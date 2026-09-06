@@ -1,0 +1,13 @@
+# Copy to app.yaml and fill owner/name before importing the GitHub repository.
+kind: wasmer.io/App.v0
+owner: GANTI_USERNAME_WASMER
+name: siakad-sttmi-uji
+package: .
+debug: false
+redirect:
+  force_https: true
+scaling:
+  mode: single_concurrency
+volumes:
+  - name: siakad-uploads
+    mount: /app/storage/app
