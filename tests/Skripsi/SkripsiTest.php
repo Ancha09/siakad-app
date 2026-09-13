@@ -11,7 +11,9 @@ use App\Models\RiwayatSkripsi;
 use App\Models\User;
 use App\Services\SkripsiService;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\Process\Process;
 use Tests\TestCase;
@@ -44,6 +46,7 @@ class SkripsiTest extends TestCase
             '2026_08_19_091444_create_kelas_table.php',
             '2026_08_19_091740_add_kelas_id_to_mahasiswas_table.php',
             '2026_09_05_000000_create_skripsi_tables.php',
+            '2026_09_13_000000_create_template_bimbingans_table.php',
             '2026_09_06_120000_create_pengumuman_tables.php',
         ] as $migration) {
             (require database_path('migrations/'.$migration))->up();
@@ -338,12 +341,30 @@ class SkripsiTest extends TestCase
         }
     }
 
-    public function test_title_has_no_update_endpoint_and_html_is_escaped(): void
+    public function test_title_can_be_updated_safely_and_html_is_escaped(): void
     {
         $this->actingAs($this->student->user)->post(route('mahasiswa.skripsi.store'), $this->payload(['judul' => '<script>alert(1)</script>']))->assertSessionHasNoErrors();
         $submission = PengajuanSkripsi::sole();
-        $this->put(route('mahasiswa.skripsi.show', $submission), ['judul' => 'Diganti'])->assertStatus(405);
+        $this->put(route('mahasiswa.skripsi.title.update', $submission), ['judul' => 'Judul Diganti'])->assertSessionHasNoErrors();
+        self::assertSame('Judul Diganti', $submission->fresh()->judul);
+        $this->assertDatabaseHas('riwayat_skripsis', ['pengajuan_skripsi_id' => $submission->id, 'tindakan' => 'Perubahan judul']);
+        $this->put(route('mahasiswa.skripsi.title.update', $submission), ['judul' => '<script>alert(1)</script>'])->assertSessionHasNoErrors();
         $this->get(route('mahasiswa.skripsi.show', $submission))->assertOk()->assertSee('&lt;script&gt;alert(1)&lt;/script&gt;', false)->assertDontSee('<script>alert(1)</script>', false);
+    }
+
+    public function test_admin_uploads_template_and_student_downloads_latest_file(): void
+    {
+        Storage::fake('local');
+        $this->actingAs($this->admin)->post(route('admin.skripsi.template.store'), [
+            'template' => UploadedFile::fake()->create('kartu-bimbingan.pdf', 100, 'application/pdf'),
+        ])->assertSessionHasNoErrors();
+
+        $template = \App\Models\TemplateBimbingan::sole();
+        Storage::disk('local')->assertExists($template->path);
+        $this->actingAs($this->student->user)->get(route('mahasiswa.skripsi.template.download'))
+            ->assertOk()
+            ->assertDownload('kartu-bimbingan.pdf');
+        $this->get(route('mahasiswa.skripsi'))->assertOk()->assertSee('Unduh template');
     }
 
     #[DataProvider('concurrentActions')]

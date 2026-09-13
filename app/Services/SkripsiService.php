@@ -108,6 +108,27 @@ class SkripsiService
         }, 5);
     }
 
+    public function updateTitle(User $actor, PengajuanSkripsi $submission, string $title): void
+    {
+        abort_unless($actor->role === 'mahasiswa', 403);
+
+        DB::transaction(function () use ($actor, $submission, $title) {
+            $this->lockPeriod($submission->periode_skripsi_id);
+            $current = PengajuanSkripsi::lockForUpdate()->findOrFail($submission->id);
+            $student = $this->eligibleStudent(Mahasiswa::where('user_id', $actor->id)->firstOrFail()->id);
+            $latest = $student->pengajuanSkripsi()->where('periode_skripsi_id', $current->periode_skripsi_id)->latest('id')->first();
+            $this->ensure($current->mahasiswa_id === $student->id && $latest?->id === $current->id, 'Hanya judul pengajuan terakhir milik Anda yang dapat diubah.');
+            $this->ensure(in_array($current->status, ['Menunggu', 'Diterima'], true), 'Judul pengajuan ini tidak dapat diubah. Gunakan formulir pengajuan ulang setelah ditolak.');
+            $title = trim($title);
+            $this->ensure($title !== '' && $title !== $current->judul, 'Masukkan judul baru yang berbeda dari judul sebelumnya.');
+            $oldTitle = $current->judul;
+            $current->update(['judul' => $title]);
+            $this->audit($actor, 'Perubahan judul', [
+                'judul_lama' => $oldTitle, 'judul_baru' => $title, 'status' => $current->status,
+            ], $current->periode_skripsi_id, $current->id);
+        }, 5);
+    }
+
     public function transfer(User $actor, PengajuanSkripsi $submission, array $data): PengajuanSkripsi
     {
         abort_unless($actor->role === 'admin', 403);

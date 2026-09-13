@@ -14,14 +14,26 @@ class DosenController extends Controller
 {
     // ================= INDEX =================
 
-    public function index()
+    public function index(Request $request)
     {
+        $data = $request->validate(['q' => 'nullable|string|max:100']);
+        $search = trim($data['q'] ?? '');
         $dosens = Dosen::with([
             'prodi',
         ])
         ->withCount('mahasiswaWali')
+        ->when($search !== '', function ($query) use ($search) {
+            $query->where(function ($query) use ($search) {
+                $query->whereLike('nidn', '%'.$search.'%')
+                    ->orWhereLike('nama', '%'.$search.'%')
+                    ->orWhereLike('email', '%'.$search.'%')
+                    ->orWhereLike('jabatan', '%'.$search.'%')
+                    ->orWhereHas('prodi', fn ($query) => $query->whereLike('nama_prodi', '%'.$search.'%'));
+            });
+        })
         ->latest()
-        ->paginate(10);
+        ->paginate(10)
+        ->withQueryString();
 
         return view('admin.dosen.index', compact('dosens'));
     }

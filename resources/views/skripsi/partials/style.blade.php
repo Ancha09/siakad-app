@@ -8,15 +8,16 @@
     .skripsi input,.skripsi select,.skripsi textarea { width:100%; border:1px solid #cbd5e1; padding:10px; border-radius:8px; color:#0f172a; background:#fff; font:inherit; box-sizing:border-box; }
     .skripsi textarea { resize:vertical; min-height:80px; }
     .skripsi button,.skripsi .sk-link { display:inline-block; padding:9px 14px; border-radius:8px; border:0; background:var(--blue,#2563eb); color:white; cursor:pointer; text-decoration:none; font:inherit; font-size:13px; }
-    .skripsi .sk-danger { background:#b91c1c; } .skripsi .sk-secondary { background:#475569; }
+    .skripsi .sk-danger { background:#1e40af; } .skripsi .sk-secondary { background:#1d4ed8; }
     .skripsi .sk-scroll { overflow-x:auto; } .skripsi table { width:100%; border-collapse:collapse; text-align:left; font-size:13px; }
     .skripsi th,.skripsi td { padding:12px; border-bottom:1px solid #e2e8f0; vertical-align:top; }
     .skripsi td { min-width:100px; } .skripsi .sk-title { min-width:220px; max-width:440px; overflow-wrap:anywhere; }
     .skripsi .sk-badge { display:inline-block; border-radius:20px; padding:4px 10px; background:#e2e8f0; color:#334155; white-space:nowrap; }
-    .skripsi .sk-Menunggu { background:#fef3c7; color:#92400e; } .skripsi .sk-Diterima { background:#dcfce7; color:#166534; }
-    .skripsi .sk-Ditolak { background:#fee2e2; color:#991b1b; } .skripsi .sk-Dialihkan { background:#dbeafe; color:#1e40af; }
+    .skripsi .sk-Menunggu { background:#eff6ff; color:#1d4ed8; } .skripsi .sk-Diterima { background:#dbeafe; color:#1e3a8a; }
+    .skripsi .sk-Ditolak { background:#e0e7ff; color:#3730a3; } .skripsi .sk-Dialihkan { background:#bfdbfe; color:#1e40af; }
     .skripsi .sk-alert { padding:14px; border-radius:10px; background:#eff6ff; color:#1e40af; }
-    .skripsi .sk-errors { background:#fef2f2; color:#991b1b; } .skripsi .sk-success { background:#f0fdf4; color:#166534; }
+    .skripsi .sk-errors { background:#eff6ff; color:#1e40af; } .skripsi .sk-success { background:#dbeafe; color:#1e3a8a; }
+    .skripsi .sk-download-card { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
     .skripsi .sk-summary { display:flex; flex-wrap:wrap; gap:12px; } .skripsi .sk-summary>div { flex:1 1 150px; background:#f8fafc; border-radius:10px; padding:14px; }
     .skripsi .sk-summary strong { display:block; font-size:25px; margin-bottom:6px; }
     .skripsi details { margin:10px 0; } .skripsi summary { cursor:pointer; font-weight:600; } .skripsi details form { margin-top:14px; }

@@ -12,13 +12,19 @@
 
 <div class="toolbar">
 
-    <div class="search-box">
+    <form method="GET" action="{{ route('admin.dosen') }}" class="search-box" role="search">
         <span class="search-icon">🔍</span>
 
         <input
+            name="q"
             type="text"
-            placeholder="Cari NIDN atau Nama Dosen...">
-    </div>
+            value="{{ request('q') }}"
+            aria-label="Cari data dosen"
+            placeholder="Cari NIDN, nama, prodi, email, atau jabatan...">
+        @if(request()->filled('q'))
+            <a href="{{ route('admin.dosen') }}" class="search-clear" aria-label="Hapus pencarian">&times;</a>
+        @endif
+    </form>
 
     <a href="{{ route('admin.dosen.create') }}" class="btn-primary">
         ➕ Tambah Dosen
@@ -126,7 +132,7 @@
 
                         <td colspan="7" style="text-align:center;padding:35px">
 
-                            Belum ada data dosen.
+                            {{ request()->filled('q') ? 'Data dosen tidak ditemukan.' : 'Belum ada data dosen.' }}
 
                         </td>
 

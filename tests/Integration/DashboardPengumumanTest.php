@@ -54,6 +54,7 @@ class DashboardPengumumanTest extends TestCase
                 if ($table === 'presensi_pertemuans') $t->unsignedBigInteger('jadwal_id');
             });
         }
+        (require database_path('migrations/2026_09_13_000000_create_template_bimbingans_table.php'))->up();
     }
 
     private function account(string $role): User

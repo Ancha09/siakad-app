@@ -117,6 +117,16 @@
                 <div class="hero-card-desc">Rekap kehadiran kuliah</div>
               </a>
 
+              @if($templateBimbingan)
+              <a href="{{ route('mahasiswa.skripsi.template.download') }}" class="hero-menu-card">
+                <div class="hero-card-icon">
+                  <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14a2 2 0 002-2v-2M3 17v2a2 2 0 002 2"/></svg>
+                </div>
+                <div class="hero-card-title">Kartu Bimbingan</div>
+                <div class="hero-card-desc">Unduh template terbaru</div>
+              </a>
+              @endif
+
             </div><!-- / row 2 -->
           </div><!-- / hero-menu-section -->
 

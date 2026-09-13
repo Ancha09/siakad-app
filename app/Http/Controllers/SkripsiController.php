@@ -8,9 +8,11 @@ use App\Models\PengajuanSkripsi;
 use App\Models\PeriodeSkripsi;
 use App\Models\Prodi;
 use App\Models\RiwayatSkripsi;
+use App\Models\TemplateBimbingan;
 use App\Services\SkripsiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 
 class SkripsiController extends Controller
 {
@@ -50,6 +52,7 @@ class SkripsiController extends Controller
 
             return view('skripsi.mahasiswa', $context + [
                 'student' => $student, 'last' => $last, 'dosens' => $dosens,
+                'templateBimbingan' => TemplateBimbingan::aktif(),
                 'submissions' => $query->latest('id')->paginate(10)->withQueryString(),
             ]);
         }
@@ -112,6 +115,7 @@ class SkripsiController extends Controller
             'submissions' => $submissions->latest('id')->paginate(15, ['*'], 'pengajuan_page')->withQueryString(),
             'dosens' => Dosen::pembimbingAktif()->orderBy('nama')->get(), 'prodis' => Prodi::orderBy('nama_prodi')->get(),
             'allDosens' => Dosen::orderBy('nama')->get(),
+            'templateBimbingan' => TemplateBimbingan::aktif(),
             'loads' => Dosen::with('prodi')->withCount([
                 'pengajuanSkripsi as diterima_count' => fn ($q) => $q->where('periode_skripsi_id', $periodId)->diterima(),
                 'pengajuanSkripsi as menunggu_count' => fn ($q) => $q->where('periode_skripsi_id', $periodId)->where('status', 'Menunggu'),
@@ -137,6 +141,59 @@ class SkripsiController extends Controller
         $service->submit($request->user(), $data);
 
         return back()->with('success', 'Pengajuan berhasil dikirim. Menunggu persetujuan dosen.');
+    }
+
+    public function updateTitle(Request $request, PengajuanSkripsi $pengajuan, SkripsiService $service)
+    {
+        Gate::authorize('view', $pengajuan);
+        $data = $this->validateInput($request, ['judul' => 'required|string|max:1000']);
+        $service->updateTitle($request->user(), $pengajuan, $data['judul']);
+
+        return back()->with('success', 'Judul skripsi berhasil diperbarui dan dicatat dalam riwayat.');
+    }
+
+    public function uploadTemplate(Request $request, SkripsiService $service)
+    {
+        abort_unless($request->user()->role === 'admin', 403);
+        $data = $request->validate([
+            'template' => 'required|file|max:10240|mimes:pdf,doc,docx,xls,xlsx',
+        ], [
+            'template.required' => 'Pilih berkas template kartu bimbingan.',
+            'template.mimes' => 'Template harus berformat PDF, DOC, DOCX, XLS, atau XLSX.',
+            'template.max' => 'Ukuran template maksimal 10 MB.',
+        ]);
+        $file = $data['template'];
+        $previous = TemplateBimbingan::aktif();
+        $path = $file->store('template-bimbingan', 'local');
+        abort_if($path === false, 500, 'Template gagal disimpan.');
+
+        $template = TemplateBimbingan::create([
+            'nama_asli' => basename($file->getClientOriginalName()),
+            'path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'ukuran' => $file->getSize(),
+            'diunggah_oleh' => $request->user()->id,
+        ]);
+        $service->audit($request->user(), 'Unggah template kartu bimbingan', [
+            'template_id' => $template->id, 'nama' => $template->nama_asli, 'ukuran' => $template->ukuran,
+        ]);
+        if ($previous) {
+            Storage::disk('local')->delete($previous->path);
+            $previous->delete();
+        }
+
+        return back()->with('success', 'Template kartu bimbingan berhasil diperbarui.');
+    }
+
+    public function downloadTemplate(Request $request)
+    {
+        abort_unless(in_array($request->user()->role, ['admin', 'mahasiswa'], true), 403);
+        $template = TemplateBimbingan::aktif();
+        abort_unless($template && Storage::disk('local')->exists($template->path), 404, 'Template kartu bimbingan belum tersedia.');
+
+        return Storage::disk('local')->download($template->path, $template->nama_asli, [
+            'Content-Type' => $template->mime_type ?: 'application/octet-stream',
+        ]);
     }
 
     public function decide(Request $request, PengajuanSkripsi $pengajuan, SkripsiService $service)

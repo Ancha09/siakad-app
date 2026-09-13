@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Models\Mahasiswa;
 use App\Models\Krs;
+use App\Models\TemplateBimbingan;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
@@ -49,13 +50,16 @@ class DashboardController extends Controller
             ->where('status', 'Menunggu')
             ->count();
 
+        $templateBimbingan = TemplateBimbingan::aktif();
+
         return view('mahasiswa.dashboard', compact(
             'mahasiswa',
             'krs',
             'jadwals',
             'totalSks',
             'jumlahKrs',
-            'krsMenunggu'
+            'krsMenunggu',
+            'templateBimbingan'
         ));
     }
 

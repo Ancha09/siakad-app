@@ -25,9 +25,9 @@
   --gray-200:   #e2e8f0;
   --gray-500:   #64748b;
   --gray-700:   #334155;
-  --red:        #ef4444;
-  --green:      #22c55e;
-  --gold:       #f59e0b;
+  --red:        #1d4ed8;
+  --green:      #2563eb;
+  --gold:       #3b82f6;
   --shadow:     0 4px 24px rgba(10,31,92,0.12);
   --shadow-lg:  0 8px 40px rgba(10,31,92,0.20);
 }
@@ -512,9 +512,9 @@ tr:hover td { background: var(--gray-50); }
 /* Badges */
 .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
 .badge-blue  { background: var(--pale); color: var(--blue); }
-.badge-green { background: #dcfce7; color: #16a34a; }
-.badge-red   { background: #fee2e2; color: #dc2626; }
-.badge-gold  { background: #fef3c7; color: #d97706; }
+.badge-green { background: #dbeafe; color: #1e40af; }
+.badge-red   { background: #e0e7ff; color: #3730a3; }
+.badge-gold  { background: #eff6ff; color: #1d4ed8; }
 .badge-gray  { background: var(--gray-100); color: var(--gray-500); }
 
 /* KHS Summary */
@@ -913,8 +913,8 @@ tr:hover td { background: var(--gray-50); }
 ================================ */
 
 .alert-success{
-    background:#dcfce7;
-    color:#166534;
+    background:#dbeafe;
+    color:#1e3a8a;
     padding:14px 18px;
     border-radius:10px;
     margin-bottom:20px;
@@ -947,7 +947,7 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .btn-delete{
-    background:#ef4444;
+    background:#1d4ed8;
     color:#fff;
     border:none;
     padding:7px 14px;
@@ -958,12 +958,12 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .btn-delete:hover{
-    background:#dc2626;
+    background:#1e40af;
 }
 
 .badge-success{
-    background:#dcfce7;
-    color:#166534;
+    background:#dbeafe;
+    color:#1e40af;
     padding:6px 10px;
     border-radius:999px;
     font-size:12px;
@@ -971,8 +971,8 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .badge-warning{
-    background:#fef3c7;
-    color:#92400e;
+    background:#eff6ff;
+    color:#1d4ed8;
     padding:6px 10px;
     border-radius:999px;
     font-size:12px;
@@ -980,13 +980,15 @@ tr:hover td { background: var(--gray-50); }
 }
 
 .alert-success{
-    background:#dcfce7;
-    color:#166534;
-    border:1px solid #86efac;
+    background:#dbeafe;
+    color:#1e3a8a;
+    border:1px solid #93c5fd;
     padding:12px 16px;
     border-radius:10px;
     font-weight:600;
 }
+
+.search-clear{color:var(--blue);font-size:24px;line-height:1;text-decoration:none;padding:4px;}
 
 /* Navigasi aplikasi pada layar Android dan perangkat mobile */
 .app-mobile-nav { display: none; }

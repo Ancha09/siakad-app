@@ -6,6 +6,21 @@
     <div><h1>Pengelolaan Pembimbing Skripsi</h1><p class="sk-muted">Atur periode, pantau pengajuan, dan alihkan secara manual berdasarkan beban dosen.</p></div>
     @include('skripsi.partials.period')
     <div class="sk-card">
+        <h2>Template kartu bimbingan</h2>
+        <p class="sk-muted">Unggah satu template aktif untuk diunduh mahasiswa dari dashboard. Format PDF, DOC, DOCX, XLS, atau XLSX; maksimal 10 MB.</p>
+        @if($templateBimbingan)
+            <p>Template aktif: <strong>{{ $templateBimbingan->nama_asli }}</strong> ({{ number_format($templateBimbingan->ukuran / 1024, 0, ',', '.') }} KB)</p>
+            <a class="sk-link sk-secondary" href="{{ route('admin.skripsi.template.download') }}">Unduh template saat ini</a>
+        @else
+            <p class="sk-muted">Belum ada template yang diunggah.</p>
+        @endif
+        <form method="POST" action="{{ route('admin.skripsi.template.store') }}" enctype="multipart/form-data" class="sk-grid">
+            @csrf
+            <label>{{ $templateBimbingan ? 'Ganti template' : 'Pilih template' }}<input type="file" name="template" accept=".pdf,.doc,.docx,.xls,.xlsx" required></label>
+            <button>Unggah template</button>
+        </form>
+    </div>
+    <div class="sk-card">
         <h2>Pengaturan periode</h2>
         <p class="sk-muted">Semua waktu menggunakan {{ config('app.timezone') }}. Perpanjangan tenggat membuka kembali tindakan untuk periode tersebut dan dicatat dalam riwayat.</p>
         @if($period)
