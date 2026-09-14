@@ -9,7 +9,9 @@ use App\Models\Prodi;
 use App\Models\User;
 use App\Models\Mahasiswa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Throwable;
 
 class DosenController extends Controller
 {
@@ -69,37 +71,49 @@ class DosenController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'nidn'      => 'required|unique:dosens,nidn',
-            'nama'      => 'required',
-            'email'     => 'nullable|email|unique:users,email',
-            'telepon'   => 'nullable',
-            'jabatan'   => 'nullable',
-            'golongan'  => 'nullable',
-            'prodi_id'  => 'required|exists:prodis,id',
-            'password'  => 'required|min:8|confirmed',
+        $data = $request->validate([
+            'nidn' => ['required', 'string', 'max:255', 'unique:dosens,nidn', 'unique:users,login'],
+            'nama' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
+            'telepon' => ['nullable', 'string', 'max:255'],
+            'jabatan' => ['nullable', 'string', 'max:255'],
+            'golongan' => ['nullable', 'string', 'max:255'],
+            'prodi_id' => ['required', 'integer', 'exists:prodis,id'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'nidn.unique' => 'NIDN sudah digunakan sebagai NIDN atau login akun lain.',
         ]);
 
-        // Membuat akun login dosen
-        $user = User::create([
-            'name'      => $request->nama,
-            'login'     => $request->nidn,
-            'email'     => $request->email,
-            'role'      => 'dosen',
-            'password'  => Hash::make($request->password),
-        ]);
+        try {
+            DB::transaction(function () use ($data) {
+                // Membuat akun login dosen
+                $user = User::create([
+                    'name' => $data['nama'],
+                    'login' => $data['nidn'],
+                    'email' => $data['email'] ?? null,
+                    'role' => 'dosen',
+                    'password' => Hash::make($data['password']),
+                ]);
 
-        // Menyimpan data dosen
-        Dosen::create([
-            'nidn'      => $request->nidn,
-            'nama'      => $request->nama,
-            'email'     => $request->email,
-            'telepon'   => $request->telepon,
-            'jabatan'   => $request->jabatan,
-            'golongan'  => $request->golongan,
-            'prodi_id'  => $request->prodi_id,
-            'user_id'   => $user->id,
-        ]);
+                // Menyimpan data dosen
+                Dosen::create([
+                    'nidn' => $data['nidn'],
+                    'nama' => $data['nama'],
+                    'email' => $data['email'] ?? null,
+                    'telepon' => $data['telepon'] ?? null,
+                    'jabatan' => $data['jabatan'] ?? null,
+                    'golongan' => $data['golongan'] ?? null,
+                    'prodi_id' => $data['prodi_id'],
+                    'user_id' => $user->id,
+                ]);
+            });
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return back()
+                ->withInput()
+                ->with('error', 'Data dosen gagal disimpan. Silakan coba kembali.');
+        }
 
         return redirect()
             ->route('admin.dosen')
