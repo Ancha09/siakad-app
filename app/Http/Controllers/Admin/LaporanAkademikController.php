@@ -9,6 +9,8 @@ use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Services\ReportExporter;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -41,122 +43,18 @@ class LaporanAkademikController extends Controller
         ));
     }
 
-    public function excel(Request $request)
+    public function excel(Request $request, ReportExporter $exporter)
     {
         $this->pastikanAdmin($request);
         $this->validasiFilter($request);
         $laporan = $this->buatLaporan($request);
 
-        return response()->streamDownload(function () use ($laporan, $request) {
-            $handle = fopen('php://output', 'w');
-            fwrite($handle, "\xEF\xBB\xBF");
-
-            $this->csv($handle, ['LAPORAN AKADEMIK STTMI']);
-            $this->csv($handle, ['Filter', $this->deskripsiFilter($request)]);
-            $this->csv($handle, []);
-            $this->csv($handle, ['RINGKASAN']);
-            $this->csv($handle, ['Jumlah Mahasiswa', $laporan['ringkasan']['jumlah_mahasiswa']]);
-            $this->csv($handle, ['Jumlah Mata Kuliah', $laporan['ringkasan']['jumlah_mata_kuliah']]);
-            $this->csv($handle, ['Rata-rata IP', $laporan['ringkasan']['rata_ip']]);
-            $this->csv($handle, ['Rata-rata Kehadiran', $laporan['ringkasan']['rata_kehadiran'].'%']);
-            $this->csv($handle, ['Mahasiswa Kehadiran < 75%', $laporan['ringkasan']['mahasiswa_kehadiran_rendah']]);
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['DISTRIBUSI NILAI']);
-            foreach ($laporan['distribusiNilai'] as $huruf => $jumlah) {
-                $this->csv($handle, [$huruf, $jumlah]);
-            }
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['REKAP PRESENSI']);
-            foreach ($laporan['rekapPresensi'] as $status => $jumlah) {
-                $this->csv($handle, [ucfirst($status), $jumlah]);
-            }
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['REKAP KRS']);
-            $this->csv($handle, ['Menunggu', $laporan['rekapKrs']['menunggu']]);
-            $this->csv($handle, ['Disetujui', $laporan['rekapKrs']['disetujui']]);
-            $this->csv($handle, ['Ditolak', $laporan['rekapKrs']['ditolak']]);
-            if ($laporan['rekapKrs']['diambil_legacy'] > 0) {
-                $this->csv($handle, ['Diambil (data legacy)', $laporan['rekapKrs']['diambil_legacy']]);
-            }
-            $this->csv($handle, ['Mahasiswa Mengajukan', $laporan['rekapKrs']['mahasiswa_mengajukan']]);
-            $this->csv($handle, ['Total SKS Disetujui', $laporan['rekapKrs']['sks_disetujui']]);
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['RINGKASAN KUESIONER']);
-            $this->csv($handle, ['Jumlah Responden', $laporan['rekapKuesioner']['jumlah_responden']]);
-            $this->csv($handle, ['Sudah Mengisi', $laporan['rekapKuesioner']['sudah_mengisi']]);
-            $this->csv($handle, ['Belum Mengisi', $laporan['rekapKuesioner']['belum_mengisi']]);
-            $this->csv($handle, ['Rata-rata Skor', $laporan['rekapKuesioner']['rata_rata']]);
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['REKAP NILAI']);
-            $this->csv($handle, ['Mata Kuliah', 'Dosen', 'Kelas', 'Jumlah Mahasiswa', 'Rata-rata Nilai', 'Rata-rata Bobot', 'Tertinggi', 'Terendah']);
-            foreach ($laporan['rekapNilai'] as $item) {
-                $this->csv($handle, [
-                    $item->mata_kuliah,
-                    $item->dosen,
-                    $item->kelas,
-                    $item->jumlah_mahasiswa,
-                    $item->rata_nilai,
-                    $item->rata_bobot,
-                    $item->tertinggi,
-                    $item->terendah,
-                ]);
-            }
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['KEHADIRAN DI BAWAH 75%']);
-            $this->csv($handle, ['NIM', 'Nama', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Hadir', 'Izin', 'Sakit', 'Alpha', 'Kehadiran']);
-            foreach ($laporan['kehadiranRendah'] as $item) {
-                $this->csv($handle, [
-                    $item->nim,
-                    $item->nama,
-                    $item->prodi,
-                    $item->kelas,
-                    $item->mata_kuliah,
-                    $item->hadir,
-                    $item->izin,
-                    $item->sakit,
-                    $item->alpha,
-                    $item->persentase.'%',
-                ]);
-            }
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['RINGKASAN AKADEMIK MAHASISWA']);
-            $this->csv($handle, ['NIM', 'Nama', 'Program Studi', 'Kelas', 'Total SKS Disetujui', 'IP Akademik', 'Kehadiran']);
-            foreach ($laporan['detailMahasiswa'] as $item) {
-                $this->csv($handle, [
-                    $item->nim,
-                    $item->nama,
-                    $item->prodi,
-                    $item->kelas,
-                    $item->total_sks,
-                    $item->ip === null ? '-' : $item->ip,
-                    $item->kehadiran === null ? '-' : $item->kehadiran.'%',
-                ]);
-            }
-            $this->csv($handle, []);
-
-            $this->csv($handle, ['REKAP EVALUASI PERKULIAHAN']);
-            $this->csv($handle, ['Dosen', 'Mata Kuliah', 'Kelas', 'Jumlah Responden', 'Rata-rata Skor']);
-            foreach ($laporan['rekapEvaluasi'] as $item) {
-                $this->csv($handle, [
-                    $item->dosen,
-                    $item->mata_kuliah,
-                    $item->kelas,
-                    $item->jumlah_responden,
-                    $item->rata_rata,
-                ]);
-            }
-
-            fclose($handle);
-        }, 'laporan-akademik-'.now()->format('Ymd-His').'.csv', [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-        ]);
+        return $exporter->excel(
+            'laporan-akademik-'.now()->format('Ymd-His').'.xlsx',
+            'Laporan Akademik STTMI',
+            $this->deskripsiFilter($request),
+            $this->excelSheets($laporan)
+        );
     }
 
     public function pdf(Request $request)
@@ -164,10 +62,64 @@ class LaporanAkademikController extends Controller
         $this->pastikanAdmin($request);
         $this->validasiFilter($request);
 
-        return view('admin.laporan.print', array_merge(
-            $this->buatLaporan($request),
-            ['deskripsiFilter' => $this->deskripsiFilter($request)]
-        ));
+        $data = array_merge($this->buatLaporan($request), [
+            'reportTitle' => 'Laporan Akademik',
+            'deskripsiFilter' => $this->deskripsiFilter($request),
+        ]);
+
+        return Pdf::loadView('admin.laporan.print', $data)
+            ->setPaper('a4', 'landscape')
+            ->download('laporan-akademik-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    private function excelSheets(array $laporan): array
+    {
+        $ringkasan = $laporan['ringkasan'];
+
+        return [
+            [
+                'title' => 'Ringkasan',
+                'headings' => ['Indikator', 'Nilai'],
+                'rows' => [
+                    ['Jumlah Mahasiswa', $ringkasan['jumlah_mahasiswa']],
+                    ['Jumlah Mata Kuliah', $ringkasan['jumlah_mata_kuliah']],
+                    ['Rata-rata IP', $ringkasan['rata_ip']],
+                    ['Rata-rata Kehadiran', $ringkasan['rata_kehadiran'].'%'],
+                    ['Mahasiswa Kehadiran < 75%', $ringkasan['mahasiswa_kehadiran_rendah']],
+                ],
+            ],
+            [
+                'title' => 'Rekap Nilai',
+                'headings' => ['Mata Kuliah', 'Dosen', 'Kelas', 'Mahasiswa', 'Rata Nilai', 'Rata Bobot', 'Tertinggi', 'Terendah'],
+                'rows' => $laporan['rekapNilai']->map(fn ($item) => [
+                    $item->mata_kuliah, $item->dosen, $item->kelas, $item->jumlah_mahasiswa,
+                    $item->rata_nilai, $item->rata_bobot, $item->tertinggi, $item->terendah,
+                ]),
+            ],
+            [
+                'title' => 'Kehadiran Rendah',
+                'headings' => ['NIM', 'Nama', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Hadir', 'Izin', 'Sakit', 'Alpha', 'Kehadiran'],
+                'rows' => $laporan['kehadiranRendah']->map(fn ($item) => [
+                    $item->nim, $item->nama, $item->prodi, $item->kelas, $item->mata_kuliah,
+                    $item->hadir, $item->izin, $item->sakit, $item->alpha, $item->persentase.'%',
+                ]),
+            ],
+            [
+                'title' => 'Mahasiswa',
+                'headings' => ['NIM', 'Nama', 'Program Studi', 'Kelas', 'SKS Disetujui', 'IP Akademik', 'Kehadiran'],
+                'rows' => $laporan['detailMahasiswa']->map(fn ($item) => [
+                    $item->nim, $item->nama, $item->prodi, $item->kelas, $item->total_sks,
+                    $item->ip ?? '-', $item->kehadiran === null ? '-' : $item->kehadiran.'%',
+                ]),
+            ],
+            [
+                'title' => 'Evaluasi Perkuliahan',
+                'headings' => ['Dosen', 'Mata Kuliah', 'Kelas', 'Responden', 'Rata-rata Skor'],
+                'rows' => $laporan['rekapEvaluasi']->map(fn ($item) => [
+                    $item->dosen, $item->mata_kuliah, $item->kelas, $item->jumlah_responden, $item->rata_rata,
+                ]),
+            ],
+        ];
     }
 
     private function buatLaporan(Request $request): array
@@ -475,10 +427,5 @@ class LaporanAkademikController extends Controller
         ];
 
         return collect($bagian)->filter()->implode(' | ') ?: 'Semua data';
-    }
-
-    private function csv($handle, array $columns): void
-    {
-        fputcsv($handle, $columns, ',', '"', '\\');
     }
 }

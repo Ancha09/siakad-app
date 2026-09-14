@@ -247,8 +247,25 @@
                 </div>
 
                 <div style="font-size:26px;font-weight:700;margin-top:5px;">
-                    {{ number_format($ipk, 2) }}
+                    @if($ipkTerlihat !== null)
+                        {{ number_format($ipkTerlihat, 2) }}
+                    @elseif($jumlahKuesionerTertunda > 0)
+                        🔒
+                    @else
+                        -
+                    @endif
                 </div>
+
+                @if($jumlahKuesionerTertunda > 0)
+                    <small style="display:block;margin-top:7px;color:#92400e;">
+                        Selesaikan {{ $jumlahKuesionerTertunda }} kuesioner untuk membuka IPK.
+                    </small>
+                    <a href="{{ route('mahasiswa.kuesioner') }}" class="btn-outline" style="display:inline-block;margin-top:10px;padding:6px 10px;font-size:11px;">
+                        Isi Kuesioner
+                    </a>
+                @elseif($jumlahNilai === 0)
+                    <small style="display:block;margin-top:7px;color:#64748b;">Belum ada nilai yang diterbitkan.</small>
+                @endif
             </div>
 
 
@@ -1156,14 +1173,18 @@
 
                 ℹ️
 
-                Berdasarkan IPK
-                <strong>
-                    {{ number_format($ipk, 2) }}
-                </strong>,
-                batas maksimal KRS Anda adalah
+                Batas maksimal KRS Anda adalah
                 <strong>
                     {{ $batasSks }} SKS
                 </strong>.
+
+                @if($jumlahKuesionerTertunda > 0)
+                    IPK kumulatif disembunyikan sampai seluruh kuesioner dosen selesai diisi.
+                @elseif($ipkTerlihat !== null)
+                    Ketentuan ini dihitung berdasarkan IPK {{ number_format($ipkTerlihat, 2) }}.
+                @else
+                    Ketentuan ini menggunakan batas akademik awal karena belum ada nilai.
+                @endif
 
                 @if($periodeKrs->minimal_sks > 0)
 

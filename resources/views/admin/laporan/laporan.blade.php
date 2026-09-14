@@ -66,8 +66,8 @@
         <div class="page-card-head">
             <h2>📚 Laporan Akademik</h2>
             <div class="report-actions">
-                <a href="{{ route('admin.laporan.excel', request()->query()) }}" class="btn-primary">📊 Download Excel</a>
-                <a href="{{ route('admin.laporan.pdf', request()->query()) }}" class="btn-outline" target="_blank">📄 Download PDF</a>
+                <a href="{{ route('admin.laporan.excel', request()->query()) }}" class="btn-primary">📊 Download Excel (.xlsx)</a>
+                <a href="{{ route('admin.laporan.pdf', request()->query()) }}" class="btn-outline">📄 Download PDF</a>
             </div>
         </div>
         <div class="page-card-body">

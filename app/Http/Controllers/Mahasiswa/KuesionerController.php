@@ -77,7 +77,7 @@ class KuesionerController extends Controller
 
         return redirect()
             ->route('mahasiswa.khs')
-            ->with('success', 'Kuesioner berhasil dikirim. Nilai mata kuliah tersebut sekarang dapat dilihat.');
+            ->with('success', 'Kuesioner berhasil dikirim. Nilai mata kuliah tersebut sekarang terbuka; IPS dan IPK terbuka setelah seluruh kuesioner selesai.');
     }
 
     private function mahasiswa(): Mahasiswa

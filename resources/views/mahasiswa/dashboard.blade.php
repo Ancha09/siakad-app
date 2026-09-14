@@ -117,7 +117,14 @@
                 <div class="hero-card-desc">Rekap kehadiran kuliah</div>
               </a>
 
-              @if($templateBimbingan)
+              <a href="{{ route('mahasiswa.kuesioner') }}" class="hero-menu-card" @if($kuesionerTertunda > 0) style="box-shadow:0 0 0 2px #fbbf24,0 12px 28px rgba(15,23,42,.18);" @endif>
+                <div class="hero-card-icon">
+                  <svg viewBox="0 0 24 24"><path d="M9 4H5v18h14V4h-4"/><path d="M9 2h6v4H9zM8 12l2 2 4-4M8 18h8"/></svg>
+                </div>
+                <div class="hero-card-title">Kuesioner Dosen @if($kuesionerTertunda > 0) ({{ $kuesionerTertunda }}) @endif</div>
+                <div class="hero-card-desc">{{ $kuesionerTertunda > 0 ? 'Wajib diisi untuk membuka nilai, IPS, dan IPK' : 'Evaluasi perkuliahan Anda' }}</div>
+              </a>
+
               <a href="{{ route('mahasiswa.skripsi.template.download') }}" class="hero-menu-card">
                 <div class="hero-card-icon">
                   <svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14a2 2 0 002-2v-2M3 17v2a2 2 0 002 2"/></svg>
@@ -125,14 +132,48 @@
                 <div class="hero-card-title">Kartu Bimbingan</div>
                 <div class="hero-card-desc">Unduh template terbaru</div>
               </a>
-              @endif
 
             </div><!-- / row 2 -->
           </div><!-- / hero-menu-section -->
 
         </div><!-- / dashboard-hero -->
 
-        <!-- ── BERITA TERKINI ─────────────────── -->
+        <!-- Status hasil studi -->
+        <section style="margin:24px 0;padding:22px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 6px 22px rgba(15,23,42,.06);">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+            <div>
+              <p style="margin:0 0 5px;color:#64748b;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Status Hasil Studi</p>
+              <h2 style="margin:0;color:#0f2854;font-size:21px;">IPK Kumulatif</h2>
+            </div>
+
+            @if ($ipkTerlihat !== null)
+              <strong style="font-size:32px;color:#0f2854;line-height:1;">{{ number_format($ipkTerlihat, 2) }}</strong>
+            @elseif ($jumlahNilai === 0)
+              <strong style="font-size:30px;color:#94a3b8;line-height:1;">—</strong>
+            @else
+              <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:#fff7ed;color:#9a3412;font-size:13px;font-weight:700;">
+                &#128274; IPK terkunci
+              </span>
+            @endif
+          </div>
+
+          @if ($kuesionerTertunda > 0)
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px;padding:15px 17px;border-radius:14px;background:#fffbeb;border:1px solid #fde68a;">
+              <p style="margin:0;color:#78350f;font-size:13px;line-height:1.6;">
+                Selesaikan <strong>{{ $kuesionerTertunda }} kuesioner dosen</strong> untuk membuka seluruh nilai, IPS, dan IPK kumulatif.
+              </p>
+              <a href="{{ route('mahasiswa.kuesioner') }}" style="display:inline-flex;padding:9px 14px;border-radius:10px;background:#0f2854;color:#fff;text-decoration:none;font-size:12px;font-weight:700;">
+                Isi Kuesioner
+              </a>
+            </div>
+          @elseif ($jumlahNilai > 0)
+            <p style="margin:14px 0 0;color:#15803d;font-size:13px;font-weight:600;">Semua kuesioner nilai telah diselesaikan.</p>
+          @else
+            <p style="margin:14px 0 0;color:#64748b;font-size:13px;">IPK akan tersedia setelah nilai perkuliahan diterbitkan.</p>
+          @endif
+        </section>
+
+        <!-- Berita terkini -->
         <x-pengumuman-feed />
 
       </div><!-- / view-dashboard -->

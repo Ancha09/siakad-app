@@ -9,7 +9,9 @@ use App\Models\PeriodeSkripsi;
 use App\Models\Prodi;
 use App\Models\RiwayatSkripsi;
 use App\Models\TemplateBimbingan;
+use App\Services\ReportExporter;
 use App\Services\SkripsiService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -124,6 +126,90 @@ class SkripsiController extends Controller
         ]);
     }
 
+    public function adminExcel(Request $request, ReportExporter $exporter)
+    {
+        $report = $this->adminExportData($request);
+
+        return $exporter->excel(
+            'laporan-bimbingan-skripsi-'.now()->format('Ymd-His').'.xlsx',
+            'Laporan Pembimbing Skripsi',
+            $report['deskripsiFilter'],
+            [
+                [
+                    'title' => 'Ringkasan',
+                    'headings' => ['Status', 'Jumlah'],
+                    'rows' => collect($report['summary'])->map(fn ($count, $status) => [$status, $count])->values(),
+                ],
+                [
+                    'title' => 'Pembimbing Resmi',
+                    'headings' => ['NIM', 'Mahasiswa', 'Program Studi', 'Judul', 'Dosen Pembimbing', 'Tanggal Disetujui'],
+                    'rows' => $report['accepted']->map(fn ($item) => [
+                        $item->mahasiswa?->nim ?? '-', $item->mahasiswa?->nama ?? '-',
+                        $item->mahasiswa?->prodi?->nama_prodi ?? '-', $item->judul,
+                        $item->dosen?->nama ?? '-', $item->diputuskan_pada?->format('d-m-Y H:i') ?? '-',
+                    ]),
+                ],
+                [
+                    'title' => 'Riwayat Pengajuan',
+                    'headings' => ['NIM', 'Mahasiswa', 'Program Studi', 'Judul', 'Dosen Tujuan', 'Status', 'Tanggal Pengajuan', 'Catatan'],
+                    'rows' => $report['submissions']->map(fn ($item) => [
+                        $item->mahasiswa?->nim ?? '-', $item->mahasiswa?->nama ?? '-',
+                        $item->mahasiswa?->prodi?->nama_prodi ?? '-', $item->judul,
+                        $item->dosen?->nama ?? '-', $item->status, $item->created_at?->format('d-m-Y H:i') ?? '-',
+                        $item->alasan_keputusan ?: '-',
+                    ]),
+                ],
+            ]
+        );
+    }
+
+    public function adminPdf(Request $request)
+    {
+        $report = $this->adminExportData($request);
+
+        return Pdf::loadView('admin.skripsi.print', $report + ['reportTitle' => 'Laporan Pembimbing Skripsi'])
+            ->setPaper('a4', 'landscape')
+            ->download('laporan-bimbingan-skripsi-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    private function adminExportData(Request $request): array
+    {
+        $context = $this->context($request);
+        $period = $context['period'];
+        $periodId = $period?->id ?? 0;
+        $this->validateInput($request, [
+            'q' => 'nullable|string|max:200', 'prodi_id' => 'nullable|integer|exists:prodis,id',
+            'dosen_id' => 'nullable|integer|exists:dosens,id',
+            'status' => 'nullable|in:Belum mengajukan,Belum mendapat pembimbing,Menunggu,Diterima,Ditolak,Dialihkan',
+        ]);
+
+        $base = PengajuanSkripsi::with(['mahasiswa.prodi', 'dosen'])
+            ->where('periode_skripsi_id', $periodId)
+            ->when($request->filled('q'), fn ($q) => $q->where(fn ($q) => $q->whereLike('judul', '%'.$request->q.'%')
+                ->orWhereHas('mahasiswa', fn ($m) => $m->whereLike('nama', '%'.$request->q.'%')->orWhereLike('nim', '%'.$request->q.'%'))))
+            ->when($request->filled('prodi_id'), fn ($q) => $q->whereHas('mahasiswa', fn ($m) => $m->where('prodi_id', $request->prodi_id)))
+            ->when($request->filled('dosen_id'), fn ($q) => $q->where('dosen_id', $request->dosen_id));
+
+        $all = (clone $base)->latest('id')->get();
+        $submissions = (clone $base)
+            ->when(in_array($request->status, PengajuanSkripsi::STATUS, true), fn ($q) => $q->where('status', $request->status))
+            ->latest('id')->get();
+
+        return [
+            'period' => $period,
+            'summary' => collect(PengajuanSkripsi::STATUS)->mapWithKeys(fn ($status) => [$status => $all->where('status', $status)->count()])->all(),
+            'accepted' => (clone $base)->diterima()->latest('diputuskan_pada')->get(),
+            'submissions' => $submissions,
+            'deskripsiFilter' => collect([
+                $period?->nama,
+                $request->filled('prodi_id') ? 'Prodi '.Prodi::find($request->prodi_id)?->nama_prodi : null,
+                $request->filled('dosen_id') ? 'Dosen '.Dosen::find($request->dosen_id)?->nama : null,
+                $request->filled('status') ? 'Status '.$request->status : null,
+                $request->filled('q') ? 'Pencarian “'.$request->q.'”' : null,
+            ])->filter()->implode(' | ') ?: 'Semua data',
+        ];
+    }
+
     public function show(Request $request, PengajuanSkripsi $pengajuan)
     {
         Gate::authorize('view', $pengajuan);
@@ -189,7 +275,16 @@ class SkripsiController extends Controller
     {
         abort_unless(in_array($request->user()->role, ['admin', 'mahasiswa'], true), 403);
         $template = TemplateBimbingan::aktif();
-        abort_unless($template && Storage::disk('local')->exists($template->path), 404, 'Template kartu bimbingan belum tersedia.');
+
+        if (! $template || ! Storage::disk('local')->exists($template->path)) {
+            $mahasiswa = $request->user()->role === 'mahasiswa'
+                ? Mahasiswa::with('prodi')->where('user_id', $request->user()->id)->first()
+                : null;
+
+            return Pdf::loadView('skripsi.template-bimbingan', compact('mahasiswa'))
+                ->setPaper('a4', 'portrait')
+                ->download('template-kartu-bimbingan-skripsi-sttmi.pdf');
+        }
 
         return Storage::disk('local')->download($template->path, $template->nama_asli, [
             'Content-Type' => $template->mime_type ?: 'application/octet-stream',

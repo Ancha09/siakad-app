@@ -30,7 +30,10 @@
         @endif
 
         <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:14px 16px;border-radius:10px;margin-bottom:20px;">
-            🔒 Nilai setiap mata kuliah akan terbuka setelah Anda mengisi kuesioner evaluasi dosen untuk mata kuliah tersebut.
+            🔒 Nilai mata kuliah terbuka setelah kuesionernya diisi. IPS dan IPK kumulatif tetap terkunci sampai seluruh kuesioner yang wajib selesai.
+            @if($jumlahKuesionerTertunda > 0)
+                <a href="{{ route('mahasiswa.kuesioner') }}" style="display:inline-block;margin-left:8px;color:#9a3412;font-weight:700;">Isi {{ $jumlahKuesionerTertunda }} kuesioner tertunda →</a>
+            @endif
         </div>
 
         <div style="
@@ -185,7 +188,13 @@
                     font-weight:700;
                     margin-top:5px;
                 ">
-                    {{ number_format($ipk, 2) }}
+                    @if($ipk !== null)
+                        {{ number_format($ipk, 2) }}
+                    @elseif($jumlahKuesionerTertunda > 0)
+                        🔒
+                    @else
+                        -
+                    @endif
                 </div>
 
                 <small>
@@ -243,10 +252,11 @@
                             margin-left:5px;
                         ">
 
-                            {{ number_format(
-                                $ipsPerSemester[$semester] ?? 0,
-                                2
-                            ) }}
+                            @if(($ipsPerSemester[$semester] ?? null) !== null)
+                                {{ number_format($ipsPerSemester[$semester], 2) }}
+                            @else
+                                🔒
+                            @endif
 
                         </span>
 

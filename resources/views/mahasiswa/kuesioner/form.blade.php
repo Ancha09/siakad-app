@@ -25,7 +25,7 @@
         </div>
 
         <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:14px 16px;border-radius:10px;margin-bottom:22px;line-height:1.6;">
-            Isi secara jujur menggunakan skala 1 (sangat tidak setuju) sampai 5 (sangat setuju). Setelah dikirim, jawaban tidak dapat diubah dan nilai akan langsung terbuka.
+            Isi secara jujur menggunakan skala 1 (sangat tidak setuju) sampai 5 (sangat setuju). Setelah dikirim, jawaban tidak dapat diubah dan nilai mata kuliah ini akan terbuka. IPS dan IPK terbuka setelah seluruh kuesioner selesai.
         </div>
 
         @if($errors->any())
@@ -66,7 +66,7 @@
 
             <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;">
                 <button type="submit" class="btn-primary" onclick="return confirm('Kirim kuesioner? Jawaban tidak dapat diubah setelah dikirim.')">
-                    Kirim & Buka Nilai
+                    Kirim &amp; Buka Nilai Mata Kuliah
                 </button>
                 <a href="{{ route('mahasiswa.kuesioner') }}" class="btn-outline">Kembali</a>
             </div>

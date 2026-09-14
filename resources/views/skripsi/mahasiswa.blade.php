@@ -5,9 +5,7 @@
     @include('skripsi.partials.style')
     <div><h1>Pengajuan Skripsi</h1><p class="sk-muted">Ajukan judul dan pilih calon dosen pembimbing.</p></div>
     @include('skripsi.partials.period')
-    @if($templateBimbingan)
-        <div class="sk-card sk-download-card"><div><h2>Template kartu bimbingan</h2><p class="sk-muted">{{ $templateBimbingan->nama_asli }}</p></div><a class="sk-link" href="{{ route('mahasiswa.skripsi.template.download') }}">Unduh template</a></div>
-    @endif
+    <div class="sk-card sk-download-card"><div><h2>Template kartu bimbingan</h2><p class="sk-muted">{{ $templateBimbingan?->nama_asli ?? 'Template PDF bawaan STTMI' }}</p></div><a class="sk-link" href="{{ route('mahasiswa.skripsi.template.download') }}">Unduh template</a></div>
     <div class="sk-alert">
         Pengajuan skripsi tersedia mulai semester {{ \App\Models\Mahasiswa::MIN_SEMESTER_SKRIPSI }} ke atas.
         Semester Anda: <strong>{{ $student->semester ?? 'Belum diisi' }}</strong>.

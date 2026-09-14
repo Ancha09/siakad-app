@@ -39,6 +39,19 @@
 
 <body>
 
+    @php
+        $adminUser = auth()->user();
+        $adminName = $adminUser?->name ?: 'Admin Akademik';
+        $adminInitial = mb_strtoupper(mb_substr($adminName, 0, 1));
+        $adminSubtitle = match (true) {
+            request()->routeIs('admin.kurikulum.*', 'admin.jadwal*', 'admin.periode-krs*', 'admin.krs*', 'admin.khs*', 'admin.skripsi*') => 'Kelola proses dan data akademik STTMI',
+            request()->routeIs('admin.presensi*', 'admin.kuesioner*', 'admin.laporan.*') => 'Monitoring dan laporan akademik STTMI',
+            request()->routeIs('admin.pengumuman.*', 'admin.pemberitahuan*') => 'Informasi dan komunikasi kampus',
+            request()->routeIs('profile.*') => 'Kelola identitas dan keamanan akun administrator',
+            default => 'Ringkasan akademik seluruh program studi STTMI',
+        };
+    @endphp
+
 
     <!-- =========================================================
          SIDEBAR
@@ -103,14 +116,14 @@
         <div class="sidebar-user">
 
             <div class="user-avatar">
-                A
+                {{ $adminInitial }}
             </div>
 
 
             <div class="user-info">
 
                 <p>
-                    Admin Akademik
+                    {{ $adminName }}
                 </p>
 
                 <span>
@@ -148,13 +161,12 @@
             <x-sidebar-item route="admin.khs" :active="request()->routeIs('admin.khs', 'admin.khs.*')" icon="file-chart">KHS</x-sidebar-item>
             <x-sidebar-item route="admin.skripsi" :active="request()->routeIs('admin.skripsi', 'admin.skripsi.*')" icon="graduation">Pembimbing Skripsi</x-sidebar-item>
 
-            <div class="nav-section-label">Monitoring</div>
-            <x-sidebar-item icon="chart">Grafik Nilai</x-sidebar-item>
+            <div class="nav-section-label">Monitoring &amp; Laporan</div>
             <x-sidebar-item route="admin.presensi" :active="request()->routeIs('admin.presensi', 'admin.presensi.*')" icon="attendance" badge="Baru">Monitoring Absensi</x-sidebar-item>
             <x-sidebar-item route="admin.kuesioner" :active="request()->routeIs('admin.kuesioner', 'admin.kuesioner.*')" icon="clipboard">Evaluasi Dosen</x-sidebar-item>
             <x-sidebar-item route="admin.laporan.index" :active="request()->routeIs('admin.laporan.*')" icon="file">Laporan Akademik</x-sidebar-item>
 
-            <div class="nav-section-label">Informasi Kampus</div>
+            <div class="nav-section-label">Informasi</div>
             <x-sidebar-item route="admin.pengumuman.index" :active="request()->routeIs('admin.pengumuman.*')" icon="bell">Kelola Pengumuman</x-sidebar-item>
             <x-sidebar-item route="admin.pemberitahuan" :active="request()->routeIs('admin.pemberitahuan*')" icon="clipboard">Pemberitahuan</x-sidebar-item>
             <div class="nav-section-label">Akun</div>
@@ -237,17 +249,15 @@
                 <div class="page-title">
 
                     <h1>
-                        @yield(
-                            'page-title',
-                            'Dashboard'
-                        )
+                        @hasSection('page-title')
+                            @yield('page-title')
+                        @else
+                            @yield('title', 'Dashboard')
+                        @endif
                     </h1>
 
                     <p>
-                        @yield(
-                            'page-subtitle',
-                            'Ringkasan akademik seluruh program studi STTM'
-                        )
+                        @yield('page-subtitle', $adminSubtitle)
                     </p>
 
                 </div>
@@ -283,18 +293,18 @@
 
                 {{-- PROFILE --}}
 
-                <div class="topbar-profile">
+                <a class="topbar-profile" href="{{ route('profile.edit') }}" aria-label="Buka profil admin">
 
 
                     <div class="topbar-avatar">
-                        A
+                        {{ $adminInitial }}
                     </div>
 
 
                     <div class="topbar-profile-info">
 
                         <p>
-                            Admin Akademik
+                            {{ $adminName }}
                         </p>
 
                         <span>
@@ -304,7 +314,7 @@
                     </div>
 
 
-                </div>
+                </a>
 
 
             </div>

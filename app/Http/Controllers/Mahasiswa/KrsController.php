@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\Http\Controllers\Controller;
+use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
-use App\Models\Jadwal;
-use App\Models\Khs;
 use App\Models\PeriodeKrs;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,14 +17,13 @@ class KrsController extends Controller
     // HALAMAN KRS
     // =========================================================
 
-    public function index()
+    public function index(MahasiswaNilaiService $nilaiService)
     {
         // ===================== DATA MAHASISWA =====================
 
         $mahasiswa = Mahasiswa::with('prodi')
             ->where('user_id', Auth::id())
             ->firstOrFail();
-
 
         // ===================== PERIODE KRS AKTIF =====================
 
@@ -34,20 +33,21 @@ class KrsController extends Controller
             ->latest()
             ->first();
 
-
         // =========================================================
         // HITUNG IPK MAHASISWA
         // =========================================================
 
-        $ipk = $this->hitungIpk($mahasiswa->id);
-
+        $ringkasanNilai = $nilaiService->ringkasanMahasiswa($mahasiswa->id);
+        $ipk = $ringkasanNilai['ipk_aktual'];
+        $ipkTerlihat = $ringkasanNilai['ipk_terlihat'];
+        $jumlahKuesionerTertunda = $ringkasanNilai['kuesioner_tertunda'];
+        $jumlahNilai = $ringkasanNilai['jumlah_nilai'];
 
         // =========================================================
         // TENTUKAN BATAS SKS BERDASARKAN IPK
         // =========================================================
 
         $batasSksIpk = $this->tentukanBatasSks($ipk);
-
 
         // =========================================================
         // BATAS SKS FINAL
@@ -68,7 +68,6 @@ class KrsController extends Controller
 
         }
 
-
         // ===================== KRS MAHASISWA =====================
 
         $krs = Krs::with([
@@ -77,9 +76,8 @@ class KrsController extends Controller
             'jadwal.ruangan',
             'jadwal.kelas.prodi',
         ])
-        ->where('mahasiswa_id', $mahasiswa->id)
-        ->get();
-
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->get();
 
         // ===================== KRS PADA PERIODE AKTIF =====================
 
@@ -88,13 +86,11 @@ class KrsController extends Controller
                 ->where('semester_akademik', $periodeKrs->semester)
             : collect();
 
-
         // ===================== JADWAL YANG SUDAH DIAMBIL =====================
 
         $jadwalDiambil = $krsPeriodeAktif
             ->pluck('jadwal_id')
             ->toArray();
-
 
         // ===================== TOTAL SKS =====================
 
@@ -106,7 +102,6 @@ class KrsController extends Controller
 
             });
 
-
         // ===================== SISA SKS =====================
 
         $sisaSks = max(
@@ -114,11 +109,9 @@ class KrsController extends Controller
             $batasSks - $totalSks
         );
 
-
         // ===================== JADWAL TERSEDIA =====================
 
         $jadwals = collect();
-
 
         if ($periodeKrs) {
 
@@ -130,42 +123,35 @@ class KrsController extends Controller
             ])
 
             // Jangan tampilkan jadwal yang sudah ada di KRS
-            ->whereNotIn('id', $jadwalDiambil)
+                ->whereNotIn('id', $jadwalDiambil)
 
             // ===================== SESUAI PRODI =====================
+                ->whereHas('mataKuliah', function ($query) use ($mahasiswa) {
 
-            ->whereHas('mataKuliah', function ($query) use ($mahasiswa) {
+                    $query->where(
+                        'prodi_id',
+                        $mahasiswa->prodi_id
+                    );
 
-                $query->where(
-                    'prodi_id',
-                    $mahasiswa->prodi_id
-                );
-
-            })
+                })
 
             // ===================== SESUAI TAHUN AKADEMIK =====================
-
-            ->where(
-                'tahun_akademik',
-                $periodeKrs->tahun_akademik
-            )
+                ->where(
+                    'tahun_akademik',
+                    $periodeKrs->tahun_akademik
+                )
 
             // ===================== SESUAI SEMESTER AKADEMIK =====================
-
-            ->where(
-                'semester_akademik',
-                $periodeKrs->semester
-            )
-
-            ->orderByRaw("
+                ->where(
+                    'semester_akademik',
+                    $periodeKrs->semester
+                )
+                ->orderByRaw("
                 CASE hari WHEN 'Senin' THEN 1 WHEN 'Selasa' THEN 2 WHEN 'Rabu' THEN 3 WHEN 'Kamis' THEN 4 WHEN 'Jumat' THEN 5 WHEN 'Sabtu' THEN 6 ELSE 0 END
             ")
-
-            ->orderBy('jam_mulai')
-
-            ->get();
+                ->orderBy('jam_mulai')
+                ->get();
         }
-
 
         // =========================================================
         // RETURN VIEW
@@ -180,24 +166,24 @@ class KrsController extends Controller
                 'totalSks',
                 'sisaSks',
                 'periodeKrs',
-                'ipk',
+                'ipkTerlihat',
+                'jumlahKuesionerTertunda',
+                'jumlahNilai',
                 'batasSks'
             )
         );
     }
 
-
     // =========================================================
     // AMBIL MATA KULIAH
     // =========================================================
 
-    public function store(Request $request)
+    public function store(Request $request, MahasiswaNilaiService $nilaiService)
     {
         $mahasiswa = Mahasiswa::where(
             'user_id',
             Auth::id()
         )->firstOrFail();
-
 
         // ===================== VALIDASI =====================
 
@@ -205,28 +191,26 @@ class KrsController extends Controller
             'jadwal_id' => 'required|exists:jadwals,id',
         ]);
 
-
         // ===================== CEK PERIODE KRS =====================
 
         $periodeKrs = PeriodeKrs::where(
             'status',
             'Dibuka'
         )
-        ->where(
-            'tanggal_mulai',
-            '<=',
-            now()
-        )
-        ->where(
-            'tanggal_selesai',
-            '>=',
-            now()
-        )
-        ->latest()
-        ->first();
+            ->where(
+                'tanggal_mulai',
+                '<=',
+                now()
+            )
+            ->where(
+                'tanggal_selesai',
+                '>=',
+                now()
+            )
+            ->latest()
+            ->first();
 
-
-        if (!$periodeKrs) {
+        if (! $periodeKrs) {
 
             return back()->with(
                 'error',
@@ -234,15 +218,11 @@ class KrsController extends Controller
             );
         }
 
-
         // =========================================================
         // HITUNG IPK
         // =========================================================
 
-        $ipk = $this->hitungIpk(
-            $mahasiswa->id
-        );
-
+        $ipk = $nilaiService->ringkasanMahasiswa($mahasiswa->id)['ipk_aktual'];
 
         // =========================================================
         // TENTUKAN BATAS SKS BERDASARKAN IPK
@@ -251,7 +231,6 @@ class KrsController extends Controller
         $batasSksIpk = $this->tentukanBatasSks(
             $ipk
         );
-
 
         // =========================================================
         // BATAS FINAL
@@ -263,22 +242,20 @@ class KrsController extends Controller
             $periodeKrs->maksimal_sks
         );
 
-
         // ===================== AMBIL JADWAL =====================
 
         $jadwal = Jadwal::with([
             'mataKuliah',
-            'kelas.prodi'
+            'kelas.prodi',
         ])
-        ->findOrFail(
-            $request->jadwal_id
-        );
-
+            ->findOrFail(
+                $request->jadwal_id
+            );
 
         // ===================== CEK PRODI =====================
 
         if (
-            !$jadwal->mataKuliah ||
+            ! $jadwal->mataKuliah ||
             $jadwal->mataKuliah->prodi_id != $mahasiswa->prodi_id
         ) {
 
@@ -287,7 +264,6 @@ class KrsController extends Controller
                 'Mata kuliah tidak sesuai dengan Program Studi Anda.'
             );
         }
-
 
         // ===================== CEK TAHUN AKADEMIK =====================
 
@@ -302,7 +278,6 @@ class KrsController extends Controller
             );
         }
 
-
         // ===================== CEK SEMESTER AKADEMIK =====================
 
         if (
@@ -316,19 +291,17 @@ class KrsController extends Controller
             );
         }
 
-
         // ===================== CEK DUPLIKAT =====================
 
         $sudahAda = Krs::where(
             'mahasiswa_id',
             $mahasiswa->id
         )
-        ->where(
-            'jadwal_id',
-            $jadwal->id
-        )
-        ->exists();
-
+            ->where(
+                'jadwal_id',
+                $jadwal->id
+            )
+            ->exists();
 
         if ($sudahAda) {
 
@@ -338,32 +311,28 @@ class KrsController extends Controller
             );
         }
 
-
         // ===================== HITUNG TOTAL SKS =====================
 
         $totalSks = Krs::where(
             'mahasiswa_id',
             $mahasiswa->id
         )
-        ->where('tahun_akademik', $periodeKrs->tahun_akademik)
-        ->where('semester_akademik', $periodeKrs->semester)
-        ->where('status', '!=', 'Ditolak')
-        ->with('jadwal.mataKuliah')
-        ->get()
-        ->sum(function ($item) {
+            ->where('tahun_akademik', $periodeKrs->tahun_akademik)
+            ->where('semester_akademik', $periodeKrs->semester)
+            ->where('status', '!=', 'Ditolak')
+            ->with('jadwal.mataKuliah')
+            ->get()
+            ->sum(function ($item) {
 
-            return $item->jadwal->mataKuliah->sks ?? 0;
+                return $item->jadwal->mataKuliah->sks ?? 0;
 
-        });
-
+            });
 
         $sksMataKuliah =
             $jadwal->mataKuliah->sks ?? 0;
 
-
         $totalSetelahAmbil =
             $totalSks + $sksMataKuliah;
-
 
         // =========================================================
         // CEK MAKSIMAL SKS BERDASARKAN IPK
@@ -376,43 +345,33 @@ class KrsController extends Controller
 
             return back()->with(
                 'error',
-                'Mata kuliah tidak dapat diambil karena total SKS melebihi batas maksimal Anda, yaitu ' .
-                $batasSks .
-                ' SKS berdasarkan IPK ' .
-                number_format($ipk, 2) .
-                '.'
+                'Mata kuliah tidak dapat diambil karena total SKS melebihi batas maksimal Anda, yaitu '.
+                $batasSks.
+                ' SKS berdasarkan ketentuan akademik dan IPK yang tersimpan.'
             );
         }
-
 
         // ===================== SIMPAN KRS =====================
 
         Krs::create([
 
-            'mahasiswa_id' =>
-                $mahasiswa->id,
+            'mahasiswa_id' => $mahasiswa->id,
 
-            'jadwal_id' =>
-                $jadwal->id,
+            'jadwal_id' => $jadwal->id,
 
             // ==============================
             // MENUNGGU PERSETUJUAN DOSEN
             // ==============================
 
-            'status' =>
-                'Menunggu',
+            'status' => 'Menunggu',
 
-            'alasan_penolakan' =>
-                null,
+            'alasan_penolakan' => null,
 
-            'tahun_akademik' =>
-                $periodeKrs->tahun_akademik,
+            'tahun_akademik' => $periodeKrs->tahun_akademik,
 
-            'semester_akademik' =>
-                $periodeKrs->semester,
+            'semester_akademik' => $periodeKrs->semester,
 
         ]);
-
 
         return redirect()
             ->route('mahasiswa.krs')
@@ -421,7 +380,6 @@ class KrsController extends Controller
                 'Mata kuliah berhasil diajukan. Menunggu persetujuan Dosen Wali.'
             );
     }
-
 
     // =========================================================
     // AJUKAN KEMBALI KRS YANG DITOLAK
@@ -436,28 +394,26 @@ class KrsController extends Controller
             Auth::id()
         )->firstOrFail();
 
-
         // ===================== CEK PERIODE KRS =====================
 
         $periodeKrs = PeriodeKrs::where(
             'status',
             'Dibuka'
         )
-        ->where(
-            'tanggal_mulai',
-            '<=',
-            now()
-        )
-        ->where(
-            'tanggal_selesai',
-            '>=',
-            now()
-        )
-        ->latest()
-        ->first();
+            ->where(
+                'tanggal_mulai',
+                '<=',
+                now()
+            )
+            ->where(
+                'tanggal_selesai',
+                '>=',
+                now()
+            )
+            ->latest()
+            ->first();
 
-
-        if (!$periodeKrs) {
+        if (! $periodeKrs) {
 
             return redirect()
                 ->route('mahasiswa.krs')
@@ -467,19 +423,17 @@ class KrsController extends Controller
                 );
         }
 
-
         // ===================== AMBIL KRS MILIK MAHASISWA =====================
 
         $krs = Krs::where(
             'id',
             $id
         )
-        ->where(
-            'mahasiswa_id',
-            $mahasiswa->id
-        )
-        ->firstOrFail();
-
+            ->where(
+                'mahasiswa_id',
+                $mahasiswa->id
+            )
+            ->firstOrFail();
 
         // ===================== CEK STATUS =====================
 
@@ -492,7 +446,6 @@ class KrsController extends Controller
                     'KRS tersebut tidak dapat diajukan kembali karena statusnya bukan Ditolak.'
                 );
         }
-
 
         // ===================== CEK TAHUN AKADEMIK =====================
 
@@ -509,7 +462,6 @@ class KrsController extends Controller
                 );
         }
 
-
         // ===================== CEK SEMESTER AKADEMIK =====================
 
         if (
@@ -525,19 +477,15 @@ class KrsController extends Controller
                 );
         }
 
-
         // ===================== AJUKAN KEMBALI =====================
 
         $krs->update([
 
-            'status' =>
-                'Menunggu',
+            'status' => 'Menunggu',
 
-            'alasan_penolakan' =>
-                null,
+            'alasan_penolakan' => null,
 
         ]);
-
 
         // ===================== REDIRECT =====================
 
@@ -548,69 +496,6 @@ class KrsController extends Controller
                 'KRS berhasil diajukan kembali. Menunggu persetujuan Dosen Wali.'
             );
     }
-
-
-    // =========================================================
-    // HITUNG IPK MAHASISWA
-    // =========================================================
-
-    private function hitungIpk(int $mahasiswaId): float
-    {
-        $khs = Khs::with([
-            'krs.jadwal.mataKuliah'
-        ])
-        ->whereHas('krs', function ($query) use ($mahasiswaId) {
-
-            $query->where(
-                'mahasiswa_id',
-                $mahasiswaId
-            );
-
-        })
-        ->get();
-
-
-        if ($khs->isEmpty()) {
-
-            return 0.00;
-        }
-
-
-        $totalSks = 0;
-        $totalMutu = 0;
-
-
-        foreach ($khs as $item) {
-
-            $sks =
-                $item->krs
-                    ->jadwal
-                    ->mataKuliah
-                    ->sks ?? 0;
-
-            $bobot =
-                $item->bobot ?? 0;
-
-
-            $totalSks += $sks;
-
-            $totalMutu +=
-                $sks * $bobot;
-        }
-
-
-        if ($totalSks <= 0) {
-
-            return 0.00;
-        }
-
-
-        return round(
-            $totalMutu / $totalSks,
-            2
-        );
-    }
-
 
     // =========================================================
     // TENTUKAN BATAS SKS BERDASARKAN IPK
@@ -624,13 +509,11 @@ class KrsController extends Controller
             return 24;
         }
 
-
         // IPK >= 3.25
         if ($ipk >= 3.25) {
 
             return 22;
         }
-
 
         // IPK < 3.25
         return 20;

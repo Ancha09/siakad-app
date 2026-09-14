@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\PeriodeKrsController;
 use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
+use App\Http\Controllers\Admin\PresensiExportController;
 use App\Http\Controllers\Admin\ProdiController;
 use App\Http\Controllers\Admin\RuanganController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
@@ -26,25 +27,26 @@ use App\Http\Controllers\Dosen\JadwalController as DosenJadwalController;
 use App\Http\Controllers\Dosen\KrsController as DosenKrsController;
 use App\Http\Controllers\Dosen\MataKuliahController as DosenMataKuliahController;
 use App\Http\Controllers\Dosen\NilaiController;
+use App\Http\Controllers\Dosen\PenelitianController as DosenPenelitianController;
 use App\Http\Controllers\Dosen\PresensiController;
 use App\Http\Controllers\Dosen\ProfileController as DosenProfileController;
-use App\Http\Controllers\Dosen\PenelitianController as DosenPenelitianController;
+use App\Http\Controllers\KurikulumViewerController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
-use App\Http\Controllers\Mahasiswa\KhsController as MahasiswaKhsController;
 // ===================== MAHASISWA =====================
 
+use App\Http\Controllers\Mahasiswa\KhsController as MahasiswaKhsController;
 use App\Http\Controllers\Mahasiswa\KrsController as MahasiswaKrsController;
 use App\Http\Controllers\Mahasiswa\KuesionerController as MahasiswaKuesionerController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\ProfileController as MahasiswaProfileController;
-use App\Http\Controllers\KurikulumViewerController;
-use App\Http\Middleware\SkripsiRole;
+use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Middleware\SkripsiRole;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (!Auth::check()) {
+    if (! Auth::check()) {
         return redirect()->route('login');
     }
 
@@ -378,9 +380,9 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::get('/presensi', [AdminPresensiController::class, 'index'])->name('admin.presensi');
 
-    Route::get('/presensi/download/excel', [AdminPresensiController::class, 'downloadExcel'])->name('admin.presensi.excel');
+    Route::get('/presensi/download/excel', [PresensiExportController::class, 'excel'])->name('admin.presensi.excel');
 
-    Route::get('/presensi/download/pdf', [AdminPresensiController::class, 'downloadPdf'])->name('admin.presensi.pdf');
+    Route::get('/presensi/download/pdf', [PresensiExportController::class, 'pdf'])->name('admin.presensi.pdf');
 
     // ===================== REKAP KUESIONER =====================
 
@@ -415,13 +417,13 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->group(function () {
 // =========================================================
 
 Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::resource('pengumuman', \App\Http\Controllers\Admin\PengumumanController::class)->except('show');
+    Route::resource('pengumuman', App\Http\Controllers\Admin\PengumumanController::class)->except('show');
 });
 
 foreach (['dosen', 'mahasiswa', 'admin'] as $role) {
     Route::middleware(['auth', SkripsiRole::class.':'.$role])->prefix($role)->name($role.'.')->group(function () {
-        Route::get('/pemberitahuan', [\App\Http\Controllers\PengumumanController::class, 'index'])->name('pemberitahuan');
-        Route::post('/pemberitahuan/{pengumuman}/baca', [\App\Http\Controllers\PengumumanController::class, 'read'])->name('pemberitahuan.baca');
+        Route::get('/pemberitahuan', [PengumumanController::class, 'index'])->name('pemberitahuan');
+        Route::post('/pemberitahuan/{pengumuman}/baca', [PengumumanController::class, 'read'])->name('pemberitahuan.baca');
     });
 }
 

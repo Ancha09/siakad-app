@@ -25,7 +25,7 @@
                 href="{{ route('admin.presensi.excel', request()->query()) }}"
                 class="btn-primary"
             >
-                📊 Download Excel
+                📊 Download Excel (.xlsx)
             </a>
 
             <a

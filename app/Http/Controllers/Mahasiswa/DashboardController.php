@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\Http\Controllers\Controller;
-use App\Models\Mahasiswa;
 use App\Models\Krs;
-use App\Models\TemplateBimbingan;
+use App\Models\Mahasiswa;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     // ===================== DASHBOARD =====================
-    public function index()
+    public function index(MahasiswaNilaiService $nilaiService)
     {
         $mahasiswa = Mahasiswa::with('prodi')
             ->where('user_id', Auth::id())
@@ -22,9 +22,11 @@ class DashboardController extends Controller
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
+            'khs',
+            'kuesioner',
         ])
-        ->where('mahasiswa_id', $mahasiswa->id)
-        ->get();
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->get();
 
         // Total SKS yang sudah disetujui
         $totalSks = $krs
@@ -50,7 +52,10 @@ class DashboardController extends Controller
             ->where('status', 'Menunggu')
             ->count();
 
-        $templateBimbingan = TemplateBimbingan::aktif();
+        $ringkasanNilai = $nilaiService->ringkasanMahasiswa($mahasiswa->id);
+        $kuesionerTertunda = $ringkasanNilai['kuesioner_tertunda'];
+        $ipkTerlihat = $ringkasanNilai['ipk_terlihat'];
+        $jumlahNilai = $ringkasanNilai['jumlah_nilai'];
 
         return view('mahasiswa.dashboard', compact(
             'mahasiswa',
@@ -59,17 +64,17 @@ class DashboardController extends Controller
             'totalSks',
             'jumlahKrs',
             'krsMenunggu',
-            'templateBimbingan'
+            'kuesionerTertunda',
+            'ipkTerlihat',
+            'jumlahNilai'
         ));
     }
-
 
     // ===================== KRS =====================
     public function krs()
     {
         return view('mahasiswa.krs');
     }
-
 
     // ===================== JADWAL =====================
     public function jadwal()
@@ -83,14 +88,14 @@ class DashboardController extends Controller
             'jadwal.dosen',
             'jadwal.ruangan',
         ])
-        ->where('mahasiswa_id', $mahasiswa->id)
-        ->where('status', 'Disetujui')
-        ->get()
-        ->map(function ($krs) {
-            return $krs->jadwal;
-        })
-        ->filter()
-        ->values();
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('status', 'Disetujui')
+            ->get()
+            ->map(function ($krs) {
+                return $krs->jadwal;
+            })
+            ->filter()
+            ->values();
 
         return view(
             'mahasiswa.jadwal.index',
@@ -101,18 +106,15 @@ class DashboardController extends Controller
         );
     }
 
-
     // ===================== KHS =====================
     public function khs()
     {
         return view('mahasiswa.khs');
     }
 
-
     // ===================== KEUANGAN =====================
     public function keuangan()
     {
         return view('mahasiswa.keuangan');
     }
-
 }

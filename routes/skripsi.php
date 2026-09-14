@@ -14,6 +14,8 @@ foreach (['mahasiswa', 'dosen', 'admin'] as $role) {
         } elseif ($role === 'dosen') {
             Route::put('/pengajuan/{pengajuan}/keputusan', [SkripsiController::class, 'decide'])->name('.decide');
         } else {
+            Route::get('/laporan/excel', [SkripsiController::class, 'adminExcel'])->name('.excel');
+            Route::get('/laporan/pdf', [SkripsiController::class, 'adminPdf'])->name('.pdf');
             Route::post('/periode', [SkripsiController::class, 'period'])->name('.periode.store');
             Route::put('/periode/{periode}', [SkripsiController::class, 'period'])->name('.periode.update');
             Route::put('/dosen/{dosen}', [SkripsiController::class, 'dosen'])->name('.dosen');

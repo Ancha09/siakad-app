@@ -1,9 +1,17 @@
 @extends('layouts.admin')
 @section('title', 'Pengelolaan Pembimbing Skripsi')
+@section('page-title', 'Pembimbing Skripsi')
+@section('page-subtitle', 'Kelola periode, pembimbing, pengajuan, dan laporan bimbingan')
 @section('content')
 <div class="skripsi">
     @include('skripsi.partials.style')
-    <div><h1>Pengelolaan Pembimbing Skripsi</h1><p class="sk-muted">Atur periode, pantau pengajuan, dan alihkan secara manual berdasarkan beban dosen.</p></div>
+    <div class="sk-page-header">
+        <div><span class="sk-eyebrow">AKADEMIK · SKRIPSI</span><h1>Pengelolaan Pembimbing Skripsi</h1><p class="sk-muted">Atur periode, pantau pengajuan, dan alihkan secara manual berdasarkan beban dosen.</p></div>
+        <div class="sk-actions">
+            <a class="sk-link sk-excel" href="{{ route('admin.skripsi.excel', request()->query()) }}">📊 Download Excel</a>
+            <a class="sk-link sk-pdf" href="{{ route('admin.skripsi.pdf', request()->query()) }}">📄 Download PDF</a>
+        </div>
+    </div>
     @include('skripsi.partials.period')
     <div class="sk-card">
         <h2>Template kartu bimbingan</h2>
@@ -12,7 +20,8 @@
             <p>Template aktif: <strong>{{ $templateBimbingan->nama_asli }}</strong> ({{ number_format($templateBimbingan->ukuran / 1024, 0, ',', '.') }} KB)</p>
             <a class="sk-link sk-secondary" href="{{ route('admin.skripsi.template.download') }}">Unduh template saat ini</a>
         @else
-            <p class="sk-muted">Belum ada template yang diunggah.</p>
+            <p class="sk-muted">Belum ada template khusus yang diunggah. Sistem menyediakan template PDF bawaan yang siap digunakan.</p>
+            <a class="sk-link sk-pdf" href="{{ route('admin.skripsi.template.download') }}">Unduh template bawaan</a>
         @endif
         <form method="POST" action="{{ route('admin.skripsi.template.store') }}" enctype="multipart/form-data" class="sk-grid">
             @csrf

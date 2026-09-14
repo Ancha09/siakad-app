@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
+use App\Models\Fakultas;
 use App\Models\Prodi;
 use App\Models\User;
 use App\Models\Mahasiswa;
@@ -16,10 +17,21 @@ class DosenController extends Controller
 
     public function index(Request $request)
     {
-        $data = $request->validate(['q' => 'nullable|string|max:100']);
+        $data = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'fakultas_id' => ['nullable', 'integer', 'exists:fakultas,id'],
+            'prodi_id' => ['nullable', 'integer', 'exists:prodis,id'],
+        ]);
+
         $search = trim($data['q'] ?? '');
+        $fakultasId = $data['fakultas_id'] ?? null;
+        $prodiId = $data['prodi_id'] ?? null;
+
+        $fakultas = Fakultas::orderBy('nama_fakultas')->get();
+        $prodis = Prodi::with('fakultas')->orderBy('nama_prodi')->get();
+
         $dosens = Dosen::with([
-            'prodi',
+            'prodi.fakultas',
         ])
         ->withCount('mahasiswaWali')
         ->when($search !== '', function ($query) use ($search) {
@@ -31,11 +43,15 @@ class DosenController extends Controller
                     ->orWhereHas('prodi', fn ($query) => $query->whereLike('nama_prodi', '%'.$search.'%'));
             });
         })
+        ->when($fakultasId, function ($query) use ($fakultasId) {
+            $query->whereHas('prodi', fn ($query) => $query->where('fakultas_id', $fakultasId));
+        })
+        ->when($prodiId, fn ($query) => $query->where('prodi_id', $prodiId))
         ->latest()
         ->paginate(10)
         ->withQueryString();
 
-        return view('admin.dosen.index', compact('dosens'));
+        return view('admin.dosen.index', compact('dosens', 'fakultas', 'prodis'));
     }
 
 

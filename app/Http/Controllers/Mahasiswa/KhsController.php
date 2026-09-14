@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Mahasiswa;
 use App\Http\Controllers\Controller;
 use App\Models\Khs;
 use App\Models\Mahasiswa;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Support\Facades\Auth;
 
 class KhsController extends Controller
@@ -13,7 +14,7 @@ class KhsController extends Controller
     // HALAMAN KHS MAHASISWA
     // =========================================================
 
-    public function index()
+    public function index(MahasiswaNilaiService $nilaiService)
     {
         // ===================== DATA MAHASISWA =====================
 
@@ -34,10 +35,8 @@ class KhsController extends Controller
         ])
             ->whereHas('krs', function ($query) use ($mahasiswa) {
 
-                $query->where(
-                    'mahasiswa_id',
-                    $mahasiswa->id
-                );
+                $query->where('mahasiswa_id', $mahasiswa->id)
+                    ->where('status', 'Disetujui');
 
             })
             ->orderByDesc('tahun_akademik')
@@ -69,32 +68,26 @@ class KhsController extends Controller
 
         });
 
-        // ===================== TOTAL MUTU =====================
-
-        $totalMutu = $khsTerlihat->sum(function ($item) {
-
-            $sks = $item->krs
-                ->jadwal
-                ->mataKuliah
-                ->sks ?? 0;
-
-            $bobot = $item->bobot ?? 0;
-
-            return $sks * $bobot;
-
-        });
-
-        // ===================== IPK =====================
-
-        $ipk = $totalSks > 0
-            ? round($totalMutu / $totalSks, 2)
-            : 0;
+        // IPK hanya dapat dilihat setelah seluruh kuesioner nilai selesai.
+        $ringkasanNilai = $nilaiService->ringkasan($khs);
+        $ipk = $ringkasanNilai['ipk_terlihat'];
+        $jumlahKuesionerTertunda = $ringkasanNilai['kuesioner_tertunda'];
 
         // ===================== IPS PER SEMESTER =====================
 
         $ipsPerSemester = [];
 
         foreach ($khsPerSemester as $semester => $data) {
+
+            $semesterTerkunci = $data->contains(function ($item) {
+                return $item->krs?->kuesioner === null;
+            });
+
+            if ($semesterTerkunci) {
+                $ipsPerSemester[$semester] = null;
+
+                continue;
+            }
 
             $dataTerlihat = $data->filter(function ($item) {
                 return $item->krs?->kuesioner !== null;
@@ -127,6 +120,15 @@ class KhsController extends Controller
                 : 0;
         }
 
+        // Jangan teruskan nilai yang terkunci ke lapisan tampilan.
+        $khs->each(function ($item) {
+            if ($item->krs?->kuesioner === null) {
+                $item->setAttribute('nilai_angka', null);
+                $item->setAttribute('nilai_huruf', null);
+                $item->setAttribute('bobot', null);
+            }
+        });
+
         // ===================== RETURN VIEW =====================
 
         return view(
@@ -137,7 +139,8 @@ class KhsController extends Controller
                 'khsPerSemester',
                 'ipsPerSemester',
                 'totalSks',
-                'ipk'
+                'ipk',
+                'jumlahKuesionerTertunda'
             )
         );
     }
