@@ -41,6 +41,15 @@ body {
   min-height: 100vh;
 }
 
+/* Semua area aplikasi memakai tautan tanpa garis bawah. */
+a,
+a:hover,
+a:focus,
+a:active,
+a:visited {
+  text-decoration: none;
+}
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 5px; }
 
@@ -611,6 +620,15 @@ tr:hover td { background: var(--gray-50); }
   font-size: 13px; font-weight: 600; cursor: pointer;
   font-family: inherit; transition: all 0.2s;
   display: inline-flex; align-items: center; gap: 7px;
+}
+
+a.btn-primary,
+a.btn-primary:hover,
+a.btn-primary:focus,
+a.btn-primary:active,
+a.btn-primary:visited {
+  color: var(--white);
+  text-decoration: none;
 }
 .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(10,31,92,0.22); }
 

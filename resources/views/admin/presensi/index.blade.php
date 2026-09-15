@@ -30,7 +30,7 @@
 
             <a
                 href="{{ route('admin.presensi.pdf', request()->query()) }}"
-                class="btn-outline"
+                class="btn-primary"
             >
                 📄 Download PDF
             </a>

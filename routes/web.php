@@ -165,6 +165,8 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
 
     Route::get('/khs', [MahasiswaKhsController::class, 'index'])->name('mahasiswa.khs');
 
+    Route::get('/khs/transkrip/pdf', [MahasiswaKhsController::class, 'transkripPdf'])->name('mahasiswa.transkrip.pdf');
+
     // ===================== KUESIONER EVALUASI DOSEN =====================
 
     Route::get('/kuesioner', [MahasiswaKuesionerController::class, 'index'])->name('mahasiswa.kuesioner');

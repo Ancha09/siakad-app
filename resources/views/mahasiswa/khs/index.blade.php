@@ -23,6 +23,12 @@
 
     <div class="page-card-body">
 
+        <div style="display:flex;justify-content:flex-end;margin-bottom:18px;">
+            <a href="{{ route('mahasiswa.transkrip.pdf') }}" class="btn-primary">
+                Download Transkrip PDF
+            </a>
+        </div>
+
         @if(session('success'))
             <div style="background:#dcfce7;color:#166534;padding:13px 16px;border-radius:10px;margin-bottom:18px;">
                 {{ session('success') }}
