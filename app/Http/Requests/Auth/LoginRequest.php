@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Auth;
 
 use Illuminate\Auth\Events\Lockout;
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -40,6 +39,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt([
             'login' => $this->login,
+            'is_active' => true,
             'password' => $this->password,
         ], $this->boolean('remember'))) {
 
@@ -80,7 +80,7 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(
-            Str::lower($this->string('login')) . '|' . $this->ip()
+            Str::lower($this->string('login')).'|'.$this->ip()
         );
     }
 }

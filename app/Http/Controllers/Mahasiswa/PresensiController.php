@@ -25,6 +25,8 @@ class PresensiController extends Controller
 
         $krs = Krs::with([
             'jadwal.mataKuliah',
+            'mataKuliahManual',
+            'dosenManual',
             'jadwal.dosen',
             'jadwal.ruangan',
             'jadwal.kelas',
@@ -86,7 +88,7 @@ class PresensiController extends Controller
                 'persentase' => $persentase,
                 'riwayat' => $riwayat->concat($presensiTanpaSesi)->sortBy('pertemuan')->values(),
             ];
-        })->filter(fn ($item) => $item->jadwal && $item->jadwal->mataKuliah)->values();
+        })->filter(fn ($item) => $item->krs->mata_kuliah_efektif !== null)->values();
 
         $totalHadir = $mataKuliahs->sum('hadir');
         $totalIzin = $mataKuliahs->sum('izin');

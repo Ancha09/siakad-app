@@ -5,12 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\Fakultas;
+use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use App\Models\User;
-use App\Models\Mahasiswa;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class DosenController extends Controller
@@ -35,27 +36,26 @@ class DosenController extends Controller
         $dosens = Dosen::with([
             'prodi.fakultas',
         ])
-        ->withCount('mahasiswaWali')
-        ->when($search !== '', function ($query) use ($search) {
-            $query->where(function ($query) use ($search) {
-                $query->whereLike('nidn', '%'.$search.'%')
-                    ->orWhereLike('nama', '%'.$search.'%')
-                    ->orWhereLike('email', '%'.$search.'%')
-                    ->orWhereLike('jabatan', '%'.$search.'%')
-                    ->orWhereHas('prodi', fn ($query) => $query->whereLike('nama_prodi', '%'.$search.'%'));
-            });
-        })
-        ->when($fakultasId, function ($query) use ($fakultasId) {
-            $query->whereHas('prodi', fn ($query) => $query->where('fakultas_id', $fakultasId));
-        })
-        ->when($prodiId, fn ($query) => $query->where('prodi_id', $prodiId))
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+            ->withCount('mahasiswaWali')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->whereLike('nidn', '%'.$search.'%')
+                        ->orWhereLike('nama', '%'.$search.'%')
+                        ->orWhereLike('email', '%'.$search.'%')
+                        ->orWhereLike('jabatan', '%'.$search.'%')
+                        ->orWhereHas('prodi', fn ($query) => $query->whereLike('nama_prodi', '%'.$search.'%'));
+                });
+            })
+            ->when($fakultasId, function ($query) use ($fakultasId) {
+                $query->whereHas('prodi', fn ($query) => $query->where('fakultas_id', $fakultasId));
+            })
+            ->when($prodiId, fn ($query) => $query->where('prodi_id', $prodiId))
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return view('admin.dosen.index', compact('dosens', 'fakultas', 'prodis'));
     }
-
 
     // ================= CREATE =================
 
@@ -65,7 +65,6 @@ class DosenController extends Controller
 
         return view('admin.dosen.create', compact('prodis'));
     }
-
 
     // ================= STORE =================
 
@@ -92,6 +91,7 @@ class DosenController extends Controller
                     'login' => $data['nidn'],
                     'email' => $data['email'] ?? null,
                     'role' => 'dosen',
+                    'is_active' => true,
                     'password' => Hash::make($data['password']),
                 ]);
 
@@ -105,6 +105,7 @@ class DosenController extends Controller
                     'golongan' => $data['golongan'] ?? null,
                     'prodi_id' => $data['prodi_id'],
                     'user_id' => $user->id,
+                    'is_active' => true,
                 ]);
             });
         } catch (Throwable $exception) {
@@ -119,7 +120,6 @@ class DosenController extends Controller
             ->route('admin.dosen')
             ->with('success', 'Data dosen berhasil ditambahkan.');
     }
-
 
     // ================= EDIT =================
 
@@ -139,93 +139,52 @@ class DosenController extends Controller
         ));
     }
 
-
     // ================= UPDATE =================
 
     public function update(Request $request, Dosen $dosen)
     {
-        $request->validate([
-            'nidn'      => 'required|unique:dosens,nidn,' . $dosen->id,
-            'nama'      => 'required',
-            'email'     => 'nullable|email',
-            'telepon'   => 'nullable',
-            'jabatan'   => 'nullable',
-            'golongan'  => 'nullable',
-            'prodi_id'  => 'required|exists:prodis,id',
-            'password'  => 'nullable|min:8|confirmed',
-            'mahasiswa_wali' => 'nullable|array',
-            'mahasiswa_wali.*' => 'exists:mahasiswas,id',
+        $data = $request->validate([
+            'nidn' => ['required', 'string', 'max:255', Rule::unique('dosens', 'nidn')->ignore($dosen->id), Rule::unique('users', 'login')->ignore($dosen->user_id)],
+            'nama' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($dosen->user_id)],
+            'telepon' => ['nullable', 'string', 'max:255'],
+            'jabatan' => ['nullable', 'string', 'max:255'],
+            'golongan' => ['nullable', 'string', 'max:255'],
+            'prodi_id' => ['required', 'integer', 'exists:prodis,id'],
+            'is_active' => ['nullable', 'boolean'],
+            'password' => [Rule::requiredIf($dosen->user_id === null), 'nullable', 'string', 'min:8', 'confirmed'],
+            'mahasiswa_wali' => ['nullable', 'array'],
+            'mahasiswa_wali.*' => ['integer', 'exists:mahasiswas,id'],
         ]);
 
-
-        // Update data dosen
-        $dosen->update([
-            'nidn'      => $request->nidn,
-            'nama'      => $request->nama,
-            'email'     => $request->email,
-            'telepon'   => $request->telepon,
-            'jabatan'   => $request->jabatan,
-            'golongan'  => $request->golongan,
-            'prodi_id'  => $request->prodi_id,
-        ]);
-
-
-        // Update akun login dosen
-        if ($dosen->user) {
-
-            $dosen->user->name  = $request->nama;
-            $dosen->user->login = $request->nidn;
-            $dosen->user->email = $request->email;
-
-            if ($request->filled('password')) {
-                $dosen->user->password = Hash::make(
-                    $request->password
-                );
+        DB::transaction(function () use ($data, $dosen, $request) {
+            $active = array_key_exists('is_active', $data) ? $request->boolean('is_active') : $dosen->is_active;
+            $userData = [
+                'name' => $data['nama'], 'login' => $data['nidn'], 'email' => $data['email'] ?? null,
+                'role' => 'dosen', 'is_active' => $active,
+            ];
+            if (! empty($data['password'])) {
+                $userData['password'] = Hash::make($data['password']);
             }
 
-            $dosen->user->save();
-        }
+            $user = $dosen->user;
+            if ($user) {
+                $user->update($userData);
+            } else {
+                $user = User::create($userData);
+            }
 
-
-        /*
-        |--------------------------------------------------------------------------
-        | ATUR DOSEN WALI
-        |--------------------------------------------------------------------------
-        |
-        | Mahasiswa yang dicentang akan mendapatkan dosen ini
-        | sebagai dosen wali.
-        |
-        | Mahasiswa yang sebelumnya menjadi wali dosen ini tetapi
-        | tidak dicentang lagi akan dilepas dari dosen tersebut.
-        |
-        */
-
-        // Lepaskan mahasiswa yang sebelumnya menjadi wali dosen ini
-        Mahasiswa::where('dosen_wali_id', $dosen->id)
-            ->update([
-                'dosen_wali_id' => null
+            $dosen->update([
+                ...collect($data)->except(['password', 'mahasiswa_wali', 'is_active'])->all(),
+                'user_id' => $user->id,
+                'is_active' => $active,
             ]);
 
-
-        // Ambil mahasiswa yang dipilih
-        $mahasiswaWali = $request->input(
-            'mahasiswa_wali',
-            []
-        );
-
-
-        // Tetapkan dosen sebagai wali
-        if (!empty($mahasiswaWali)) {
-
-            Mahasiswa::whereIn(
-                'id',
-                $mahasiswaWali
-            )
-            ->update([
-                'dosen_wali_id' => $dosen->id
-            ]);
-        }
-
+            Mahasiswa::where('dosen_wali_id', $dosen->id)->update(['dosen_wali_id' => null]);
+            if (! empty($data['mahasiswa_wali'])) {
+                Mahasiswa::whereIn('id', $data['mahasiswa_wali'])->update(['dosen_wali_id' => $dosen->id]);
+            }
+        });
 
         return redirect()
             ->route('admin.dosen')
@@ -235,35 +194,15 @@ class DosenController extends Controller
             );
     }
 
-
     // ================= DELETE =================
 
     public function destroy(Dosen $dosen)
     {
-        // Lepaskan mahasiswa wali terlebih dahulu
-        Mahasiswa::where(
-            'dosen_wali_id',
-            $dosen->id
-        )->update([
-            'dosen_wali_id' => null
-        ]);
+        DB::transaction(function () use ($dosen) {
+            $dosen->forceFill(['is_active' => false, 'skripsi_aktif' => false])->save();
+            $dosen->user?->update(['is_active' => false]);
+        });
 
-
-        // Hapus akun user
-        if ($dosen->user) {
-            $dosen->user->delete();
-        }
-
-
-        // Hapus data dosen
-        $dosen->delete();
-
-
-        return redirect()
-            ->route('admin.dosen')
-            ->with(
-                'success',
-                'Data dosen berhasil dihapus.'
-            );
+        return redirect()->route('admin.dosen')->with('success', 'Dosen dinonaktifkan tanpa menghapus jadwal atau riwayat akademik.');
     }
 }

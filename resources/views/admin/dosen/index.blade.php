@@ -95,10 +95,10 @@
                             <td>{{ $dosen->prodi?->nama_prodi ?? '-' }}</td>
                             <td>{{ $dosen->jabatan ?? '-' }}</td>
                             <td>
-                                @if(($dosen->status ?? 'Tetap') === 'Tetap')
-                                    <span class="badge badge-green">Tetap</span>
+                                @if($dosen->is_active)
+                                    <span class="badge badge-green">Aktif</span>
                                 @else
-                                    <span class="badge badge-gold">{{ $dosen->status }}</span>
+                                    <span class="badge badge-gold">Nonaktif</span>
                                 @endif
                             </td>
                             <td>
@@ -109,8 +109,9 @@
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn-delete"
-                                                onclick="return confirm('Yakin ingin menghapus data dosen ini?')">
-                                            🗑 Hapus
+                                                @disabled(! $dosen->is_active)
+                                                onclick="return confirm('Nonaktifkan dosen ini? Akun tidak dapat login, tetapi riwayat akademik tetap tersimpan.')">
+                                            Nonaktifkan
                                         </button>
                                     </form>
                                 </div>

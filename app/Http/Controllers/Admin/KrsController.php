@@ -3,13 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Dosen;
+use App\Models\Fakultas;
+use App\Models\Jadwal;
+use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
-use App\Models\Jadwal;
-use App\Models\Fakultas;
 use App\Models\Prodi;
-use App\Models\Kelas;
-use App\Models\Dosen;
 use Illuminate\Http\Request;
 
 class KrsController extends Controller
@@ -23,39 +23,34 @@ class KrsController extends Controller
         $fakultas = Fakultas::orderBy('nama_fakultas')
             ->get();
 
-
         // ===================== DATA PRODI =====================
 
         $prodis = Prodi::with('fakultas')
             ->orderBy('nama_prodi')
             ->get();
 
-
         // ===================== DATA KELAS =====================
 
         $kelases = Kelas::with([
-            'prodi.fakultas'
+            'prodi.fakultas',
         ])
             ->orderBy('angkatan', 'desc')
             ->orderBy('nama_kelas')
             ->get();
-
 
         // ===================== DATA DOSEN =====================
 
         $dosens = Dosen::orderBy('nama')
             ->get();
 
-
         // ===================== DATA MAHASISWA =====================
 
         $mahasiswas = Mahasiswa::with([
             'prodi.fakultas',
-            'kelas'
+            'kelas',
         ])
             ->orderBy('nama')
             ->get();
-
 
         // ===================== QUERY KRS =====================
 
@@ -65,9 +60,8 @@ class KrsController extends Controller
             'jadwal.mataKuliah.prodi.fakultas',
             'jadwal.dosen',
             'jadwal.ruangan',
-            'jadwal.kelas.prodi.fakultas'
-        ]);
-
+            'jadwal.kelas.prodi.fakultas',
+        ])->where('is_manual', false);
 
         // ===================== SEARCH =====================
 
@@ -80,30 +74,29 @@ class KrsController extends Controller
                 // Cari mahasiswa
                 $q->whereHas('mahasiswa', function ($mhs) use ($search) {
 
-                    $mhs->whereLike('nim', '%' . $search . '%')
-                        ->orWhereLike('nama', '%' . $search . '%');
+                    $mhs->whereLike('nim', '%'.$search.'%')
+                        ->orWhereLike('nama', '%'.$search.'%');
 
                 })
 
                 // Cari mata kuliah
-                ->orWhereHas('jadwal.mataKuliah', function ($mk) use ($search) {
+                    ->orWhereHas('jadwal.mataKuliah', function ($mk) use ($search) {
 
-                    $mk->whereLike('kode_mk', '%' . $search . '%')
-                       ->orWhereLike('nama_mk', '%' . $search . '%');
+                        $mk->whereLike('kode_mk', '%'.$search.'%')
+                            ->orWhereLike('nama_mk', '%'.$search.'%');
 
-                })
+                    })
 
                 // Cari dosen
-                ->orWhereHas('jadwal.dosen', function ($dosen) use ($search) {
+                    ->orWhereHas('jadwal.dosen', function ($dosen) use ($search) {
 
-                    $dosen->whereLike('nama', '%' . $search . '%'
-                    );
+                        $dosen->whereLike('nama', '%'.$search.'%'
+                        );
 
-                });
+                    });
 
             });
         }
-
 
         // ===================== FILTER FAKULTAS =====================
 
@@ -119,7 +112,6 @@ class KrsController extends Controller
             });
         }
 
-
         // ===================== FILTER PRODI =====================
 
         if ($request->filled('prodi_id')) {
@@ -133,7 +125,6 @@ class KrsController extends Controller
 
             });
         }
-
 
         // ===================== FILTER KELAS =====================
 
@@ -149,7 +140,6 @@ class KrsController extends Controller
             });
         }
 
-
         // ===================== FILTER ANGKATAN =====================
 
         if ($request->filled('angkatan')) {
@@ -163,7 +153,6 @@ class KrsController extends Controller
 
             });
         }
-
 
         // ===================== FILTER DOSEN =====================
 
@@ -179,7 +168,6 @@ class KrsController extends Controller
             });
         }
 
-
         // ===================== FILTER MAHASISWA =====================
 
         if ($request->filled('mahasiswa_id')) {
@@ -189,7 +177,6 @@ class KrsController extends Controller
                 $request->mahasiswa_id
             );
         }
-
 
         // ===================== FILTER STATUS =====================
 
@@ -201,7 +188,6 @@ class KrsController extends Controller
             );
         }
 
-
         // ===================== FILTER SEMESTER AKADEMIK =====================
 
         if ($request->filled('semester_akademik')) {
@@ -211,7 +197,6 @@ class KrsController extends Controller
                 $request->semester_akademik
             );
         }
-
 
         // ===================== FILTER TAHUN AKADEMIK =====================
 
@@ -223,14 +208,12 @@ class KrsController extends Controller
             );
         }
 
-
         // ===================== HASIL =====================
 
         $krs = $query
             ->latest()
             ->paginate(10)
             ->withQueryString();
-
 
         // ===================== TAHUN AKADEMIK =====================
 
@@ -240,7 +223,6 @@ class KrsController extends Controller
             ->orderBy('tahun_akademik', 'desc')
             ->pluck('tahun_akademik');
 
-
         // ===================== ANGKATAN =====================
 
         $angkatans = Kelas::select('angkatan')
@@ -248,7 +230,6 @@ class KrsController extends Controller
             ->distinct()
             ->orderBy('angkatan', 'desc')
             ->pluck('angkatan');
-
 
         // ===================== RETURN VIEW =====================
 
@@ -267,29 +248,26 @@ class KrsController extends Controller
         );
     }
 
-
     // ===================== CREATE =====================
 
     public function create()
     {
         $mahasiswas = Mahasiswa::with([
             'prodi',
-            'kelas'
+            'kelas',
         ])
             ->orderBy('nama')
             ->get();
-
 
         $jadwals = Jadwal::with([
             'mataKuliah',
             'dosen',
             'ruangan',
-            'kelas.prodi'
+            'kelas.prodi',
         ])
             ->orderBy('hari')
             ->orderBy('jam_mulai')
             ->get();
-
 
         return view(
             'admin.krs.create',
@@ -300,19 +278,17 @@ class KrsController extends Controller
         );
     }
 
-
     // ===================== STORE =====================
 
     public function store(Request $request)
     {
         $request->validate([
-            'mahasiswa_id'      => 'required|exists:mahasiswas,id',
-            'jadwal_id'         => 'required|exists:jadwals,id',
-            'status'            => 'required|in:Diambil,Disetujui,Ditolak',
-            'tahun_akademik'    => 'required',
+            'mahasiswa_id' => 'required|exists:mahasiswas,id',
+            'jadwal_id' => 'required|exists:jadwals,id',
+            'status' => 'required|in:Diambil,Disetujui,Ditolak',
+            'tahun_akademik' => 'required',
             'semester_akademik' => 'required|in:Ganjil,Genap',
         ]);
-
 
         // Cek duplikasi
 
@@ -326,26 +302,22 @@ class KrsController extends Controller
             )
             ->first();
 
-
         if ($cek) {
 
             return back()
                 ->withInput()
                 ->withErrors([
-                    'jadwal_id' =>
-                        'Mahasiswa sudah mengambil jadwal ini.'
+                    'jadwal_id' => 'Mahasiswa sudah mengambil jadwal ini.',
                 ]);
         }
 
-
         Krs::create([
-            'mahasiswa_id'      => $request->mahasiswa_id,
-            'jadwal_id'         => $request->jadwal_id,
-            'status'             => $request->status,
-            'tahun_akademik'     => $request->tahun_akademik,
+            'mahasiswa_id' => $request->mahasiswa_id,
+            'jadwal_id' => $request->jadwal_id,
+            'status' => $request->status,
+            'tahun_akademik' => $request->tahun_akademik,
             'semester_akademik' => $request->semester_akademik,
         ]);
-
 
         return redirect()
             ->route('admin.krs')
@@ -355,40 +327,37 @@ class KrsController extends Controller
             );
     }
 
-
     // ===================== EDIT =====================
 
     public function edit(Krs $kr)
     {
+        abort_if($kr->is_manual, 404);
         $mahasiswas = Mahasiswa::with([
             'prodi',
-            'kelas'
+            'kelas',
         ])
             ->orderBy('nama')
             ->get();
-
 
         $jadwals = Jadwal::with([
             'mataKuliah',
             'dosen',
             'ruangan',
-            'kelas.prodi'
+            'kelas.prodi',
         ])
             ->orderBy('hari')
             ->orderBy('jam_mulai')
             ->get();
 
-
         return view(
             'admin.krs.edit',
             [
-                'krs'        => $kr,
+                'krs' => $kr,
                 'mahasiswas' => $mahasiswas,
-                'jadwals'    => $jadwals,
+                'jadwals' => $jadwals,
             ]
         );
     }
-
 
     // ===================== UPDATE =====================
 
@@ -397,14 +366,15 @@ class KrsController extends Controller
         Krs $kr
     ) {
 
+        abort_if($kr->is_manual, 404);
+
         $request->validate([
-            'mahasiswa_id'      => 'required|exists:mahasiswas,id',
-            'jadwal_id'         => 'required|exists:jadwals,id',
-            'status'            => 'required|in:Diambil,Disetujui,Ditolak',
-            'tahun_akademik'    => 'required',
+            'mahasiswa_id' => 'required|exists:mahasiswas,id',
+            'jadwal_id' => 'required|exists:jadwals,id',
+            'status' => 'required|in:Diambil,Disetujui,Ditolak',
+            'tahun_akademik' => 'required',
             'semester_akademik' => 'required|in:Ganjil,Genap',
         ]);
-
 
         // Cek duplikasi
 
@@ -423,26 +393,22 @@ class KrsController extends Controller
             )
             ->first();
 
-
         if ($cek) {
 
             return back()
                 ->withInput()
                 ->withErrors([
-                    'jadwal_id' =>
-                        'Mahasiswa sudah mengambil jadwal ini.'
+                    'jadwal_id' => 'Mahasiswa sudah mengambil jadwal ini.',
                 ]);
         }
 
-
         $kr->update([
-            'mahasiswa_id'      => $request->mahasiswa_id,
-            'jadwal_id'         => $request->jadwal_id,
-            'status'            => $request->status,
-            'tahun_akademik'    => $request->tahun_akademik,
+            'mahasiswa_id' => $request->mahasiswa_id,
+            'jadwal_id' => $request->jadwal_id,
+            'status' => $request->status,
+            'tahun_akademik' => $request->tahun_akademik,
             'semester_akademik' => $request->semester_akademik,
         ]);
-
 
         return redirect()
             ->route('admin.krs')
@@ -452,11 +418,11 @@ class KrsController extends Controller
             );
     }
 
-
     // ===================== DELETE =====================
 
     public function destroy(Krs $kr)
     {
+        abort_if($kr->is_manual, 404);
         $kr->delete();
 
         return redirect()

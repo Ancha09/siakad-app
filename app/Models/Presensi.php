@@ -16,8 +16,17 @@ class Presensi extends Model
         'keterangan',
         'foto',
         'materi',
+        'is_manual',
+        'manual_identity',
     ];
 
+    protected function casts(): array
+    {
+        return [
+            'tanggal' => 'date',
+            'is_manual' => 'boolean',
+        ];
+    }
 
     // ===================== RELASI KRS =====================
 

@@ -34,7 +34,13 @@ class Mahasiswa extends Model
         'kelas_id',
         'dosen_wali_id',
         'user_id',
+        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
 
     // ===================== RELASI PROGRAM STUDI =====================
 

@@ -25,6 +25,12 @@
     .student-attendance .empty-state { padding:48px 18px; text-align:center; color:#64748b; }
     .student-attendance .empty-state strong { display:block; margin-bottom:6px; color:#334155; font-size:15px; }
     .student-attendance .note { margin-top:8px; color:#64748b; font-size:11px; }
+    .student-attendance .attendance-progress { display:block; width:100%; height:7px; margin:4px 0; border:0; border-radius:10px; overflow:hidden; appearance:none; background:var(--gray-200); }
+    .student-attendance .attendance-progress::-webkit-progress-bar { background:var(--gray-200); border-radius:10px; }
+    .student-attendance .attendance-progress::-webkit-progress-value { background:linear-gradient(90deg,#16a34a,#4ade80); border-radius:10px; }
+    .student-attendance .attendance-progress::-moz-progress-bar { background:linear-gradient(90deg,#16a34a,#4ade80); border-radius:10px; }
+    .student-attendance .attendance-progress-low::-webkit-progress-value { background:linear-gradient(90deg,#dc2626,#f97316); }
+    .student-attendance .attendance-progress-low::-moz-progress-bar { background:linear-gradient(90deg,#dc2626,#f97316); }
     @media(max-width:800px) {
         .student-attendance .attendance-counts { grid-template-columns:repeat(3,1fr); }
         .student-attendance .attendance-toolbar { align-items:stretch; flex-direction:column; }
@@ -75,7 +81,7 @@
 
     @forelse($mataKuliahs as $item)
         @php
-            $mk = $item->jadwal->mataKuliah;
+            $mk = $item->krs->mata_kuliah_efektif;
             $percentage = $item->persentase ?? 0;
         @endphp
         <section class="page-card course-card">
@@ -85,8 +91,8 @@
                         <span class="course-code">{{ $mk->kode_mk }}</span>
                         <h2>{{ $mk->nama_mk }}</h2>
                         <div class="course-meta">
-                            {{ $mk->sks }} SKS · {{ $item->jadwal->dosen->nama ?? 'Dosen belum ditentukan' }}<br>
-                            {{ $item->jadwal->hari ?? '-' }}, {{ $item->jadwal->jam_mulai ? substr($item->jadwal->jam_mulai, 0, 5) : '-' }}–{{ $item->jadwal->jam_selesai ? substr($item->jadwal->jam_selesai, 0, 5) : '-' }}
+                            {{ $mk->sks }} SKS · {{ $item->krs->dosen_efektif?->nama ?? 'Dosen belum ditentukan' }}<br>
+                            {{ $item->jadwal?->hari ?? 'Jadwal historis' }}, {{ $item->jadwal?->jam_mulai ? substr($item->jadwal->jam_mulai, 0, 5) : '-' }}–{{ $item->jadwal?->jam_selesai ? substr($item->jadwal->jam_selesai, 0, 5) : '-' }}
                             · {{ $item->krs->tahun_akademik ?? $item->jadwal->tahun_akademik ?? '-' }} {{ $item->krs->semester_akademik ?? $item->jadwal->semester_akademik ?? '' }}
                         </div>
                     </div>
@@ -105,9 +111,11 @@
                     <div class="count-box"><strong>{{ $item->total }}</strong><span>Total Tercatat</span></div>
                 </div>
 
-                <div class="progress-bar" aria-label="Persentase kehadiran {{ number_format($percentage, 1) }} persen">
-                    <div class="progress-fill" style="width:{{ min(100, max(0, $percentage)) }}%;{{ $percentage < 75 ? 'background:linear-gradient(90deg,#dc2626,#f97316);' : 'background:linear-gradient(90deg,#16a34a,#4ade80);' }}"></div>
-                </div>
+                <progress class="attendance-progress {{ $percentage < 75 ? 'attendance-progress-low' : '' }}"
+                          value="{{ min(100, max(0, $percentage)) }}" max="100"
+                          aria-label="Persentase kehadiran {{ number_format($percentage, 1) }} persen">
+                    {{ number_format($percentage, 1) }}%
+                </progress>
                 <div class="note">
                     @if($item->persentase === null)
                         Dosen belum mencatat presensi pada mata kuliah ini.

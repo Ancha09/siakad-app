@@ -13,9 +13,21 @@ class Khs extends Model
         'nilai_angka',
         'nilai_huruf',
         'bobot',
+        'sks',
         'tahun_akademik',
         'semester_akademik',
+        'is_manual',
     ];
+
+    protected function casts(): array
+    {
+        return ['is_manual' => 'boolean'];
+    }
+
+    public function getSksEfektifAttribute(): int
+    {
+        return (int) ($this->sks ?? $this->krs?->mata_kuliah_efektif?->sks ?? 0);
+    }
 
     public function krs()
     {

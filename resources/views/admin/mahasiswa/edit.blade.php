@@ -253,6 +253,15 @@
 
                 </div>
 
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="hidden" name="is_active" value="0">
+                        <input type="checkbox" name="is_active" value="1" @checked(old('is_active', $mahasiswa->is_active))>
+                        Akun dan data mahasiswa aktif
+                    </label>
+                    <small>Nonaktifkan untuk menutup akses login tanpa menghapus riwayat akademik.</small>
+                </div>
+
             </div>
 
 

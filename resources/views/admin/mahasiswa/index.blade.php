@@ -370,6 +370,7 @@
                     <tr>
 
                         <th>NO</th>
+                        <th>STATUS</th>
                         <th>NIM</th>
                         <th>NAMA MAHASISWA</th>
 
@@ -405,6 +406,14 @@
                                     )
                                 }}
 
+                            </td>
+
+                            <td>
+                                @if($mahasiswa->is_active)
+                                    <span class="badge badge-green">Aktif</span>
+                                @else
+                                    <span class="badge badge-gold">Nonaktif</span>
+                                @endif
                             </td>
 
 
@@ -616,7 +625,7 @@
                                     <form
                                         action="{{ route('admin.mahasiswa.destroy', $mahasiswa->id) }}"
                                         method="POST"
-                                        onsubmit="return confirm('Yakin ingin menghapus mahasiswa ini?')"
+                                        onsubmit="return confirm('Nonaktifkan mahasiswa ini? Akun tidak dapat login, tetapi riwayat akademik tetap tersimpan.')"
                                     >
 
                                         @csrf
@@ -624,6 +633,7 @@
 
                                         <button
                                             type="submit"
+                                            @disabled(! $mahasiswa->is_active)
                                             class="btn-outline"
                                             style="
                                                 padding:6px 10px;
@@ -632,7 +642,7 @@
                                                 cursor:pointer;
                                             "
                                         >
-                                            🗑 Hapus
+                                            Nonaktifkan
                                         </button>
 
                                     </form>
@@ -648,7 +658,7 @@
                         <tr>
 
                             <td
-                                colspan="10"
+                                colspan="11"
                                 style="
                                     text-align:center;
                                     padding:50px 20px;

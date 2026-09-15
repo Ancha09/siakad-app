@@ -77,6 +77,7 @@ class KrsController extends Controller
             'jadwal.kelas.prodi',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('is_manual', false)
             ->get();
 
         // ===================== KRS PADA PERIODE AKTIF =====================
@@ -433,6 +434,7 @@ class KrsController extends Controller
                 'mahasiswa_id',
                 $mahasiswa->id
             )
+            ->where('is_manual', false)
             ->firstOrFail();
 
         // ===================== CEK STATUS =====================

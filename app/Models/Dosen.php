@@ -26,7 +26,13 @@ class Dosen extends Model
         'golongan',
         'prodi_id',
         'user_id',
+        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
 
     // Relasi ke Program Studi
     public function prodi()

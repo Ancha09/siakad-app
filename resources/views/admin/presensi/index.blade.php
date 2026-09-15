@@ -468,22 +468,22 @@
 
 
                                 <td>
-                                    {{ $item->krs->mahasiswa->prodi->nama_prodi ?? '-' }}
+                                    {{ $item->krs?->prodi_efektif?->nama_prodi ?? '-' }}
                                 </td>
 
 
                                 <td>
-                                    {{ $item->krs->mahasiswa->kelas->nama_kelas ?? '-' }}
+                                    {{ $item->krs?->kelas_efektif?->nama_kelas ?? '-' }}
                                 </td>
 
 
                                 <td>
-                                    {{ $item->krs->jadwal->mataKuliah->nama_mk ?? '-' }}
+                                    {{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}
                                 </td>
 
 
                                 <td>
-                                    {{ $item->krs->jadwal->dosen->nama ?? '-' }}
+                                    {{ $item->krs?->dosen_efektif?->nama ?? '-' }}
                                 </td>
 
 

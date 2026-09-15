@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Dosen;
+use App\Models\Fakultas;
+use App\Models\Kelas;
 use App\Models\Khs;
 use App\Models\Krs;
-use App\Models\Fakultas;
 use App\Models\Prodi;
-use App\Models\Dosen;
-use App\Models\Kelas;
 use Illuminate\Http\Request;
 
 class KhsController extends Controller
@@ -32,12 +32,11 @@ class KhsController extends Controller
             ->get();
 
         $kelases = Kelas::with([
-            'prodi.fakultas'
+            'prodi.fakultas',
         ])
-        ->orderBy('angkatan', 'desc')
-        ->orderBy('nama_kelas')
-        ->get();
-
+            ->orderBy('angkatan', 'desc')
+            ->orderBy('nama_kelas')
+            ->get();
 
         // ===================== DATA ANGKATAN =====================
 
@@ -47,17 +46,18 @@ class KhsController extends Controller
             ->orderBy('angkatan', 'desc')
             ->pluck('angkatan');
 
-
         // ===================== QUERY KHS =====================
 
         $query = Khs::with([
             'krs.mahasiswa.prodi',
             'krs.mahasiswa.kelas.prodi.fakultas',
             'krs.jadwal.mataKuliah.prodi.fakultas',
+            'krs.mataKuliahManual.prodi.fakultas',
+            'krs.dosenManual',
+            'krs.prodiManual',
             'krs.jadwal.dosen',
             'krs.jadwal.ruangan',
         ]);
-
 
         // =====================================================
         // SEARCH
@@ -76,41 +76,42 @@ class KhsController extends Controller
                     function ($mahasiswa) use ($search) {
 
                         $mahasiswa
-                            ->whereLike('nim', '%' . $search . '%'
+                            ->whereLike('nim', '%'.$search.'%'
                             )
-                            ->orWhereLike('nama', '%' . $search . '%'
+                            ->orWhereLike('nama', '%'.$search.'%'
                             );
                     }
                 )
 
                 // ===================== MATA KULIAH =====================
+                    ->orWhereHas(
+                        'krs.jadwal.mataKuliah',
+                        function ($mk) use ($search) {
 
-                ->orWhereHas(
-                    'krs.jadwal.mataKuliah',
-                    function ($mk) use ($search) {
-
-                        $mk
-                            ->whereLike('kode_mk', '%' . $search . '%'
-                            )
-                            ->orWhereLike('nama_mk', '%' . $search . '%'
-                            );
-                    }
-                )
+                            $mk
+                                ->whereLike('kode_mk', '%'.$search.'%'
+                                )
+                                ->orWhereLike('nama_mk', '%'.$search.'%'
+                                );
+                        }
+                    )
+                    ->orWhereHas('krs.mataKuliahManual', function ($mk) use ($search) {
+                        $mk->whereLike('kode_mk', '%'.$search.'%')->orWhereLike('nama_mk', '%'.$search.'%');
+                    })
+                    ->orWhereHas('krs.dosenManual', fn ($dosen) => $dosen->whereLike('nama', '%'.$search.'%'))
 
                 // ===================== DOSEN =====================
+                    ->orWhereHas(
+                        'krs.jadwal.dosen',
+                        function ($dosen) use ($search) {
 
-                ->orWhereHas(
-                    'krs.jadwal.dosen',
-                    function ($dosen) use ($search) {
-
-                        $dosen->whereLike('nama', '%' . $search . '%'
-                        );
-                    }
-                );
+                            $dosen->whereLike('nama', '%'.$search.'%'
+                            );
+                        }
+                    );
 
             });
         }
-
 
         // =====================================================
         // FILTER FAKULTAS
@@ -130,25 +131,16 @@ class KhsController extends Controller
             );
         }
 
-
         // =====================================================
         // FILTER PROGRAM STUDI
         // =====================================================
 
         if ($request->filled('prodi_id')) {
 
-            $query->whereHas(
-                'krs.mahasiswa',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'prodi_id',
-                        $request->prodi_id
-                    );
-                }
-            );
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('prodi_id', $request->prodi_id)
+                ->orWhereHas('mahasiswa', fn ($mahasiswa) => $mahasiswa->where('prodi_id', $request->prodi_id)));
         }
-
 
         // =====================================================
         // FILTER KELAS
@@ -168,7 +160,6 @@ class KhsController extends Controller
             );
         }
 
-
         // =====================================================
         // FILTER ANGKATAN
         // =====================================================
@@ -187,25 +178,16 @@ class KhsController extends Controller
             );
         }
 
-
         // =====================================================
         // FILTER DOSEN
         // =====================================================
 
         if ($request->filled('dosen_id')) {
 
-            $query->whereHas(
-                'krs.jadwal',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'dosen_id',
-                        $request->dosen_id
-                    );
-                }
-            );
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('dosen_id', $request->dosen_id)
+                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('dosen_id', $request->dosen_id)));
         }
-
 
         // =====================================================
         // FILTER TAHUN AKADEMIK
@@ -219,7 +201,6 @@ class KhsController extends Controller
             );
         }
 
-
         // =====================================================
         // FILTER SEMESTER
         // =====================================================
@@ -232,7 +213,6 @@ class KhsController extends Controller
             );
         }
 
-
         // =====================================================
         // HASIL DATA
         // =====================================================
@@ -241,7 +221,6 @@ class KhsController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
-
 
         // =====================================================
         // RETURN VIEW
@@ -260,7 +239,6 @@ class KhsController extends Controller
         );
     }
 
-
     // =====================================================
     // CREATE
     // =====================================================
@@ -278,17 +256,16 @@ class KhsController extends Controller
             'jadwal.ruangan',
             'khs',
         ])
-        ->where('status', 'Disetujui')
-        ->whereDoesntHave('khs')
-        ->latest()
-        ->get();
+            ->where('status', 'Disetujui')
+            ->whereDoesntHave('khs')
+            ->latest()
+            ->get();
 
         return view(
             'admin.khs.create',
             compact('krs')
         );
     }
-
 
     // =====================================================
     // STORE
@@ -310,7 +287,6 @@ class KhsController extends Controller
             ],
         ]);
 
-
         // ===================== AMBIL KRS =====================
 
         $krs = Krs::with([
@@ -319,8 +295,7 @@ class KhsController extends Controller
             'jadwal.dosen',
             'jadwal.ruangan',
         ])
-        ->findOrFail($request->krs_id);
-
+            ->findOrFail($request->krs_id);
 
         // ===================== CEK STATUS KRS =====================
 
@@ -333,7 +308,6 @@ class KhsController extends Controller
                     'KHS hanya dapat dibuat untuk KRS yang sudah disetujui.'
                 );
         }
-
 
         // ===================== CEK DUPLIKAT =====================
 
@@ -352,13 +326,11 @@ class KhsController extends Controller
                 );
         }
 
-
         // ===================== KONVERSI NILAI =====================
 
         [$huruf, $bobot] = $this->konversiNilai(
             $request->nilai_angka
         );
-
 
         // ===================== SIMPAN =====================
 
@@ -371,7 +343,6 @@ class KhsController extends Controller
             'semester_akademik' => $krs->semester_akademik,
         ]);
 
-
         return redirect()
             ->route('admin.khs')
             ->with(
@@ -379,7 +350,6 @@ class KhsController extends Controller
                 'Data KHS berhasil ditambahkan.'
             );
     }
-
 
     // =====================================================
     // EDIT
@@ -395,25 +365,24 @@ class KhsController extends Controller
             'jadwal.ruangan',
             'khs',
         ])
-        ->where('status', 'Disetujui')
-        ->where(function ($query) use ($kh) {
+            ->where('status', 'Disetujui')
+            ->where(function ($query) use ($kh) {
 
-            $query
-                ->whereDoesntHave('khs')
-                ->orWhereHas(
-                    'khs',
-                    function ($q) use ($kh) {
+                $query
+                    ->whereDoesntHave('khs')
+                    ->orWhereHas(
+                        'khs',
+                        function ($q) use ($kh) {
 
-                        $q->where(
-                            'id',
-                            $kh->id
-                        );
-                    }
-                );
-        })
-        ->latest()
-        ->get();
-
+                            $q->where(
+                                'id',
+                                $kh->id
+                            );
+                        }
+                    );
+            })
+            ->latest()
+            ->get();
 
         return view(
             'admin.khs.edit',
@@ -423,7 +392,6 @@ class KhsController extends Controller
             ]
         );
     }
-
 
     // =====================================================
     // UPDATE
@@ -448,15 +416,13 @@ class KhsController extends Controller
             ],
         ]);
 
-
         $krs = Krs::with([
             'mahasiswa',
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
         ])
-        ->findOrFail($request->krs_id);
-
+            ->findOrFail($request->krs_id);
 
         // ===================== CEK STATUS =====================
 
@@ -470,20 +436,18 @@ class KhsController extends Controller
                 );
         }
 
-
         // ===================== CEK DUPLIKAT =====================
 
         $sudahAda = Khs::where(
             'krs_id',
             $krs->id
         )
-        ->where(
-            'id',
-            '!=',
-            $kh->id
-        )
-        ->exists();
-
+            ->where(
+                'id',
+                '!=',
+                $kh->id
+            )
+            ->exists();
 
         if ($sudahAda) {
 
@@ -495,13 +459,11 @@ class KhsController extends Controller
                 );
         }
 
-
         // ===================== KONVERSI NILAI =====================
 
         [$huruf, $bobot] = $this->konversiNilai(
             $request->nilai_angka
         );
-
 
         // ===================== UPDATE =====================
 
@@ -514,7 +476,6 @@ class KhsController extends Controller
             'semester_akademik' => $krs->semester_akademik,
         ]);
 
-
         return redirect()
             ->route('admin.khs')
             ->with(
@@ -522,7 +483,6 @@ class KhsController extends Controller
                 'Data KHS berhasil diperbarui.'
             );
     }
-
 
     // =====================================================
     // DELETE
@@ -539,7 +499,6 @@ class KhsController extends Controller
                 'Data KHS berhasil dihapus.'
             );
     }
-
 
     // =====================================================
     // KONVERSI NILAI

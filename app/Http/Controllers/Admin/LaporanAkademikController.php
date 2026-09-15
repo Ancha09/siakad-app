@@ -129,6 +129,10 @@ class LaporanAkademikController extends Controller
             'mahasiswa.kelas',
             'jadwal.mataKuliah',
             'jadwal.dosen',
+            'mataKuliahManual',
+            'dosenManual',
+            'kelasManual',
+            'prodiManual.fakultas',
             'khs',
             'presensis',
             'kuesioner',
@@ -146,16 +150,21 @@ class LaporanAkademikController extends Controller
 
         $rekapNilai = $krs
             ->filter(fn (Krs $item) => $item->khs !== null)
-            ->groupBy('jadwal_id')
-            ->filter(fn ($items, $jadwalId) => $jadwalId !== null)
+            ->groupBy(fn (Krs $item) => implode('|', [
+                $item->mata_kuliah_efektif?->id ?? 0,
+                $item->dosen_efektif?->id ?? 0,
+                $item->kelas_efektif?->id ?? 0,
+                $item->tahun_akademik,
+                $item->semester_akademik,
+            ]))
             ->map(function (Collection $items) {
                 $pertama = $items->first();
                 $jadwal = $pertama->jadwal;
 
                 return (object) [
-                    'mata_kuliah' => $jadwal?->mataKuliah?->nama_mk ?? '-',
-                    'dosen' => $jadwal?->dosen?->nama ?? '-',
-                    'kelas' => $jadwal?->kelas?->nama_kelas ?? '-',
+                    'mata_kuliah' => $pertama->mata_kuliah_efektif?->nama_mk ?? '-',
+                    'dosen' => $pertama->dosen_efektif?->nama ?? '-',
+                    'kelas' => $pertama->kelas_efektif?->nama_kelas ?? '-',
                     'jumlah_mahasiswa' => $items->pluck('mahasiswa_id')->unique()->count(),
                     'rata_nilai' => round((float) $items->avg('khs.nilai_angka'), 2),
                     'rata_bobot' => round((float) $items->avg('khs.bobot'), 2),
@@ -184,12 +193,12 @@ class LaporanAkademikController extends Controller
             'diambil_legacy' => $krs->where('status', 'Diambil')->count(),
             'mahasiswa_mengajukan' => $krs->pluck('mahasiswa_id')->filter()->unique()->count(),
             'sks_disetujui' => $krs->where('status', 'Disetujui')->sum(
-                fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0)
+                fn (Krs $item) => $item->khs?->sks_efektif ?? (int) ($item->mata_kuliah_efektif?->sks ?? 0)
             ),
         ];
 
         $wajibKuesioner = $krs->filter(
-            fn (Krs $item) => $item->status === 'Disetujui' && $item->khs !== null
+            fn (Krs $item) => ! $item->is_manual && $item->status === 'Disetujui' && $item->khs !== null
         );
         $kuesionerRows = $wajibKuesioner->filter(fn (Krs $item) => $item->kuesioner !== null)->values();
         $kuesioners = $kuesionerRows->pluck('kuesioner')->values();
@@ -226,7 +235,7 @@ class LaporanAkademikController extends Controller
         return [
             'ringkasan' => [
                 'jumlah_mahasiswa' => $krs->pluck('mahasiswa_id')->filter()->unique()->count(),
-                'jumlah_mata_kuliah' => $krs->pluck('jadwal.mata_kuliah_id')->filter()->unique()->count(),
+                'jumlah_mata_kuliah' => $krs->map(fn (Krs $item) => $item->mata_kuliah_efektif?->id)->filter()->unique()->count(),
                 'rata_ip' => $ipTersedia->isNotEmpty() ? round((float) $ipTersedia->avg(), 2) : 0,
                 'rata_kehadiran' => $rataKehadiran,
                 'mahasiswa_kehadiran_rendah' => $kehadiranRendah->pluck('mahasiswa_id')->unique()->count(),
@@ -264,8 +273,8 @@ class LaporanAkademikController extends Controller
             ->map(function (Collection $items) {
                 $mahasiswa = $items->first()->mahasiswa;
                 $nilai = $items->filter(fn (Krs $item) => $item->khs !== null);
-                $sksNilai = $nilai->sum(fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0));
-                $mutu = $nilai->sum(fn (Krs $item) => (float) ($item->khs?->bobot ?? 0) * (int) ($item->jadwal?->mataKuliah?->sks ?? 0));
+                $sksNilai = $nilai->sum(fn (Krs $item) => $item->khs?->sks_efektif ?? 0);
+                $mutu = $nilai->sum(fn (Krs $item) => (float) ($item->khs?->bobot ?? 0) * ($item->khs?->sks_efektif ?? 0));
                 $presensi = $items->flatMap(fn (Krs $item) => $item->presensis);
 
                 return (object) [
@@ -275,7 +284,7 @@ class LaporanAkademikController extends Controller
                     'prodi' => $mahasiswa?->prodi?->nama_prodi ?? '-',
                     'kelas' => $mahasiswa?->kelas?->nama_kelas ?? '-',
                     'total_sks' => $items->where('status', 'Disetujui')->sum(
-                        fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0)
+                        fn (Krs $item) => $item->khs?->sks_efektif ?? (int) ($item->mata_kuliah_efektif?->sks ?? 0)
                     ),
                     'ip' => $sksNilai > 0 ? round($mutu / $sksNilai, 2) : null,
                     'kehadiran' => $presensi->isNotEmpty()
@@ -306,7 +315,7 @@ class LaporanAkademikController extends Controller
                 'nama' => $item->mahasiswa?->nama ?? '-',
                 'prodi' => $item->mahasiswa?->prodi?->nama_prodi ?? '-',
                 'kelas' => $item->mahasiswa?->kelas?->nama_kelas ?? '-',
-                'mata_kuliah' => $item->jadwal?->mataKuliah?->nama_mk ?? '-',
+                'mata_kuliah' => $item->mata_kuliah_efektif?->nama_mk ?? '-',
                 'hadir' => $presensi->where('status', 'Hadir')->count(),
                 'izin' => $presensi->where('status', 'Izin')->count(),
                 'sakit' => $presensi->where('status', 'Sakit')->count(),
@@ -360,11 +369,21 @@ class LaporanAkademikController extends Controller
         $query
             ->when($request->filled('tahun_akademik'), fn (Builder $q) => $q->where('tahun_akademik', $request->tahun_akademik))
             ->when($request->filled('semester_akademik'), fn (Builder $q) => $q->where('semester_akademik', $request->semester_akademik))
-            ->when($request->filled('fakultas_id'), fn (Builder $q) => $q->whereHas('mahasiswa.prodi', fn (Builder $prodi) => $prodi->where('fakultas_id', $request->fakultas_id)))
-            ->when($request->filled('prodi_id'), fn (Builder $q) => $q->whereHas('mahasiswa', fn (Builder $mahasiswa) => $mahasiswa->where('prodi_id', $request->prodi_id)))
-            ->when($request->filled('kelas_id'), fn (Builder $q) => $q->whereHas('mahasiswa', fn (Builder $mahasiswa) => $mahasiswa->where('kelas_id', $request->kelas_id)))
-            ->when($request->filled('mata_kuliah_id'), fn (Builder $q) => $q->whereHas('jadwal', fn (Builder $jadwal) => $jadwal->where('mata_kuliah_id', $request->mata_kuliah_id)))
-            ->when($request->filled('dosen_id'), fn (Builder $q) => $q->whereHas('jadwal', fn (Builder $jadwal) => $jadwal->where('dosen_id', $request->dosen_id)));
+            ->when($request->filled('fakultas_id'), fn (Builder $q) => $q->where(fn (Builder $item) => $item
+                ->whereHas('prodiManual', fn (Builder $prodi) => $prodi->where('fakultas_id', $request->fakultas_id))
+                ->orWhereHas('mahasiswa.prodi', fn (Builder $prodi) => $prodi->where('fakultas_id', $request->fakultas_id))))
+            ->when($request->filled('prodi_id'), fn (Builder $q) => $q->where(fn (Builder $item) => $item
+                ->where('prodi_id', $request->prodi_id)
+                ->orWhereHas('mahasiswa', fn (Builder $mahasiswa) => $mahasiswa->where('prodi_id', $request->prodi_id))))
+            ->when($request->filled('kelas_id'), fn (Builder $q) => $q->where(fn (Builder $item) => $item
+                ->where('kelas_id', $request->kelas_id)
+                ->orWhereHas('mahasiswa', fn (Builder $mahasiswa) => $mahasiswa->where('kelas_id', $request->kelas_id))))
+            ->when($request->filled('mata_kuliah_id'), fn (Builder $q) => $q->where(fn (Builder $item) => $item
+                ->where('mata_kuliah_id', $request->mata_kuliah_id)
+                ->orWhereHas('jadwal', fn (Builder $jadwal) => $jadwal->where('mata_kuliah_id', $request->mata_kuliah_id))))
+            ->when($request->filled('dosen_id'), fn (Builder $q) => $q->where(fn (Builder $item) => $item
+                ->where('dosen_id', $request->dosen_id)
+                ->orWhereHas('jadwal', fn (Builder $jadwal) => $jadwal->where('dosen_id', $request->dosen_id))));
     }
 
     private function dataFilter(): array

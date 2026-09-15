@@ -320,7 +320,7 @@
                                     {{-- KODE --}}
 
                                     <td>
-                                        {{ $item->krs->jadwal->mataKuliah->kode_mk ?? '-' }}
+                                        {{ $item->krs?->mata_kuliah_efektif?->kode_mk ?? '-' }}
                                     </td>
 
 
@@ -329,7 +329,7 @@
                                     <td>
 
                                         <strong>
-                                            {{ $item->krs->jadwal->mataKuliah->nama_mk ?? '-' }}
+                                            {{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}
                                         </strong>
 
                                     </td>
@@ -338,7 +338,7 @@
                                     {{-- DOSEN --}}
 
                                     <td>
-                                        {{ $item->krs->jadwal->dosen->nama ?? '-' }}
+                                        {{ $item->krs?->dosen_efektif?->nama ?? '-' }}
                                     </td>
 
 
@@ -346,7 +346,7 @@
 
                                     <td>
 
-                                        {{ $item->krs->jadwal->mataKuliah->sks ?? 0 }}
+                                        {{ $item->sks_efektif }}
 
                                     </td>
 
@@ -365,7 +365,7 @@
                                     <td>
 
                                         <strong>
-                                            {{ $item->krs->kuesioner ? ($item->nilai_huruf ?? '-') : '🔒' }}
+                                            {{ ($item->is_manual || $item->krs?->kuesioner) ? ($item->nilai_huruf ?? '-') : '🔒' }}
                                         </strong>
 
                                     </td>
@@ -375,7 +375,7 @@
 
                                     <td>
 
-                                        {{ $item->krs->kuesioner ? ($item->bobot ?? '-') : '🔒' }}
+                                        {{ ($item->is_manual || $item->krs?->kuesioner) ? ($item->bobot ?? '-') : '🔒' }}
 
                                     </td>
 

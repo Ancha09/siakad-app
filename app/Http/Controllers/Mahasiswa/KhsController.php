@@ -30,6 +30,8 @@ class KhsController extends Controller
 
         $khs = Khs::with([
             'krs.jadwal.mataKuliah',
+            'krs.mataKuliahManual',
+            'krs.dosenManual',
             'krs.jadwal.dosen',
             'krs.jadwal.ruangan',
             'krs.kuesioner',
@@ -45,7 +47,7 @@ class KhsController extends Controller
 
         // Nilai hanya ikut ditampilkan dan dihitung setelah kuesioner diisi.
         $khsTerlihat = $khs->filter(function ($item) {
-            return $item->krs?->kuesioner !== null;
+            return $item->is_manual || $item->krs?->kuesioner !== null;
         });
 
         // ===================== KELOMPOK PER SEMESTER =====================
@@ -62,10 +64,7 @@ class KhsController extends Controller
 
         $totalSks = $khsTerlihat->sum(function ($item) {
 
-            return $item->krs
-                ->jadwal
-                ->mataKuliah
-                ->sks ?? 0;
+            return $item->sks_efektif;
 
         });
 
@@ -81,7 +80,7 @@ class KhsController extends Controller
         foreach ($khsPerSemester as $semester => $data) {
 
             $semesterTerkunci = $data->contains(function ($item) {
-                return $item->krs?->kuesioner === null;
+                return ! $item->is_manual && $item->krs?->kuesioner === null;
             });
 
             if ($semesterTerkunci) {
@@ -91,24 +90,18 @@ class KhsController extends Controller
             }
 
             $dataTerlihat = $data->filter(function ($item) {
-                return $item->krs?->kuesioner !== null;
+                return $item->is_manual || $item->krs?->kuesioner !== null;
             });
 
             $sksSemester = $dataTerlihat->sum(function ($item) {
 
-                return $item->krs
-                    ->jadwal
-                    ->mataKuliah
-                    ->sks ?? 0;
+                return $item->sks_efektif;
 
             });
 
             $mutuSemester = $dataTerlihat->sum(function ($item) {
 
-                $sks = $item->krs
-                    ->jadwal
-                    ->mataKuliah
-                    ->sks ?? 0;
+                $sks = $item->sks_efektif;
 
                 $bobot = $item->bobot ?? 0;
 
@@ -123,7 +116,7 @@ class KhsController extends Controller
 
         // Jangan teruskan nilai yang terkunci ke lapisan tampilan.
         $khs->each(function ($item) {
-            if ($item->krs?->kuesioner === null) {
+            if (! $item->is_manual && $item->krs?->kuesioner === null) {
                 $item->setAttribute('nilai_angka', null);
                 $item->setAttribute('nilai_huruf', null);
                 $item->setAttribute('bobot', null);
@@ -157,6 +150,8 @@ class KhsController extends Controller
 
         $khs = Khs::with([
             'krs.jadwal.mataKuliah',
+            'krs.mataKuliahManual',
+            'krs.dosenManual',
             'krs.jadwal.dosen',
             'krs.kuesioner',
         ])
@@ -177,7 +172,7 @@ class KhsController extends Controller
         }
 
         $totalSks = $khs->sum(
-            fn (Khs $item) => (int) ($item->krs?->jadwal?->mataKuliah?->sks ?? 0)
+            fn (Khs $item) => $item->sks_efektif
         );
 
         return Pdf::loadView('mahasiswa.khs.transkrip-pdf', [

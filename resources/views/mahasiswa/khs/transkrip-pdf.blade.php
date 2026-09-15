@@ -49,9 +49,9 @@
                 <tr>
                     <td class="center">{{ $loop->iteration }}</td>
                     <td>{{ $item->tahun_akademik }} / {{ $item->semester_akademik }}</td>
-                    <td>{{ $item->krs?->jadwal?->mataKuliah?->kode_mk ?? '-' }}</td>
-                    <td>{{ $item->krs?->jadwal?->mataKuliah?->nama_mk ?? '-' }}</td>
-                    <td class="center">{{ $item->krs?->jadwal?->mataKuliah?->sks ?? 0 }}</td>
+                    <td>{{ $item->krs?->mata_kuliah_efektif?->kode_mk ?? '-' }}</td>
+                    <td>{{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}</td>
+                    <td class="center">{{ $item->sks_efektif }}</td>
                     <td class="center">{{ $item->nilai_huruf ?? '-' }}</td>
                     <td class="center">{{ $item->bobot === null ? '-' : number_format($item->bobot, 2) }}</td>
                 </tr>

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Dosen;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -16,6 +15,7 @@ class User extends Authenticatable
         'login',
         'email',
         'role',
+        'is_active',
         'password',
     ];
 
@@ -28,6 +28,7 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -36,5 +37,10 @@ class User extends Authenticatable
     public function dosen()
     {
         return $this->hasOne(Dosen::class, 'user_id');
+    }
+
+    public function mahasiswa()
+    {
+        return $this->hasOne(Mahasiswa::class, 'user_id');
     }
 }

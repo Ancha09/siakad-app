@@ -20,6 +20,7 @@ class DashboardController extends Controller
         // Semua KRS mahasiswa
         $krs = Krs::with([
             'jadwal.mataKuliah',
+            'mataKuliahManual',
             'jadwal.dosen',
             'jadwal.ruangan',
             'khs',
@@ -32,7 +33,7 @@ class DashboardController extends Controller
         $totalSks = $krs
             ->where('status', 'Disetujui')
             ->sum(function ($item) {
-                return $item->jadwal->mataKuliah->sks ?? 0;
+                return $item->khs?->sks_efektif ?? (int) ($item->mata_kuliah_efektif?->sks ?? 0);
             });
 
         // Jadwal dari KRS yang sudah disetujui

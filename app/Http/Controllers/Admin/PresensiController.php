@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Dosen;
+use App\Models\Kelas;
+use App\Models\MataKuliah;
 use App\Models\Presensi;
 use App\Models\Prodi;
-use App\Models\Kelas;
-use App\Models\Dosen;
-use App\Models\MataKuliah;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +29,6 @@ class PresensiController extends Controller
 
         $mataKuliahs = MataKuliah::orderBy('nama_mk')->get();
 
-
         // =====================================================
         // DATA PRESENSI
         // =====================================================
@@ -39,73 +38,52 @@ class PresensiController extends Controller
             'krs.mahasiswa.kelas',
             'krs.jadwal.mataKuliah',
             'krs.jadwal.dosen',
+            'krs.mataKuliahManual',
+            'krs.dosenManual',
+            'krs.prodiManual',
+            'krs.kelasManual',
             'krs.jadwal.ruangan',
         ]);
-
 
         // ===================== FILTER PRODI =====================
 
         if ($request->filled('prodi_id')) {
 
-            $query->whereHas('krs.mahasiswa', function ($q) use ($request) {
-
-                $q->where(
-                    'prodi_id',
-                    $request->prodi_id
-                );
-
-            });
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('prodi_id', $request->prodi_id)
+                ->orWhereHas('mahasiswa', fn ($mahasiswa) => $mahasiswa->where('prodi_id', $request->prodi_id)));
 
         }
-
 
         // ===================== FILTER KELAS =====================
 
         if ($request->filled('kelas_id')) {
 
-            $query->whereHas('krs.mahasiswa', function ($q) use ($request) {
-
-                $q->where(
-                    'kelas_id',
-                    $request->kelas_id
-                );
-
-            });
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('kelas_id', $request->kelas_id)
+                ->orWhereHas('mahasiswa', fn ($mahasiswa) => $mahasiswa->where('kelas_id', $request->kelas_id)));
 
         }
-
 
         // ===================== FILTER DOSEN =====================
 
         if ($request->filled('dosen_id')) {
 
-            $query->whereHas('krs.jadwal', function ($q) use ($request) {
-
-                $q->where(
-                    'dosen_id',
-                    $request->dosen_id
-                );
-
-            });
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('dosen_id', $request->dosen_id)
+                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('dosen_id', $request->dosen_id)));
 
         }
-
 
         // ===================== FILTER MATA KULIAH =====================
 
         if ($request->filled('mata_kuliah_id')) {
 
-            $query->whereHas('krs.jadwal', function ($q) use ($request) {
-
-                $q->where(
-                    'mata_kuliah_id',
-                    $request->mata_kuliah_id
-                );
-
-            });
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('mata_kuliah_id', $request->mata_kuliah_id)
+                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('mata_kuliah_id', $request->mata_kuliah_id)));
 
         }
-
 
         // ===================== FILTER PERTEMUAN =====================
 
@@ -118,14 +96,12 @@ class PresensiController extends Controller
 
         }
 
-
         // ===================== AMBIL DATA =====================
 
         $presensis = $query
             ->orderByDesc('tanggal')
             ->orderBy('pertemuan')
             ->get();
-
 
         // =====================================================
         // REKAP PER MAHASISWA
@@ -162,14 +138,12 @@ class PresensiController extends Controller
                     + $sakit
                     + $alpha;
 
-
                 $persentase = $total > 0
                     ? round(
                         ($hadir / $total) * 100,
                         1
                     )
                     : 0;
-
 
                 return (object) [
 
@@ -192,7 +166,6 @@ class PresensiController extends Controller
             })
             ->values();
 
-
         // =====================================================
         // DATA SESI PERTEMUAN
         // =====================================================
@@ -210,7 +183,6 @@ class PresensiController extends Controller
                 'jadwals.dosen_id'
             );
 
-
         if ($request->filled('dosen_id')) {
 
             $pertemuanQuery->where(
@@ -219,7 +191,6 @@ class PresensiController extends Controller
             );
 
         }
-
 
         if ($request->filled('mata_kuliah_id')) {
 
@@ -230,7 +201,6 @@ class PresensiController extends Controller
 
         }
 
-
         if ($request->filled('pertemuan')) {
 
             $pertemuanQuery->where(
@@ -240,12 +210,10 @@ class PresensiController extends Controller
 
         }
 
-
         $pertemuans = $pertemuanQuery
             ->orderByDesc('tanggal')
             ->orderBy('pertemuan')
             ->get();
-
 
         // =====================================================
         // STATISTIK
@@ -269,7 +237,6 @@ class PresensiController extends Controller
             ->where('status', 'Alpha')
             ->count();
 
-
         return view(
             'admin.presensi.index',
             compact(
@@ -289,7 +256,6 @@ class PresensiController extends Controller
         );
     }
 
-
     // =========================================================
     // DOWNLOAD EXCEL
     // =========================================================
@@ -303,9 +269,8 @@ class PresensiController extends Controller
             // BOM supaya Excel membaca UTF-8
             fprintf(
                 $handle,
-                chr(0xEF) . chr(0xBB) . chr(0xBF)
+                chr(0xEF).chr(0xBB).chr(0xBF)
             );
-
 
             fputcsv($handle, [
                 'NIM',
@@ -319,14 +284,12 @@ class PresensiController extends Controller
                 'Status',
             ]);
 
-
             $query = Presensi::with([
                 'krs.mahasiswa.prodi',
                 'krs.mahasiswa.kelas',
                 'krs.jadwal.mataKuliah',
                 'krs.jadwal.dosen',
             ]);
-
 
             if ($request->filled('prodi_id')) {
 
@@ -340,7 +303,6 @@ class PresensiController extends Controller
 
             }
 
-
             if ($request->filled('kelas_id')) {
 
                 $query->whereHas(
@@ -352,7 +314,6 @@ class PresensiController extends Controller
                 );
 
             }
-
 
             if ($request->filled('dosen_id')) {
 
@@ -366,7 +327,6 @@ class PresensiController extends Controller
 
             }
 
-
             if ($request->filled('mata_kuliah_id')) {
 
                 $query->whereHas(
@@ -379,7 +339,6 @@ class PresensiController extends Controller
 
             }
 
-
             if ($request->filled('pertemuan')) {
 
                 $query->where(
@@ -389,12 +348,10 @@ class PresensiController extends Controller
 
             }
 
-
             $data = $query
                 ->orderBy('tanggal')
                 ->orderBy('pertemuan')
                 ->get();
-
 
             foreach ($data as $item) {
 
@@ -408,11 +365,11 @@ class PresensiController extends Controller
 
                     $item->krs->mahasiswa->kelas->nama_kelas ?? '-',
 
-                    $item->krs->jadwal->mataKuliah->nama_mk ?? '-',
+                    $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-',
 
-                    $item->krs->jadwal->dosen->nama ?? '-',
+                    $item->krs?->dosen_efektif?->nama ?? '-',
 
-                    'Pertemuan ' . $item->pertemuan,
+                    'Pertemuan '.$item->pertemuan,
 
                     $item->tanggal,
 
@@ -422,14 +379,12 @@ class PresensiController extends Controller
 
             }
 
-
             fclose($handle);
 
         }, 'rekap-presensi.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
-
 
     // =========================================================
     // DOWNLOAD PDF

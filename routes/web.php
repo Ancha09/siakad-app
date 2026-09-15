@@ -14,8 +14,10 @@ use App\Http\Controllers\Admin\KurikulumController as AdminKurikulumController;
 use App\Http\Controllers\Admin\LaporanAkademikController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\MataKuliahController;
+use App\Http\Controllers\Admin\NilaiManualController;
 use App\Http\Controllers\Admin\PeriodeKrsController;
 use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
+use App\Http\Controllers\Admin\PresensiManualController;
 use App\Http\Controllers\Admin\PresensiExportController;
 use App\Http\Controllers\Admin\ProdiController;
 use App\Http\Controllers\Admin\RuanganController;
@@ -364,6 +366,14 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::delete('/khs/{kh}', [KhsController::class, 'destroy'])->name('admin.khs.destroy');
 
+    // ===================== NILAI LAMA / MANUAL =====================
+
+    Route::get('/nilai-manual', [NilaiManualController::class, 'index'])->name('admin.nilai-manual.index');
+    Route::get('/nilai-manual/create', [NilaiManualController::class, 'create'])->name('admin.nilai-manual.create');
+    Route::post('/nilai-manual', [NilaiManualController::class, 'store'])->name('admin.nilai-manual.store');
+    Route::get('/nilai-manual/{khs}/edit', [NilaiManualController::class, 'edit'])->name('admin.nilai-manual.edit');
+    Route::put('/nilai-manual/{khs}', [NilaiManualController::class, 'update'])->name('admin.nilai-manual.update');
+
     // ===================== KELAS =====================
 
     Route::get('/kelas', [KelasController::class, 'index'])->name('admin.kelas');
@@ -385,6 +395,14 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/presensi/download/excel', [PresensiExportController::class, 'excel'])->name('admin.presensi.excel');
 
     Route::get('/presensi/download/pdf', [PresensiExportController::class, 'pdf'])->name('admin.presensi.pdf');
+
+    // ===================== ABSENSI LAMA / MANUAL =====================
+
+    Route::get('/presensi-manual', [PresensiManualController::class, 'index'])->name('admin.presensi-manual.index');
+    Route::get('/presensi-manual/create', [PresensiManualController::class, 'create'])->name('admin.presensi-manual.create');
+    Route::post('/presensi-manual', [PresensiManualController::class, 'store'])->name('admin.presensi-manual.store');
+    Route::get('/presensi-manual/{presensi}/edit', [PresensiManualController::class, 'edit'])->name('admin.presensi-manual.edit');
+    Route::put('/presensi-manual/{presensi}', [PresensiManualController::class, 'update'])->name('admin.presensi-manual.update');
 
     // ===================== REKAP KUESIONER =====================
 
