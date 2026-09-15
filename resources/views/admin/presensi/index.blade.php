@@ -483,7 +483,7 @@
 
 
                                 <td>
-                                    {{ $item->krs?->dosen_efektif?->nama ?? '-' }}
+                                    {{ $item->dosen_pengampu }}
                                 </td>
 
 

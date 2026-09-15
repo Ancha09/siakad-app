@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasManualLecturer;
 use Illuminate\Database\Eloquent\Model;
 
 class Khs extends Model
 {
+    use HasManualLecturer;
+
     protected $table = 'khs';
 
     protected $fillable = [
@@ -17,11 +20,13 @@ class Khs extends Model
         'tahun_akademik',
         'semester_akademik',
         'is_manual',
+        'dosen_id',
+        'dosen_override',
     ];
 
     protected function casts(): array
     {
-        return ['is_manual' => 'boolean'];
+        return ['is_manual' => 'boolean', 'dosen_override' => 'boolean'];
     }
 
     public function getSksEfektifAttribute(): int

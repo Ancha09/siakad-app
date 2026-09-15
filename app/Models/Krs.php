@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Krs extends Model
@@ -69,7 +70,19 @@ class Krs extends Model
 
     public function getDosenEfektifAttribute()
     {
+        if ($this->is_manual) {
+            return $this->dosenManual;
+        }
+
         return $this->jadwal?->dosen ?? $this->dosenManual;
+    }
+
+    public function scopeForDosen(Builder $query, int $dosenId): Builder
+    {
+        return $query->where(fn (Builder $q) => $q
+            ->where(fn (Builder $manual) => $manual->where('is_manual', true)->where('dosen_id', $dosenId))
+            ->orWhere(fn (Builder $active) => $active->where('is_manual', false)
+                ->whereHas('jadwal', fn (Builder $j) => $j->where('dosen_id', $dosenId))));
     }
 
     public function getKelasEfektifAttribute()

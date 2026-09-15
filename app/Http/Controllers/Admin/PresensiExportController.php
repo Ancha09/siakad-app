@@ -34,7 +34,7 @@ class PresensiExportController extends Controller
                     $item->krs?->prodi_efektif?->nama_prodi ?? '-',
                     $item->krs?->kelas_efektif?->nama_kelas ?? '-',
                     $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-',
-                    $item->krs?->dosen_efektif?->nama ?? '-',
+                    $item->dosen_efektif?->nama ?? '-',
                     $item->pertemuan ? 'Pertemuan '.$item->pertemuan : '-',
                     $item->tanggal ? Carbon::parse($item->tanggal)->format('d-m-Y') : '-',
                     $item->status,
@@ -73,14 +73,14 @@ class PresensiExportController extends Controller
         ]);
 
         return Presensi::with([
-            'krs.mahasiswa.prodi', 'krs.mahasiswa.kelas',
+            'dosenManual', 'krs.mahasiswa.prodi', 'krs.mahasiswa.kelas',
             'krs.jadwal.mataKuliah', 'krs.jadwal.dosen',
             'krs.mataKuliahManual', 'krs.dosenManual',
             'krs.prodiManual', 'krs.kelasManual',
         ])
             ->when($request->filled('prodi_id'), fn (Builder $q) => $q->whereHas('krs', fn (Builder $krs) => $krs->where('prodi_id', $request->prodi_id)->orWhereHas('mahasiswa', fn (Builder $m) => $m->where('prodi_id', $request->prodi_id))))
             ->when($request->filled('kelas_id'), fn (Builder $q) => $q->whereHas('krs', fn (Builder $krs) => $krs->where('kelas_id', $request->kelas_id)->orWhereHas('mahasiswa', fn (Builder $m) => $m->where('kelas_id', $request->kelas_id))))
-            ->when($request->filled('dosen_id'), fn (Builder $q) => $q->whereHas('krs', fn (Builder $krs) => $krs->where('dosen_id', $request->dosen_id)->orWhereHas('jadwal', fn (Builder $j) => $j->where('dosen_id', $request->dosen_id))))
+            ->when($request->filled('dosen_id'), fn (Builder $q) => $q->forDosen((int) $request->dosen_id))
             ->when($request->filled('mata_kuliah_id'), fn (Builder $q) => $q->whereHas('krs', fn (Builder $krs) => $krs->where('mata_kuliah_id', $request->mata_kuliah_id)->orWhereHas('jadwal', fn (Builder $j) => $j->where('mata_kuliah_id', $request->mata_kuliah_id))))
             ->when($request->filled('pertemuan'), fn (Builder $q) => $q->where('pertemuan', $request->pertemuan))
             ->orderByDesc('tanggal')->orderBy('pertemuan')->get();

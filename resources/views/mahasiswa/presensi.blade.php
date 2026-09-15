@@ -91,7 +91,7 @@
                         <span class="course-code">{{ $mk->kode_mk }}</span>
                         <h2>{{ $mk->nama_mk }}</h2>
                         <div class="course-meta">
-                            {{ $mk->sks }} SKS · {{ $item->krs->dosen_efektif?->nama ?? 'Dosen belum ditentukan' }}<br>
+                            {{ $mk->sks }} SKS · {{ $item->dosen_pengampu }}<br>
                             {{ $item->jadwal?->hari ?? 'Jadwal historis' }}, {{ $item->jadwal?->jam_mulai ? substr($item->jadwal->jam_mulai, 0, 5) : '-' }}–{{ $item->jadwal?->jam_selesai ? substr($item->jadwal->jam_selesai, 0, 5) : '-' }}
                             · {{ $item->krs->tahun_akademik ?? $item->jadwal->tahun_akademik ?? '-' }} {{ $item->krs->semester_akademik ?? $item->jadwal->semester_akademik ?? '' }}
                         </div>

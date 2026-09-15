@@ -338,7 +338,7 @@
                                     {{-- DOSEN --}}
 
                                     <td>
-                                        {{ $item->krs?->dosen_efektif?->nama ?? '-' }}
+                                        {{ $item->dosen_efektif?->nama ?? '-' }}
                                     </td>
 
 

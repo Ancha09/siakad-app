@@ -39,7 +39,7 @@ class PresensiController extends Controller
             'krs.jadwal.mataKuliah',
             'krs.jadwal.dosen',
             'krs.mataKuliahManual',
-            'krs.dosenManual',
+            'dosenManual', 'krs.dosenManual',
             'krs.prodiManual',
             'krs.kelasManual',
             'krs.jadwal.ruangan',
@@ -69,9 +69,7 @@ class PresensiController extends Controller
 
         if ($request->filled('dosen_id')) {
 
-            $query->whereHas('krs', fn ($q) => $q
-                ->where('dosen_id', $request->dosen_id)
-                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('dosen_id', $request->dosen_id)));
+            $query->forDosen((int) $request->dosen_id);
 
         }
 
@@ -148,6 +146,7 @@ class PresensiController extends Controller
                 return (object) [
 
                     'krs' => $first->krs,
+                    'dosen_pengampu' => $data->map(fn ($record) => $record->dosen_efektif?->nama)->filter()->unique()->implode(', ') ?: '-',
 
                     'hadir' => $hadir,
 
@@ -367,7 +366,7 @@ class PresensiController extends Controller
 
                     $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-',
 
-                    $item->krs?->dosen_efektif?->nama ?? '-',
+                    $item->dosen_efektif?->nama ?? '-',
 
                     'Pertemuan '.$item->pertemuan,
 

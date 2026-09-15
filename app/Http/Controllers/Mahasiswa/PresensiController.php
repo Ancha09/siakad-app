@@ -33,7 +33,7 @@ class PresensiController extends Controller
             'jadwal.presensiPertemuans' => fn ($query) => $query
                 ->orderBy('pertemuan')
                 ->orderBy('tanggal'),
-            'presensis' => fn ($query) => $query
+            'presensis' => fn ($query) => $query->with('dosenManual')
                 ->orderBy('pertemuan')
                 ->orderBy('tanggal'),
         ])
@@ -79,6 +79,7 @@ class PresensiController extends Controller
 
             return (object) [
                 'krs' => $item,
+                'dosen_pengampu' => ($presensis->isEmpty() ? $item->dosen_efektif?->nama : $presensis->map(fn ($record) => $record->dosen_efektif?->nama)->filter()->unique()->implode(', ')) ?: 'Dosen belum ditentukan',
                 'jadwal' => $item->jadwal,
                 'hadir' => $hadir,
                 'izin' => $izin,

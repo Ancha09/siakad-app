@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasManualLecturer;
 use Illuminate\Database\Eloquent\Model;
 
 class Presensi extends Model
 {
+    use HasManualLecturer;
+
     protected $table = 'presensis';
 
     protected $fillable = [
@@ -18,6 +21,8 @@ class Presensi extends Model
         'materi',
         'is_manual',
         'manual_identity',
+        'dosen_id',
+        'dosen_override',
     ];
 
     protected function casts(): array
@@ -25,6 +30,7 @@ class Presensi extends Model
         return [
             'tanggal' => 'date',
             'is_manual' => 'boolean',
+            'dosen_override' => 'boolean',
         ];
     }
 

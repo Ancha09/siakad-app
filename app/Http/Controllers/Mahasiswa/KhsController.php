@@ -29,6 +29,7 @@ class KhsController extends Controller
         // ===================== DATA KHS =====================
 
         $khs = Khs::with([
+            'dosenManual',
             'krs.jadwal.mataKuliah',
             'krs.mataKuliahManual',
             'krs.dosenManual',
@@ -149,6 +150,7 @@ class KhsController extends Controller
             ->firstOrFail();
 
         $khs = Khs::with([
+            'dosenManual',
             'krs.jadwal.mataKuliah',
             'krs.mataKuliahManual',
             'krs.dosenManual',

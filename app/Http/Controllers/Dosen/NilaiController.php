@@ -45,7 +45,7 @@ public function rekap()
     foreach ($jadwals as $jadwal) {
 
         $khs = Khs::whereHas('krs', function ($q) use ($jadwal) {
-            $q->where('jadwal_id', $jadwal->id);
+            $q->where('jadwal_id', $jadwal->id)->where('is_manual', false);
         })->get();
 
         $jadwal->jumlah = $khs->count();
@@ -71,6 +71,7 @@ public function rekap()
         }
 
         $krs = Krs::with(['mahasiswa', 'khs'])
+            ->where('is_manual', false)
             ->where('jadwal_id', $jadwal->id)
             ->where('status', 'Disetujui')
             ->get();
@@ -98,7 +99,8 @@ public function rekap()
 
         $krsIds = collect(array_values($validated['krs_id']))->map(fn ($id) => (int) $id);
         $nilaiAngka = array_values($validated['nilai_angka']);
-        $krsById = Krs::with('jadwal')
+        $krsById = Krs::with(['jadwal', 'khs'])
+            ->where('is_manual', false)
             ->whereIn('id', $krsIds)
             ->where('status', 'Disetujui')
             ->whereHas('jadwal', fn ($query) => $query->where('dosen_id', $dosen->id))
@@ -107,6 +109,8 @@ public function rekap()
 
         // Tolak seluruh permintaan apabila satu saja KRS bukan dari jadwal dosen ini.
         abort_unless($krsById->count() === $krsIds->count(), 403);
+        // Only admins may correct historical/manual grades, including those on an active KRS.
+        abort_if($krsById->contains(fn (Krs $krs) => $krs->khs?->is_manual), 403);
 
         $adaInputBaru = false;
         $adaPerubahan = false;

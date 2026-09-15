@@ -53,7 +53,7 @@ class KhsController extends Controller
             'krs.mahasiswa.kelas.prodi.fakultas',
             'krs.jadwal.mataKuliah.prodi.fakultas',
             'krs.mataKuliahManual.prodi.fakultas',
-            'krs.dosenManual',
+            'dosenManual', 'krs.dosenManual',
             'krs.prodiManual',
             'krs.jadwal.dosen',
             'krs.jadwal.ruangan',
@@ -98,7 +98,7 @@ class KhsController extends Controller
                     ->orWhereHas('krs.mataKuliahManual', function ($mk) use ($search) {
                         $mk->whereLike('kode_mk', '%'.$search.'%')->orWhereLike('nama_mk', '%'.$search.'%');
                     })
-                    ->orWhereHas('krs.dosenManual', fn ($dosen) => $dosen->whereLike('nama', '%'.$search.'%'))
+                    ->orWhereHas('dosenManual', 'krs.dosenManual', fn ($dosen) => $dosen->whereLike('nama', '%'.$search.'%'))
 
                 // ===================== DOSEN =====================
                     ->orWhereHas(
@@ -184,9 +184,7 @@ class KhsController extends Controller
 
         if ($request->filled('dosen_id')) {
 
-            $query->whereHas('krs', fn ($q) => $q
-                ->where('dosen_id', $request->dosen_id)
-                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('dosen_id', $request->dosen_id)));
+            $query->forDosen((int) $request->dosen_id);
         }
 
         // =====================================================

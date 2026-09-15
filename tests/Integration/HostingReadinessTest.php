@@ -42,6 +42,7 @@ class HostingReadinessTest extends TestCase
         });
         Schema::create('krs', function (Blueprint $table) {
             $table->id();
+            $table->boolean('is_manual')->default(false);
             $table->unsignedBigInteger('mahasiswa_id');
             $table->unsignedBigInteger('jadwal_id');
             $table->string('status');

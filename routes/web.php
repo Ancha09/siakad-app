@@ -373,6 +373,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::post('/nilai-manual', [NilaiManualController::class, 'store'])->name('admin.nilai-manual.store');
     Route::get('/nilai-manual/{khs}/edit', [NilaiManualController::class, 'edit'])->name('admin.nilai-manual.edit');
     Route::put('/nilai-manual/{khs}', [NilaiManualController::class, 'update'])->name('admin.nilai-manual.update');
+    Route::delete('/nilai-manual/{khs}', [NilaiManualController::class, 'destroy'])->name('admin.nilai-manual.destroy');
 
     // ===================== KELAS =====================
 
@@ -403,6 +404,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::post('/presensi-manual', [PresensiManualController::class, 'store'])->name('admin.presensi-manual.store');
     Route::get('/presensi-manual/{presensi}/edit', [PresensiManualController::class, 'edit'])->name('admin.presensi-manual.edit');
     Route::put('/presensi-manual/{presensi}', [PresensiManualController::class, 'update'])->name('admin.presensi-manual.update');
+    Route::delete('/presensi-manual/{presensi}', [PresensiManualController::class, 'destroy'])->name('admin.presensi-manual.destroy');
 
     // ===================== REKAP KUESIONER =====================
 

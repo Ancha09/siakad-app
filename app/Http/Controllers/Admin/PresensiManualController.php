@@ -18,12 +18,13 @@ use Illuminate\Validation\ValidationException;
 
 class PresensiManualController extends Controller
 {
-    public function index()
+    public function index(Request $request, LegacyAcademicService $legacy)
     {
-        $presensis = Presensi::with(['krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
-            ->where('is_manual', true)->orderByDesc('tanggal')->paginate(15);
+        $query = Presensi::with(['dosenManual', 'krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
+            ->where('is_manual', true);
+        $presensis = $legacy->filterRecords($query, $request, true)->orderByDesc('tanggal')->orderByDesc('id')->paginate(15)->withQueryString();
 
-        return view('admin.presensi-manual.index', compact('presensis'));
+        return view('admin.presensi-manual.index', compact('presensis') + $legacy->filterOptions());
     }
 
     public function create()
@@ -45,6 +46,8 @@ class PresensiManualController extends Controller
                 'pertemuan' => $data['pertemuan'] ?? null, 'status' => $data['status'],
                 'keterangan' => $data['keterangan'] ?? null, 'is_manual' => true,
                 'manual_identity' => $legacy->attendanceIdentity($data),
+                'dosen_id' => $data['dosen_id'] ?? null,
+                'dosen_override' => true,
             ]);
         });
 
@@ -68,8 +71,10 @@ class PresensiManualController extends Controller
         DB::transaction(function () use ($data, $legacy, $presensi) {
             Mahasiswa::whereKey($data['mahasiswa_id'])->lockForUpdate()->firstOrFail();
             $this->ensureNotDuplicate($data, $legacy, $presensi->id);
-            $krs = $legacy->resolveKrs($data);
+            $krs = $legacy->resolveKrs($data, overwriteMetadata: true, currentKrsId: $presensi->krs_id);
             $presensi->update([
+                'dosen_id' => $data['dosen_id'] ?? null,
+                'dosen_override' => true,
                 'krs_id' => $krs->id, 'tanggal' => $data['tanggal'],
                 'pertemuan' => $data['pertemuan'] ?? null, 'status' => $data['status'],
                 'keterangan' => $data['keterangan'] ?? null,
@@ -78,6 +83,17 @@ class PresensiManualController extends Controller
         });
 
         return redirect()->route('admin.presensi-manual.index')->with('success', 'Absensi lama/manual berhasil diperbarui.');
+    }
+
+    public function destroy(Presensi $presensi)
+    {
+        abort_unless($presensi->is_manual, 404);
+        DB::transaction(function () use ($presensi) {
+            Mahasiswa::whereKey($presensi->krs->mahasiswa_id)->lockForUpdate()->firstOrFail();
+            $presensi->delete();
+        });
+
+        return redirect()->route('admin.presensi-manual.index')->with('success', 'Entri absensi manual dihapus. KRS dan nilai tidak dihapus.');
     }
 
     private function ensureNotDuplicate(array $data, LegacyAcademicService $legacy, ?int $except = null): void

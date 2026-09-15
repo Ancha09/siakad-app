@@ -23,12 +23,13 @@ class NilaiManualController extends Controller
         'B-' => 2.75, 'C+' => 2.50, 'C' => 2.00, 'D' => 1.00, 'E' => 0.00,
     ];
 
-    public function index()
+    public function index(Request $request, LegacyAcademicService $legacy)
     {
-        $nilai = Khs::with(['krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
-            ->where('is_manual', true)->latest()->paginate(15);
+        $query = Khs::with(['dosenManual', 'krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
+            ->where('is_manual', true);
+        $nilai = $legacy->filterRecords($query, $request)->latest()->paginate(15)->withQueryString();
 
-        return view('admin.nilai-manual.index', compact('nilai'));
+        return view('admin.nilai-manual.index', compact('nilai') + $legacy->filterOptions());
     }
 
     public function create()
@@ -60,6 +61,8 @@ class NilaiManualController extends Controller
                 'tahun_akademik' => $data['tahun_akademik'],
                 'semester_akademik' => $data['semester_akademik'],
                 'is_manual' => true,
+                'dosen_id' => $data['dosen_id'] ?? null,
+                'dosen_override' => true,
             ]);
         });
 
@@ -88,9 +91,11 @@ class NilaiManualController extends Controller
                 throw ValidationException::withMessages(['mata_kuliah_id' => 'Nilai mahasiswa untuk mata kuliah dan periode tersebut sudah ada.']);
             }
 
-            $krs = $legacy->resolveKrs($data);
+            $krs = $legacy->resolveKrs($data, overwriteMetadata: true, currentKrsId: $khs->krs_id);
             [$huruf, $bobot] = $this->grade($data);
             $khs->update([
+                'dosen_id' => $data['dosen_id'] ?? null,
+                'dosen_override' => true,
                 'krs_id' => $krs->id, 'nilai_angka' => $data['nilai_angka'],
                 'nilai_huruf' => $huruf, 'bobot' => $bobot,
                 'sks' => $data['sks'] ?? MataKuliah::find($data['mata_kuliah_id'])?->sks,
@@ -100,6 +105,17 @@ class NilaiManualController extends Controller
         });
 
         return redirect()->route('admin.nilai-manual.index')->with('success', 'Nilai lama/manual berhasil diperbarui.');
+    }
+
+    public function destroy(Khs $khs)
+    {
+        abort_unless($khs->is_manual, 404);
+        DB::transaction(function () use ($khs) {
+            Mahasiswa::whereKey($khs->krs->mahasiswa_id)->lockForUpdate()->firstOrFail();
+            $khs->delete();
+        });
+
+        return redirect()->route('admin.nilai-manual.index')->with('success', 'Entri nilai manual dihapus. KRS dan absensi tidak dihapus.');
     }
 
     private function validated(Request $request): array

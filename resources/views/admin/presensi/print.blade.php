@@ -27,7 +27,7 @@
                     <td>{{ $item->krs?->prodi_efektif?->nama_prodi ?? '-' }}</td>
                     <td>{{ $item->krs?->kelas_efektif?->nama_kelas ?? '-' }}</td>
                     <td>{{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}</td>
-                    <td>{{ $item->krs?->dosen_efektif?->nama ?? '-' }}</td>
+                    <td>{{ $item->dosen_efektif?->nama ?? '-' }}</td>
                     <td>{{ $item->pertemuan ?? '-' }}</td>
                     <td>{{ $item->tanggal ? \Illuminate\Support\Carbon::parse($item->tanggal)->format('d-m-Y') : '-' }}</td>
                     <td>{{ $item->status }}</td>

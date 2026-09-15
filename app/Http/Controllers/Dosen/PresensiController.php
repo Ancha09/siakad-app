@@ -123,6 +123,7 @@ class PresensiController extends Controller
             'mahasiswa',
             'presensis',
         ])
+        ->where('is_manual', false)
         ->where(
             'jadwal_id',
             $jadwal->id
@@ -308,6 +309,7 @@ class PresensiController extends Controller
             'jadwal_id',
             $jadwal->id
         )
+        ->where('is_manual', false)
         ->whereIn(
             'id',
             $request->krs_id
@@ -331,6 +333,10 @@ class PresensiController extends Controller
         // =====================================================
         // CARI PERTEMUAN
         // =====================================================
+
+        if (Presensi::whereIn('krs_id', $request->krs_id)->where('pertemuan', $request->pertemuan)->where('is_manual', true)->exists()) {
+            return back()->with('error', 'Absensi lama/manual hanya dapat dikoreksi oleh admin.')->withInput();
+        }
 
         $pertemuan =
             PresensiPertemuan::where(

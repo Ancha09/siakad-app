@@ -24,6 +24,7 @@ class KrsController extends Controller
             'jadwal.dosen',
             'jadwal.ruangan',
         ])
+        ->where('is_manual', false)
         ->whereHas('jadwal', function ($query) use ($dosen) {
             $query->where('dosen_id', $dosen->id);
         })
@@ -70,6 +71,7 @@ class KrsController extends Controller
         // ===================== AMBIL KRS =====================
 
         $krs = Krs::where('id', $id)
+            ->where('is_manual', false)
             ->whereHas('jadwal', function ($query) use ($dosen) {
                 $query->where('dosen_id', $dosen->id);
             })
@@ -145,6 +147,7 @@ class KrsController extends Controller
         // ===================== AMBIL KRS =====================
 
         $krs = Krs::where('id', $id)
+            ->where('is_manual', false)
             ->whereHas('jadwal', function ($query) use ($dosen) {
                 $query->where('dosen_id', $dosen->id);
             })
