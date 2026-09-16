@@ -19,6 +19,11 @@ class Kuesioner extends Model
 
     protected $fillable = [
         'krs_id',
+        'dosen_id',
+        'mata_kuliah_id',
+        'kelas_id',
+        'tahun_akademik',
+        'semester_akademik',
         'penguasaan_materi',
         'kejelasan_penyampaian',
         'kesesuaian_rps',
@@ -38,6 +43,21 @@ class Kuesioner extends Model
     public function krs()
     {
         return $this->belongsTo(Krs::class);
+    }
+
+    public function dosen()
+    {
+        return $this->belongsTo(Dosen::class);
+    }
+
+    public function mataKuliah()
+    {
+        return $this->belongsTo(MataKuliah::class);
+    }
+
+    public function kelas()
+    {
+        return $this->belongsTo(Kelas::class);
     }
 
     public function getRataRataAttribute(): float

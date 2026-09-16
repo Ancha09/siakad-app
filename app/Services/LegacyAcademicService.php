@@ -77,6 +77,7 @@ class LegacyAcademicService
         $metadata = [
             'jadwal_id' => $data['jadwal_id'] ?? null,
             'mata_kuliah_id' => $data['mata_kuliah_id'],
+            'dosen_id' => $data['dosen_id'] ?? null,
             'prodi_id' => $data['prodi_id'] ?? null,
             'kelas_id' => $data['kelas_id'] ?? null,
             'angkatan' => $data['angkatan'] ?? null,
@@ -93,7 +94,6 @@ class LegacyAcademicService
 
         // Keep manual metadata separate; never modify an active KRS or its schedule.
         return Krs::create($metadata + [
-            'dosen_id' => $data['dosen_id'] ?? null,
             'mahasiswa_id' => $data['mahasiswa_id'],
             'tahun_akademik' => $data['tahun_akademik'],
             'semester_akademik' => $data['semester_akademik'],

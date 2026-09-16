@@ -109,7 +109,7 @@ class KuesionerController extends Controller
         $totalDosen = $dosenIds->count();
         $totalDinilai = $evaluatedDosenIds->count();
         $totalBelumDinilai = max(0, $totalDosen - $totalDinilai);
-        $totalResponden = (clone $evaluationRows)->count('kuesioners.id');
+        $totalResponden = (clone $evaluationRows)->distinct()->count('kuesioners.id');
 
         if (($filters['status_evaluasi'] ?? null) === 'sudah') {
             $dosenQuery->whereIn('id', $evaluatedDosenIds);
@@ -126,9 +126,11 @@ class KuesionerController extends Controller
             ? collect()
             : (clone $evaluationRows)
                 ->whereIn(DB::raw(LecturerEvaluationService::EFFECTIVE_DOSEN_SQL), $recordDosenIds)
-                ->pluck('kuesioners.krs_id');
+                ->pluck('kuesioners.krs_id')
+                ->unique()
+                ->values();
         $jawabanPerDosen = $this->evaluations->answers($recordKrsIds)
-            ->groupBy(fn (Kuesioner $item) => $item->krs?->dosen_efektif?->id);
+            ->groupBy(fn (Kuesioner $item) => $this->evaluations->lecturerId($item));
 
         $mapped = $dosenCollection->map(function (Dosen $dosen) use ($jawabanPerDosen) {
             /** @var EloquentCollection<int, Kuesioner> $jawaban */

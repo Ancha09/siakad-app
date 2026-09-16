@@ -7,6 +7,7 @@ use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\Khs;
+use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
@@ -14,6 +15,7 @@ use App\Services\LegacyAcademicService;
 use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -70,6 +72,10 @@ class NilaiManualController extends Controller
                 'dosen_id' => $data['dosen_id'] ?? null,
                 'dosen_override' => true,
             ]);
+
+            // Jika KHS lama pernah dihapus tetapi kuesionernya tetap ada,
+            // sinkronkan hanya evaluasi milik KRS ini dengan dosen pilihan admin.
+            $this->syncEvaluationContext($krs, $data);
         });
 
         return redirect()->to($navigation->returnUrl($request, 'admin.nilai-manual.index'))->with('success', 'Nilai lama/manual berhasil disimpan.');
@@ -110,6 +116,10 @@ class NilaiManualController extends Controller
                 'tahun_akademik' => $data['tahun_akademik'],
                 'semester_akademik' => $data['semester_akademik'],
             ]);
+
+            // Koreksi dosen pada satu nilai manual harus langsung tercermin pada
+            // evaluasi terkait, tanpa backfill atau update massal record lain.
+            $this->syncEvaluationContext($krs, $data);
         });
 
         return redirect()->to($navigation->returnUrl($request, 'admin.nilai-manual.index'))->with('success', 'Nilai lama/manual berhasil diperbarui.');
@@ -160,6 +170,22 @@ class NilaiManualController extends Controller
         }
 
         return ['E', 0.00];
+    }
+
+    private function syncEvaluationContext(Krs $krs, array $data): void
+    {
+        // Beberapa instalasi/test lama belum memiliki modul kuesioner.
+        if (! Schema::hasTable('kuesioners')) {
+            return;
+        }
+
+        $krs->kuesioner()->update([
+            'dosen_id' => $data['dosen_id'] ?? null,
+            'mata_kuliah_id' => $data['mata_kuliah_id'],
+            'kelas_id' => $data['kelas_id'] ?? $krs->mahasiswa?->kelas_id,
+            'tahun_akademik' => $data['tahun_akademik'],
+            'semester_akademik' => $data['semester_akademik'],
+        ]);
     }
 
     private function formData(): array

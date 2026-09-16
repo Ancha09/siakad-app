@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\Kuesioner;
 use App\Models\Mahasiswa;
+use App\Services\EvaluationLecturerResolver;
 use App\Services\MahasiswaNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,7 +57,7 @@ class KuesionerController extends Controller
         return view('mahasiswa.kuesioner.form', compact('krs', 'pertanyaan'));
     }
 
-    public function store(Request $request, Krs $krs)
+    public function store(Request $request, Krs $krs, EvaluationLecturerResolver $lecturerResolver)
     {
         $mahasiswa = $this->mahasiswa();
         $this->pastikanBolehMengisi($krs, $mahasiswa->id);
@@ -79,6 +80,11 @@ class KuesionerController extends Controller
 
         $krs->kuesioner()->create([
             ...$data,
+            'dosen_id' => $lecturerResolver->resolveId($krs),
+            'mata_kuliah_id' => $krs->mata_kuliah_id ?? $krs->jadwal?->mata_kuliah_id,
+            'kelas_id' => $krs->kelas_id ?? $krs->jadwal?->kelas_id ?? $krs->mahasiswa?->kelas_id,
+            'tahun_akademik' => $krs->tahun_akademik,
+            'semester_akademik' => $krs->semester_akademik,
             'submitted_at' => now(),
         ]);
 
