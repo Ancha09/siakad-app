@@ -37,10 +37,10 @@
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $item->tahun_akademik }} · {{ $item->semester_akademik }}</td>
                             <td>
-                                <strong>{{ $item->jadwal->mataKuliah->nama_mk ?? '-' }}</strong><br>
-                                <small>{{ $item->jadwal->mataKuliah->kode_mk ?? '-' }}</small>
+                                <strong>{{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}</strong><br>
+                                <small>{{ $item->mata_kuliah_efektif?->kode_mk ?? '-' }}</small>
                             </td>
-                            <td>{{ $item->jadwal->dosen->nama ?? '-' }}</td>
+                            <td>{{ $item->khs?->dosen_efektif?->nama ?? '-' }}</td>
                             <td>
                                 @if($item->kuesioner)
                                     <span class="badge-success">Sudah diisi</span>

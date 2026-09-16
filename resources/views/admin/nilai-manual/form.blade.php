@@ -17,6 +17,7 @@
         @endif
         <form method="POST" action="{{ $editing ? route('admin.nilai-manual.update', $khs) : route('admin.nilai-manual.store') }}">
             @csrf @if($editing) @method('PUT') @endif
+            <input type="hidden" name="return_url" value="{{ $returnUrl }}">
             <div class="krs-form-grid">
                 <div class="form-group"><label>Mahasiswa *</label><select name="mahasiswa_id" class="form-control" required><option value="">Pilih mahasiswa</option>@foreach($mahasiswas as $m)<option value="{{ $m->id }}" @selected(old('mahasiswa_id', $recordKrs?->mahasiswa_id) == $m->id)>{{ $m->nim }} — {{ $m->nama }}{{ $m->is_active ? '' : ' (nonaktif)' }}</option>@endforeach</select></div>
                 <div class="form-group"><label>Angkatan</label><input type="number" name="angkatan" class="form-control" min="1900" value="{{ old('angkatan', $recordKrs?->angkatan ?? $recordKrs?->mahasiswa?->angkatan) }}"></div>
@@ -35,7 +36,7 @@
             </div>
             <p style="color:#64748b">* Wajib. Angkatan, semester mahasiswa, prodi, dosen, jadwal, kelas, nilai huruf, SKS, dan bobot boleh kosong.</p>
             <p style="color:#64748b">Dosen pengampu tersimpan khusus untuk entri nilai ini. Identitas akademik pada KRS manual berlaku bersama untuk mata kuliah/periode yang sama. Untuk mengganti nama pada master dosen, gunakan menu Data Dosen.</p>
-            <button class="btn-primary">Simpan Nilai</button> <a href="{{ route('admin.nilai-manual.index') }}" class="btn-outline">Batal</a>
+            <button class="btn-primary">Simpan Nilai</button> <a href="{{ $returnUrl }}" class="btn-outline">Batal</a>
         </form>
     </div>
 </div>

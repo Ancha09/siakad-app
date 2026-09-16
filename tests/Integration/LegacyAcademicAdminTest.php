@@ -6,7 +6,9 @@ use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Presensi;
 use App\Models\User;
+use App\Services\LegacyListNavigation;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -288,7 +290,7 @@ class LegacyAcademicAdminTest extends TestCase
         }
         $second = $this->get($url)->assertOk();
         $this->assertSame(17, $second->viewData('nilai')->total());
-        $this->assertCount(2, $second->viewData('nilai')->items());
+        $this->assertCount(7, $second->viewData('nilai')->items());
     }
 
     public function test_regular_grade_cannot_be_deleted_from_manual_routes(): void
@@ -299,5 +301,69 @@ class LegacyAcademicAdminTest extends TestCase
         $this->assertDatabaseHas('khs', ['id' => $grade->id]);
         $this->assertDatabaseHas('mahasiswas', ['id' => 1]);
         $this->assertDatabaseHas('mata_kuliahs', ['id' => 1]);
+    }
+
+    private function seedManualPages(int $lastStudent = 102): void
+    {
+        for ($id = 2; $id <= $lastStudent; $id++) {
+            DB::table('mahasiswas')->insert(['id' => $id, 'nim' => '2000'.$id, 'nama' => 'Mahasiswa Historis '.$id, 'angkatan' => 2020, 'prodi_id' => 1]);
+            $krs = Krs::create($this->input(['mahasiswa_id' => $id, 'dosen_id' => 2, 'semester' => 1, 'is_manual' => true, 'status' => 'Disetujui']));
+            Khs::create(['krs_id' => $krs->id, 'nilai_angka' => 85, 'nilai_huruf' => 'A', 'bobot' => 4, 'is_manual' => true, 'dosen_id' => 2, 'dosen_override' => true, 'tahun_akademik' => '2020/2021', 'semester_akademik' => 'Ganjil']);
+            Presensi::create(['krs_id' => $krs->id, 'tanggal' => '2020-09-01', 'pertemuan' => 1, 'status' => 'Hadir', 'is_manual' => true, 'dosen_id' => 2, 'dosen_override' => true]);
+        }
+    }
+
+    public function test_grade_navigation_preserves_filters_page_ten_and_row_numbers_after_mutations(): void
+    {
+        $this->seedManualPages();
+        $returnUrl = route('admin.nilai-manual.index', ['search' => 'Historis', 'angkatan' => 2020, 'semester' => 1, 'tahun_akademik' => '2020/2021', 'dosen_id' => 2, 'page' => 10]);
+        $list = $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false)->assertSee('<td>100</td>', false);
+        $grade = $list->viewData('nilai')->first();
+        $form = $this->get(route('admin.nilai-manual.edit', ['khs' => $grade, 'return_url' => $returnUrl]))->assertOk();
+        $this->assertSame($returnUrl, $form->viewData('returnUrl'));
+        $form->assertSee('name="return_url"', false);
+        $this->put(route('admin.nilai-manual.update', $grade), $this->input(['mahasiswa_id' => $grade->krs->mahasiswa_id, 'dosen_id' => 2, 'semester' => 1, 'return_url' => $returnUrl]))->assertSessionHasNoErrors()->assertRedirect($returnUrl);
+        $this->get(route('admin.nilai-manual.create', ['return_url' => $returnUrl]))->assertOk()->assertViewHas('returnUrl', $returnUrl);
+        $this->post(route('admin.nilai-manual.store'), $this->input(['dosen_id' => 2, 'semester' => 1, 'return_url' => $returnUrl]))->assertSessionHasNoErrors()->assertRedirect($returnUrl);
+        $this->delete(route('admin.nilai-manual.destroy', $grade), ['return_url' => $returnUrl])->assertRedirect($returnUrl);
+        $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false);
+    }
+
+    public function test_attendance_navigation_preserves_page_ten_after_create_update_and_delete(): void
+    {
+        $this->seedManualPages();
+        $returnUrl = route('admin.presensi-manual.index', ['search' => 'Historis', 'status' => 'Hadir', 'tanggal_mulai' => '2020-09-01', 'tanggal_selesai' => '2020-09-02', 'page' => 10]);
+        $list = $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false)->assertSee('<td>100</td>', false);
+        $attendance = $list->viewData('presensis')->first();
+        $this->get(route('admin.presensi-manual.edit', ['presensi' => $attendance, 'return_url' => $returnUrl]))->assertOk()->assertViewHas('returnUrl', $returnUrl);
+        $input = $this->input(['mahasiswa_id' => $attendance->krs->mahasiswa_id, 'tanggal' => '2020-09-01', 'status' => 'Hadir', 'pertemuan' => 1, 'return_url' => $returnUrl]);
+        $this->put(route('admin.presensi-manual.update', $attendance), $input)->assertSessionHasNoErrors()->assertRedirect($returnUrl);
+        $this->get(route('admin.presensi-manual.create', ['return_url' => $returnUrl]))->assertOk()->assertViewHas('returnUrl', $returnUrl);
+        $this->post(route('admin.presensi-manual.store'), array_replace($input, ['mahasiswa_id' => 1]))->assertSessionHasNoErrors()->assertRedirect($returnUrl);
+        $this->delete(route('admin.presensi-manual.destroy', $attendance), ['return_url' => $returnUrl])->assertRedirect($returnUrl);
+        $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false);
+    }
+
+    public function test_untrusted_return_urls_cannot_redirect_outside_the_correct_admin_list(): void
+    {
+        $navigation = new LegacyListNavigation;
+        $fallback = route('admin.nilai-manual.index');
+        foreach (['https://evil.test/admin/nilai-manual?page=10', '//evil.test/admin/nilai-manual', 'javascript:alert(1)', '/admin/presensi-manual?page=10', '/admin/nilai-manual#fragment', '/admin/nilai-manual/../dashboard', "/admin/nilai-manual\r\nLocation: https://evil.test", ['page' => 10]] as $url) {
+            $request = Request::create('/', 'POST', ['return_url' => $url]);
+            $this->assertSame($fallback, $navigation->returnUrl($request, 'admin.nilai-manual.index'));
+        }
+        $this->post(route('admin.nilai-manual.store'), $this->input(['return_url' => 'https://evil.test']))->assertSessionHasNoErrors()->assertRedirect($fallback);
+        $safe = $navigation->returnUrl(Request::create('/', 'POST', ['return_url' => '/admin/nilai-manual?search=Mahasiswa%20Historis&page=10&return_url=https://evil.test']), 'admin.nilai-manual.index');
+        parse_str(parse_url($safe, PHP_URL_QUERY), $query);
+        $this->assertSame(['search' => 'Mahasiswa Historis', 'page' => '10'], $query);
+    }
+
+    public function test_deleting_last_row_of_last_page_keeps_filters_and_returns_to_last_valid_page(): void
+    {
+        $this->seedManualPages(12);
+        $returnUrl = route('admin.nilai-manual.index', ['search' => 'Historis', 'page' => 2]);
+        $grade = $this->get($returnUrl)->assertOk()->viewData('nilai')->first();
+        $this->delete(route('admin.nilai-manual.destroy', $grade), ['return_url' => $returnUrl])->assertRedirect($returnUrl);
+        $this->get($returnUrl)->assertRedirect(route('admin.nilai-manual.index', ['search' => 'Historis', 'page' => 1]));
     }
 }

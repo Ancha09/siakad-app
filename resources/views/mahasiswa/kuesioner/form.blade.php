@@ -12,11 +12,11 @@
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:20px;">
             <div style="background:#f8fafc;padding:14px;border-radius:10px;">
                 <small style="color:#64748b;">Mata Kuliah</small>
-                <div style="font-weight:700;margin-top:4px;">{{ $krs->jadwal->mataKuliah->nama_mk ?? '-' }}</div>
+                <div style="font-weight:700;margin-top:4px;">{{ $krs->mata_kuliah_efektif?->nama_mk ?? '-' }}</div>
             </div>
             <div style="background:#f8fafc;padding:14px;border-radius:10px;">
                 <small style="color:#64748b;">Dosen</small>
-                <div style="font-weight:700;margin-top:4px;">{{ $krs->jadwal->dosen->nama ?? '-' }}</div>
+                <div style="font-weight:700;margin-top:4px;">{{ $krs->khs?->dosen_efektif?->nama ?? '-' }}</div>
             </div>
             <div style="background:#f8fafc;padding:14px;border-radius:10px;">
                 <small style="color:#64748b;">Periode</small>

@@ -105,6 +105,7 @@ class LegacyAcademicService
     public function filterRecords(Builder $query, Request $request, bool $attendance = false): Builder
     {
         $filters = $request->validate([
+            'page' => ['nullable', 'integer', 'between:1,100000'],
             'search' => ['nullable', 'string', 'max:100'],
             'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'semester' => ['nullable', 'integer', 'between:1,14'],

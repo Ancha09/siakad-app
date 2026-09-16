@@ -11,6 +11,7 @@ use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Services\LegacyAcademicService;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -27,17 +28,22 @@ class NilaiManualController extends Controller
     {
         $query = Khs::with(['dosenManual', 'krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
             ->where('is_manual', true);
-        $nilai = $legacy->filterRecords($query, $request)->latest()->paginate(15)->withQueryString();
+        $nilai = $legacy->filterRecords($query, $request)->latest('id')->paginate(10)->appends($request->query());
+        if ($nilai->currentPage() > $nilai->lastPage()) {
+            return redirect()->route('admin.nilai-manual.index', array_replace($request->query(), ['page' => $nilai->lastPage()]));
+        }
 
         return view('admin.nilai-manual.index', compact('nilai') + $legacy->filterOptions());
     }
 
-    public function create()
+    public function create(Request $request, LegacyListNavigation $navigation)
     {
-        return view('admin.nilai-manual.form', $this->formData());
+        $returnUrl = $navigation->returnUrl($request, 'admin.nilai-manual.index');
+
+        return view('admin.nilai-manual.form', $this->formData() + compact('returnUrl'));
     }
 
-    public function store(Request $request, LegacyAcademicService $legacy)
+    public function store(Request $request, LegacyAcademicService $legacy, LegacyListNavigation $navigation)
     {
         $data = $this->validated($request);
         $legacy->validateSchedule($data);
@@ -66,18 +72,20 @@ class NilaiManualController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.nilai-manual.index')->with('success', 'Nilai lama/manual berhasil disimpan.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.nilai-manual.index'))->with('success', 'Nilai lama/manual berhasil disimpan.');
     }
 
-    public function edit(Khs $khs)
+    public function edit(Request $request, Khs $khs, LegacyListNavigation $navigation)
     {
         abort_unless($khs->is_manual, 404);
         $khs->load(['krs.mahasiswa', 'krs.mataKuliahManual', 'krs.jadwal']);
 
-        return view('admin.nilai-manual.form', $this->formData() + compact('khs'));
+        $returnUrl = $navigation->returnUrl($request, 'admin.nilai-manual.index');
+
+        return view('admin.nilai-manual.form', $this->formData() + compact('khs', 'returnUrl'));
     }
 
-    public function update(Request $request, Khs $khs, LegacyAcademicService $legacy)
+    public function update(Request $request, Khs $khs, LegacyAcademicService $legacy, LegacyListNavigation $navigation)
     {
         abort_unless($khs->is_manual, 404);
         $data = $this->validated($request);
@@ -104,10 +112,10 @@ class NilaiManualController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.nilai-manual.index')->with('success', 'Nilai lama/manual berhasil diperbarui.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.nilai-manual.index'))->with('success', 'Nilai lama/manual berhasil diperbarui.');
     }
 
-    public function destroy(Khs $khs)
+    public function destroy(Request $request, Khs $khs, LegacyListNavigation $navigation)
     {
         abort_unless($khs->is_manual, 404);
         DB::transaction(function () use ($khs) {
@@ -115,7 +123,7 @@ class NilaiManualController extends Controller
             $khs->delete();
         });
 
-        return redirect()->route('admin.nilai-manual.index')->with('success', 'Entri nilai manual dihapus. KRS dan absensi tidak dihapus.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.nilai-manual.index'))->with('success', 'Entri nilai manual dihapus. KRS dan absensi tidak dihapus.');
     }
 
     private function validated(Request $request): array

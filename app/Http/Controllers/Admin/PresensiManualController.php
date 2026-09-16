@@ -11,6 +11,7 @@ use App\Models\MataKuliah;
 use App\Models\Presensi;
 use App\Models\Prodi;
 use App\Services\LegacyAcademicService;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -22,17 +23,22 @@ class PresensiManualController extends Controller
     {
         $query = Presensi::with(['dosenManual', 'krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
             ->where('is_manual', true);
-        $presensis = $legacy->filterRecords($query, $request, true)->orderByDesc('tanggal')->orderByDesc('id')->paginate(15)->withQueryString();
+        $presensis = $legacy->filterRecords($query, $request, true)->orderByDesc('tanggal')->orderByDesc('id')->paginate(10)->appends($request->query());
+        if ($presensis->currentPage() > $presensis->lastPage()) {
+            return redirect()->route('admin.presensi-manual.index', array_replace($request->query(), ['page' => $presensis->lastPage()]));
+        }
 
         return view('admin.presensi-manual.index', compact('presensis') + $legacy->filterOptions());
     }
 
-    public function create()
+    public function create(Request $request, LegacyListNavigation $navigation)
     {
-        return view('admin.presensi-manual.form', $this->formData());
+        $returnUrl = $navigation->returnUrl($request, 'admin.presensi-manual.index');
+
+        return view('admin.presensi-manual.form', $this->formData() + compact('returnUrl'));
     }
 
-    public function store(Request $request, LegacyAcademicService $legacy)
+    public function store(Request $request, LegacyAcademicService $legacy, LegacyListNavigation $navigation)
     {
         $data = $this->validated($request);
         $legacy->validateSchedule($data);
@@ -51,18 +57,20 @@ class PresensiManualController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.presensi-manual.index')->with('success', 'Absensi lama/manual berhasil disimpan.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.presensi-manual.index'))->with('success', 'Absensi lama/manual berhasil disimpan.');
     }
 
-    public function edit(Presensi $presensi)
+    public function edit(Request $request, Presensi $presensi, LegacyListNavigation $navigation)
     {
         abort_unless($presensi->is_manual, 404);
         $presensi->load(['krs.mahasiswa', 'krs.mataKuliahManual', 'krs.jadwal']);
 
-        return view('admin.presensi-manual.form', $this->formData() + compact('presensi'));
+        $returnUrl = $navigation->returnUrl($request, 'admin.presensi-manual.index');
+
+        return view('admin.presensi-manual.form', $this->formData() + compact('presensi', 'returnUrl'));
     }
 
-    public function update(Request $request, Presensi $presensi, LegacyAcademicService $legacy)
+    public function update(Request $request, Presensi $presensi, LegacyAcademicService $legacy, LegacyListNavigation $navigation)
     {
         abort_unless($presensi->is_manual, 404);
         $data = $this->validated($request);
@@ -82,10 +90,10 @@ class PresensiManualController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.presensi-manual.index')->with('success', 'Absensi lama/manual berhasil diperbarui.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.presensi-manual.index'))->with('success', 'Absensi lama/manual berhasil diperbarui.');
     }
 
-    public function destroy(Presensi $presensi)
+    public function destroy(Request $request, Presensi $presensi, LegacyListNavigation $navigation)
     {
         abort_unless($presensi->is_manual, 404);
         DB::transaction(function () use ($presensi) {
@@ -93,7 +101,7 @@ class PresensiManualController extends Controller
             $presensi->delete();
         });
 
-        return redirect()->route('admin.presensi-manual.index')->with('success', 'Entri absensi manual dihapus. KRS dan nilai tidak dihapus.');
+        return redirect()->to($navigation->returnUrl($request, 'admin.presensi-manual.index'))->with('success', 'Entri absensi manual dihapus. KRS dan nilai tidak dihapus.');
     }
 
     private function ensureNotDuplicate(array $data, LegacyAcademicService $legacy, ?int $except = null): void

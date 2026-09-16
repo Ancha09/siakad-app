@@ -48,7 +48,7 @@ class KhsController extends Controller
 
         // Nilai hanya ikut ditampilkan dan dihitung setelah kuesioner diisi.
         $khsTerlihat = $khs->filter(function ($item) {
-            return $item->is_manual || $item->krs?->kuesioner !== null;
+            return $item->krs?->kuesioner !== null;
         });
 
         // ===================== KELOMPOK PER SEMESTER =====================
@@ -81,7 +81,7 @@ class KhsController extends Controller
         foreach ($khsPerSemester as $semester => $data) {
 
             $semesterTerkunci = $data->contains(function ($item) {
-                return ! $item->is_manual && $item->krs?->kuesioner === null;
+                return $item->krs?->kuesioner === null;
             });
 
             if ($semesterTerkunci) {
@@ -91,7 +91,7 @@ class KhsController extends Controller
             }
 
             $dataTerlihat = $data->filter(function ($item) {
-                return $item->is_manual || $item->krs?->kuesioner !== null;
+                return $item->krs?->kuesioner !== null;
             });
 
             $sksSemester = $dataTerlihat->sum(function ($item) {
@@ -116,13 +116,7 @@ class KhsController extends Controller
         }
 
         // Jangan teruskan nilai yang terkunci ke lapisan tampilan.
-        $khs->each(function ($item) {
-            if (! $item->is_manual && $item->krs?->kuesioner === null) {
-                $item->setAttribute('nilai_angka', null);
-                $item->setAttribute('nilai_huruf', null);
-                $item->setAttribute('bobot', null);
-            }
-        });
+        $nilaiService->sembunyikanNilaiTerkunci($khs);
 
         // ===================== RETURN VIEW =====================
 

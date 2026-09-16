@@ -355,7 +355,7 @@
 
                                     <td>
 
-                                        {{ $item->krs->kuesioner ? ($item->nilai_angka ?? '-') : '🔒' }}
+                                        {{ $item->krs?->kuesioner ? ($item->nilai_angka ?? '-') : '🔒' }}
 
                                     </td>
 
@@ -365,7 +365,7 @@
                                     <td>
 
                                         <strong>
-                                            {{ ($item->is_manual || $item->krs?->kuesioner) ? ($item->nilai_huruf ?? '-') : '🔒' }}
+                                            {{ $item->krs?->kuesioner ? ($item->nilai_huruf ?? '-') : '🔒' }}
                                         </strong>
 
                                     </td>
@@ -375,7 +375,7 @@
 
                                     <td>
 
-                                        {{ ($item->is_manual || $item->krs?->kuesioner) ? ($item->bobot ?? '-') : '🔒' }}
+                                        {{ $item->krs?->kuesioner ? ($item->bobot ?? '-') : '🔒' }}
 
                                     </td>
 
@@ -383,7 +383,7 @@
                                     {{-- STATUS KUESIONER --}}
 
                                     <td>
-                                        @if($item->krs->kuesioner)
+                                        @if($item->krs?->kuesioner)
                                             <span class="badge-success">Nilai terbuka</span>
                                         @else
                                             <a href="{{ route('mahasiswa.kuesioner.create', $item->krs_id) }}"

@@ -57,6 +57,7 @@ class DashboardController extends Controller
         $kuesionerTertunda = $ringkasanNilai['kuesioner_tertunda'];
         $ipkTerlihat = $ringkasanNilai['ipk_terlihat'];
         $jumlahNilai = $ringkasanNilai['jumlah_nilai'];
+        $nilaiService->sembunyikanNilaiTerkunci($krs->pluck('khs')->filter());
 
         return view('mahasiswa.dashboard', compact(
             'mahasiswa',

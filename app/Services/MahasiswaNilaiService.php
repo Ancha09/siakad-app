@@ -20,7 +20,7 @@ class MahasiswaNilaiService
 
     public function ringkasan(Collection $khs): array
     {
-        $tertunda = $khs->filter(fn (Khs $item) => ! $item->is_manual && $item->krs?->kuesioner === null)->count();
+        $tertunda = $khs->filter(fn (Khs $item) => $item->krs?->kuesioner === null)->count();
         $ipkAktual = $this->hitungIndeks($khs);
 
         return [
@@ -47,5 +47,20 @@ class MahasiswaNilaiService
         });
 
         return round($totalMutu / $totalSks, 2);
+    }
+
+    public function sembunyikanNilaiTerkunci(Collection $khs): void
+    {
+        // Request-local masking protects Blade and serialization without changing database grades.
+        $khs->each(function (Khs $item) {
+            if ($item->krs?->kuesioner !== null) {
+                return;
+            }
+            foreach (['nilai_angka', 'nilai_huruf', 'bobot', 'indeks', 'status_lulus', 'lulus', 'ip', 'ips', 'ipk'] as $field) {
+                if (array_key_exists($field, $item->getAttributes())) {
+                    $item->setAttribute($field, null);
+                }
+            }
+        });
     }
 }

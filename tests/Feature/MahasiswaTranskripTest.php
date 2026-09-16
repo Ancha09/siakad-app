@@ -141,3 +141,47 @@ test('transcript pdf is rendered from the dedicated transcript template', functi
 
     expect($templateRendered)->toBeTrue();
 });
+
+test('manual grades without schedule are hidden in khs dashboard json requests and pdf', function () {
+    ['user' => $user, 'krs' => $krs] = buatDataTranskrip();
+    $courseId = $krs->jadwal->mata_kuliah_id;
+    $krs->update(['is_manual' => true, 'jadwal_id' => null, 'mata_kuliah_id' => $courseId]);
+    $grade = $krs->khs;
+    $grade->update(['is_manual' => true, 'nilai_angka' => 93.37]);
+    $this->actingAs($user);
+    foreach (['mahasiswa.khs', 'mahasiswa.dashboard', 'mahasiswa.krs'] as $route) {
+        $response = $this->get(route($route))->assertOk()->assertDontSee('93.37')->assertDontSee('3.67');
+        if ($route === 'mahasiswa.khs') {
+            expect($response->viewData('ipk'))->toBeNull()
+                ->and($response->viewData('ipsPerSemester')['2026/2027 - Ganjil'])->toBeNull()
+                ->and($response->viewData('jumlahKuesionerTertunda'))->toBe(1);
+            $masked = $response->viewData('khs')->first()->toArray();
+        } elseif ($route === 'mahasiswa.dashboard') {
+            expect($response->viewData('ipkTerlihat'))->toBeNull();
+            $masked = $response->viewData('krs')->first()->khs->toArray();
+        } else {
+            continue;
+        }
+        foreach (['nilai_angka', 'nilai_huruf', 'bobot'] as $field) {
+            expect($masked[$field])->toBeNull();
+        }
+    }
+    $this->getJson(route('mahasiswa.khs'))->assertOk()->assertDontSee('93.37')->assertDontSee('3.67');
+    $this->get(route('mahasiswa.transkrip.pdf'))->assertRedirect(route('mahasiswa.kuesioner'));
+    $this->assertDatabaseHas('khs', ['id' => $grade->id, 'nilai_angka' => 93.37, 'nilai_huruf' => 'A-', 'bobot' => 3.67]);
+    $this->get(route('mahasiswa.kuesioner'))->assertOk()->assertSee('Pengujian Perangkat Lunak');
+    $this->get(route('mahasiswa.kuesioner.create', $krs))->assertOk()->assertSee('Pengujian Perangkat Lunak')->assertDontSee('93.37');
+});
+
+test('submitting questionnaire unlocks a manual course and transcript without changing its grade', function () {
+    ['user' => $user, 'mahasiswa' => $mahasiswa, 'krs' => $krs] = buatDataTranskrip();
+    $krs->update(['is_manual' => true, 'mata_kuliah_id' => $krs->jadwal->mata_kuliah_id, 'jadwal_id' => null]);
+    $krs->khs->update(['is_manual' => true, 'nilai_angka' => 93.37]);
+    $answers = array_fill_keys(array_keys(Kuesioner::PERTANYAAN), 5);
+    $this->actingAs($user)->post(route('mahasiswa.kuesioner.store', $krs), $answers)->assertSessionHasNoErrors()->assertRedirect(route('mahasiswa.khs'));
+    $response = $this->get(route('mahasiswa.khs'))->assertOk()->assertSee('93.37')->assertSee('3.67')->assertSee('Nilai terbuka');
+    expect($response->viewData('ipk'))->toBe(3.67)
+        ->and($response->viewData('ipsPerSemester')['2026/2027 - Ganjil'])->toBe(3.67)
+        ->and($response->viewData('jumlahKuesionerTertunda'))->toBe(0);
+    $this->get(route('mahasiswa.transkrip.pdf'))->assertOk()->assertHeader('content-type', 'application/pdf')->assertDownload('transkrip-'.$mahasiswa->nim.'.pdf');
+});

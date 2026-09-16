@@ -68,4 +68,22 @@ class MahasiswaNilaiServiceTest extends TestCase
 
         return $grade;
     }
+
+    public function test_manual_grades_are_locked_and_masked_until_their_questionnaire_is_completed(): void
+    {
+        $service = new MahasiswaNilaiService;
+        $locked = $this->grade(4, 3, false);
+        $locked->fill(['is_manual' => true, 'nilai_angka' => 93.37, 'nilai_huruf' => 'A']);
+        $visible = $this->grade(3, 3, true);
+        $visible->fill(['is_manual' => true, 'nilai_angka' => 70, 'nilai_huruf' => 'B']);
+        $grades = collect([$locked, $visible]);
+        $this->assertNull($service->ringkasan($grades)['ipk_terlihat']);
+        $this->assertSame(1, $service->ringkasan($grades)['kuesioner_tertunda']);
+        $service->sembunyikanNilaiTerkunci($grades);
+        foreach (['nilai_angka', 'nilai_huruf', 'bobot'] as $field) {
+            $this->assertNull($locked->toArray()[$field]);
+        }
+        $this->assertSame(70, $visible->nilai_angka);
+        $this->assertSame('B', $visible->nilai_huruf);
+    }
 }

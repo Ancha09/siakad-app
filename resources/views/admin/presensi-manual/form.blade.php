@@ -12,6 +12,7 @@
 <div class="page-card"><div class="page-card-head"><h2>{{ $editing ? 'Edit' : 'Input' }} Absensi Lama / Manual</h2></div><div class="page-card-body">
     @if($errors->any())<div style="background:#fee2e2;color:#991b1b;padding:15px;border-radius:8px;margin-bottom:20px"><strong>Periksa input:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
     <form method="POST" action="{{ $editing ? route('admin.presensi-manual.update', $presensi) : route('admin.presensi-manual.store') }}">@csrf @if($editing) @method('PUT') @endif
+        <input type="hidden" name="return_url" value="{{ $returnUrl }}">
         <div class="krs-form-grid">
             <div class="form-group"><label>Mahasiswa *</label><select name="mahasiswa_id" class="form-control" required><option value="">Pilih mahasiswa</option>@foreach($mahasiswas as $m)<option value="{{ $m->id }}" @selected(old('mahasiswa_id', $recordKrs?->mahasiswa_id) == $m->id)>{{ $m->nim }} — {{ $m->nama }}{{ $m->is_active ? '' : ' (nonaktif)' }}</option>@endforeach</select></div>
             <div class="form-group"><label>Angkatan</label><input type="number" name="angkatan" min="1900" class="form-control" value="{{ old('angkatan', $recordKrs?->angkatan ?? $recordKrs?->mahasiswa?->angkatan) }}"></div>
@@ -30,7 +31,7 @@
         </div>
         <p style="color:#64748b">* Wajib. Dosen, jadwal, kelas, program studi, angkatan, semester mahasiswa, nomor pertemuan, dan keterangan boleh kosong.</p>
         <p style="color:#64748b">Dosen pengampu tersimpan khusus untuk entri absensi ini. Identitas akademik pada KRS manual berlaku bersama untuk mata kuliah/periode yang sama.</p>
-        <button class="btn-primary">Simpan Absensi</button> <a href="{{ route('admin.presensi-manual.index') }}" class="btn-outline">Batal</a>
+        <button class="btn-primary">Simpan Absensi</button> <a href="{{ $returnUrl }}" class="btn-outline">Batal</a>
     </form>
 </div></div>
 @endsection

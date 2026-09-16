@@ -6,12 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\Krs;
 use App\Models\Kuesioner;
 use App\Models\Mahasiswa;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class KuesionerController extends Controller
 {
-    public function index()
+    public function index(MahasiswaNilaiService $nilaiService)
     {
         $mahasiswa = $this->mahasiswa();
 
@@ -19,6 +20,9 @@ class KuesionerController extends Controller
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.kelas',
+            'mataKuliahManual',
+            'khs.dosenManual',
+            'dosenManual',
             'khs',
             'kuesioner',
         ])
@@ -29,10 +33,12 @@ class KuesionerController extends Controller
             ->orderByDesc('semester_akademik')
             ->get();
 
+        $nilaiService->sembunyikanNilaiTerkunci($krs->pluck('khs')->filter());
+
         return view('mahasiswa.kuesioner.index', compact('mahasiswa', 'krs'));
     }
 
-    public function create(Krs $krs)
+    public function create(Krs $krs, MahasiswaNilaiService $nilaiService)
     {
         $mahasiswa = $this->mahasiswa();
         $this->pastikanBolehMengisi($krs, $mahasiswa->id);
@@ -43,7 +49,8 @@ class KuesionerController extends Controller
                 ->with('info', 'Kuesioner untuk mata kuliah tersebut sudah pernah dikirim.');
         }
 
-        $krs->load(['jadwal.mataKuliah', 'jadwal.dosen', 'jadwal.kelas']);
+        $krs->load(['jadwal.mataKuliah', 'jadwal.dosen', 'jadwal.kelas', 'mataKuliahManual', 'dosenManual', 'khs.dosenManual', 'kuesioner']);
+        $nilaiService->sembunyikanNilaiTerkunci(collect([$krs->khs])->filter());
         $pertanyaan = Kuesioner::PERTANYAAN;
 
         return view('mahasiswa.kuesioner.form', compact('krs', 'pertanyaan'));
