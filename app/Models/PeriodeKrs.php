@@ -23,4 +23,9 @@ class PeriodeKrs extends Model
         'tanggal_mulai' => 'datetime',
         'tanggal_selesai' => 'datetime',
     ];
+
+    public function aksesMahasiswa()
+    {
+        return $this->hasMany(PeriodeKrsMahasiswa::class);
+    }
 }

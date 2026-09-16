@@ -48,4 +48,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(PembayaranKrs::class, 'diverifikasi_oleh');
     }
+
+    public function aksesKrsDiubah()
+    {
+        return $this->hasMany(PeriodeKrsMahasiswa::class, 'admin_id');
+    }
 }

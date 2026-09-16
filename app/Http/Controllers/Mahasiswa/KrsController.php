@@ -7,6 +7,7 @@ use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
+use App\Models\PeriodeKrsMahasiswa;
 use App\Services\KrsCardService;
 use App\Services\MahasiswaNilaiService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -35,6 +36,10 @@ class KrsController extends Controller
             ->where('tanggal_selesai', '>=', now())
             ->latest()
             ->first();
+
+        $aksesKrsDibuka = $periodeKrs
+            ? $this->aksesKrsDibuka($periodeKrs, $mahasiswa)
+            : false;
 
         // =========================================================
         // HITUNG IPK MAHASISWA
@@ -131,7 +136,7 @@ class KrsController extends Controller
 
         $jadwals = collect();
 
-        if ($periodeKrs) {
+        if ($periodeKrs && $aksesKrsDibuka) {
 
             $jadwals = Jadwal::with([
                 'mataKuliah',
@@ -188,7 +193,8 @@ class KrsController extends Controller
                 'jumlahKuesionerTertunda',
                 'jumlahNilai',
                 'batasSks',
-                'periodeKartuKrs'
+                'periodeKartuKrs',
+                'aksesKrsDibuka'
             )
         );
     }
@@ -249,6 +255,13 @@ class KrsController extends Controller
             return back()->with(
                 'error',
                 'Pengisian KRS sedang ditutup atau periode KRS telah berakhir.'
+            );
+        }
+
+        if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
+            return back()->with(
+                'error',
+                'Akses KRS Anda belum dibuka. Silakan hubungi admin.'
             );
         }
 
@@ -457,6 +470,15 @@ class KrsController extends Controller
                 );
         }
 
+        if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
+            return redirect()
+                ->route('mahasiswa.krs')
+                ->with(
+                    'error',
+                    'Akses KRS Anda belum dibuka. Silakan hubungi admin.'
+                );
+        }
+
         // ===================== AMBIL KRS MILIK MAHASISWA =====================
 
         $krs = Krs::where(
@@ -552,5 +574,14 @@ class KrsController extends Controller
 
         // IPK < 3.25
         return 20;
+    }
+
+    private function aksesKrsDibuka(PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa): bool
+    {
+        return PeriodeKrsMahasiswa::query()
+            ->where('periode_krs_id', $periodeKrs->id)
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('status_akses', 'dibuka')
+            ->exists();
     }
 }

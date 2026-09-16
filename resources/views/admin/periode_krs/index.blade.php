@@ -61,6 +61,41 @@
 </div>
 
 
+{{-- ===================== FILTER ===================== --}}
+
+<div class="page-card" style="margin-bottom:20px;">
+    <div class="page-card-body">
+        <form method="GET" action="{{ route('admin.periode-krs') }}">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;align-items:end;">
+                <div>
+                    <label for="tahun_akademik">Tahun Akademik</label>
+                    <select id="tahun_akademik" name="tahun_akademik" class="form-control">
+                        <option value="">Semua tahun</option>
+                        @foreach($tahunAkademiks as $tahun)
+                            <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label for="semester">Semester Akademik</label>
+                    <select id="semester" name="semester" class="form-control">
+                        <option value="">Semua semester</option>
+                        <option value="Ganjil" @selected(request('semester') === 'Ganjil')>Ganjil</option>
+                        <option value="Genap" @selected(request('semester') === 'Genap')>Genap</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="submit" class="btn-primary">Terapkan Filter</button>
+                    <a href="{{ route('admin.periode-krs') }}" class="btn-outline">Reset</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
 {{-- ===================== DATA ===================== --}}
 
 <div class="page-card">
@@ -102,7 +137,7 @@
 
                     <th>Keterangan</th>
 
-                    <th width="220">Aksi</th>
+                    <th width="310">Aksi</th>
 
                 </tr>
 
@@ -228,6 +263,14 @@
                                 class="action-buttons"
                                 style="display:flex;gap:6px;flex-wrap:wrap;"
                             >
+
+                                <a
+                                    href="{{ route('admin.periode-krs.students', $item) }}"
+                                    class="btn-primary"
+                                    style="white-space:nowrap;"
+                                >
+                                    Akses Mahasiswa
+                                </a>
 
                                 {{-- TOGGLE STATUS --}}
 

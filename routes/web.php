@@ -354,6 +354,12 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::post('/periode-krs', [PeriodeKrsController::class, 'store'])->name('admin.periode-krs.store');
 
+    Route::get('/periode-krs/{periodeKrs}/mahasiswa', [PeriodeKrsController::class, 'students'])->name('admin.periode-krs.students');
+
+    Route::patch('/periode-krs/{periodeKrs}/mahasiswa/{mahasiswa}/akses', [PeriodeKrsController::class, 'updateStudentAccess'])->name('admin.periode-krs.students.access');
+
+    Route::patch('/periode-krs/{periodeKrs}/mahasiswa/{mahasiswa}/pembayaran', [PeriodeKrsController::class, 'updateStudentPayment'])->name('admin.periode-krs.students.payment');
+
     Route::get('/periode-krs/{periodeKrs}/edit', [PeriodeKrsController::class, 'edit'])->name('admin.periode-krs.edit');
 
     Route::put('/periode-krs/{periodeKrs}', [PeriodeKrsController::class, 'update'])->name('admin.periode-krs.update');

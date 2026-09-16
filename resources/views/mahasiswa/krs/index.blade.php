@@ -25,10 +25,16 @@
             </p>
         </div>
 
-        @if($periodeKrs)
+        @if($periodeKrs && $aksesKrsDibuka)
 
             <span class="badge badge-green">
                 🟢 KRS Dibuka
+            </span>
+
+        @elseif($periodeKrs)
+
+            <span class="badge" style="background:#fef3c7;color:#92400e;">
+                Akses Belum Dibuka
             </span>
 
         @else
@@ -183,6 +189,12 @@
                 </div>
 
             </div>
+
+            @if(!$aksesKrsDibuka)
+                <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:16px;border-radius:8px;margin-bottom:25px;">
+                    <strong>Akses KRS Anda belum dibuka. Silakan hubungi admin.</strong>
+                </div>
+            @endif
 
         @else
 
@@ -692,6 +704,7 @@
 
                                                 {{-- AJUKAN KEMBALI --}}
 
+                                                @if($aksesKrsDibuka)
                                                 <form
                                                     action="{{ route('mahasiswa.krs.ajukan-kembali', $item->id) }}"
                                                     method="POST"
@@ -713,6 +726,7 @@
                                                     </button>
 
                                                 </form>
+                                                @endif
 
                                             </div>
 
@@ -919,6 +933,14 @@
                     </div>
 
 
+                @elseif(!$aksesKrsDibuka)
+
+                    <div style="text-align:center;padding:45px 20px;color:#9a3412;">
+                        <div style="font-size:40px;margin-bottom:10px;">🔒</div>
+                        <strong style="display:block;font-size:16px;">Akses KRS Anda belum dibuka</strong>
+                        <p style="margin-top:8px;font-size:13px;">Silakan hubungi admin untuk pemeriksaan pembayaran dan pembukaan akses KRS.</p>
+                    </div>
+
                 @elseif($jadwals->count() == 0)
 
                     <div
@@ -1108,6 +1130,7 @@
 
                                                 @if(
                                                     $periodeKrs &&
+                                                    $aksesKrsDibuka &&
                                                     (
                                                         $totalSks +
                                                         ($jadwal->mataKuliah->sks ?? 0)
