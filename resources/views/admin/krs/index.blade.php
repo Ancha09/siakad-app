@@ -320,6 +320,10 @@
             📝 Data KRS Mahasiswa
         </h2>
 
+        <a href="{{ route('admin.krs-mahasiswa.index') }}" class="btn-primary" style="display:inline-block;">
+            KRS per Mahasiswa
+        </a>
+
     </div>
 
 

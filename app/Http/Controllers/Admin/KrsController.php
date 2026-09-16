@@ -9,12 +9,221 @@ use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
+use App\Models\PembayaranKrs;
 use App\Models\Prodi;
+use App\Services\KrsCardService;
 use App\Services\LegacyListNavigation;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class KrsController extends Controller
 {
+    public function studentIndex(Request $request)
+    {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
+            'prodi_id' => ['nullable', 'integer', 'exists:prodis,id'],
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'semester' => ['nullable', 'integer', 'between:1,14'],
+            'semester_akademik' => ['nullable', Rule::in(['Ganjil', 'Genap'])],
+            'tahun_akademik' => ['nullable', 'string', 'max:20'],
+            'status_bayar' => ['nullable', Rule::in(['belum_bayar', 'lunas'])],
+            'page' => ['nullable', 'integer', 'between:1,100000'],
+        ]);
+
+        $query = Krs::query()
+            ->with(['mahasiswa.prodi', 'mahasiswa.kelas'])
+            ->where('is_manual', false)
+            ->when($filters['search'] ?? null, function (Builder $query, string $search) {
+                $query->whereHas('mahasiswa', fn (Builder $student) => $student
+                    ->where('nim', 'like', "%{$search}%")
+                    ->orWhere('nama', 'like', "%{$search}%"));
+            })
+            ->when($filters['angkatan'] ?? null, fn (Builder $query, $angkatan) => $query
+                ->whereHas('mahasiswa', fn (Builder $student) => $student
+                    ->where('angkatan', $angkatan)
+                    ->orWhereHas('kelas', fn (Builder $kelas) => $kelas->where('angkatan', $angkatan))))
+            ->when($filters['prodi_id'] ?? null, fn (Builder $query, $prodiId) => $query
+                ->whereHas('mahasiswa', fn (Builder $student) => $student->where('prodi_id', $prodiId)))
+            ->when($filters['kelas_id'] ?? null, fn (Builder $query, $kelasId) => $query
+                ->whereHas('mahasiswa', fn (Builder $student) => $student->where('kelas_id', $kelasId)))
+            ->when($filters['tahun_akademik'] ?? null, fn (Builder $query, $tahun) => $query->where('tahun_akademik', $tahun))
+            ->when($filters['semester_akademik'] ?? null, fn (Builder $query, $semester) => $query->where('semester_akademik', $semester));
+
+        if (! empty($filters['semester'])) {
+            $semester = (int) $filters['semester'];
+            $query->where(function (Builder $semesterQuery) use ($semester) {
+                $semesterQuery->whereExists(fn (QueryBuilder $payment) => $payment
+                    ->selectRaw('1')
+                    ->from('pembayaran_krs')
+                    ->whereColumn('pembayaran_krs.mahasiswa_id', 'krs.mahasiswa_id')
+                    ->whereColumn('pembayaran_krs.tahun_akademik', 'krs.tahun_akademik')
+                    ->whereColumn('pembayaran_krs.semester_akademik', 'krs.semester_akademik')
+                    ->where('pembayaran_krs.semester', $semester))
+                    ->orWhere(function (Builder $fallback) use ($semester) {
+                        $fallback->whereNotExists(fn (QueryBuilder $payment) => $payment
+                            ->selectRaw('1')
+                            ->from('pembayaran_krs')
+                            ->whereColumn('pembayaran_krs.mahasiswa_id', 'krs.mahasiswa_id')
+                            ->whereColumn('pembayaran_krs.tahun_akademik', 'krs.tahun_akademik')
+                            ->whereColumn('pembayaran_krs.semester_akademik', 'krs.semester_akademik'))
+                            ->whereHas('mahasiswa', fn (Builder $student) => $student
+                                ->where('semester', $semester)
+                                ->orWhereHas('kelas', fn (Builder $kelas) => $kelas->where('semester', $semester)));
+                    });
+            });
+        }
+
+        if (($filters['status_bayar'] ?? null) === 'lunas') {
+            $query->whereExists(fn (QueryBuilder $payment) => $payment
+                ->selectRaw('1')
+                ->from('pembayaran_krs')
+                ->whereColumn('pembayaran_krs.mahasiswa_id', 'krs.mahasiswa_id')
+                ->whereColumn('pembayaran_krs.tahun_akademik', 'krs.tahun_akademik')
+                ->whereColumn('pembayaran_krs.semester_akademik', 'krs.semester_akademik')
+                ->where('pembayaran_krs.status_bayar', 'lunas'));
+        } elseif (($filters['status_bayar'] ?? null) === 'belum_bayar') {
+            $query->whereNotExists(fn (QueryBuilder $payment) => $payment
+                ->selectRaw('1')
+                ->from('pembayaran_krs')
+                ->whereColumn('pembayaran_krs.mahasiswa_id', 'krs.mahasiswa_id')
+                ->whereColumn('pembayaran_krs.tahun_akademik', 'krs.tahun_akademik')
+                ->whereColumn('pembayaran_krs.semester_akademik', 'krs.semester_akademik')
+                ->where('pembayaran_krs.status_bayar', 'lunas'));
+        }
+
+        $summaries = $query
+            ->select(['mahasiswa_id', 'tahun_akademik', 'semester_akademik'])
+            ->selectRaw('COUNT(*) AS jumlah_mata_kuliah')
+            ->groupBy('mahasiswa_id', 'tahun_akademik', 'semester_akademik')
+            ->orderByDesc('tahun_akademik')
+            ->orderByDesc('semester_akademik')
+            ->paginate(10)
+            ->withQueryString();
+
+        $studentIds = $summaries->getCollection()->pluck('mahasiswa_id')->unique();
+        $periodRecords = Krs::query()
+            ->with(['jadwal.mataKuliah'])
+            ->where('is_manual', false)
+            ->whereIn('mahasiswa_id', $studentIds)
+            ->get()
+            ->groupBy(fn (Krs $item) => PembayaranKrs::periodKey(
+                $item->mahasiswa_id,
+                $item->tahun_akademik,
+                $item->semester_akademik
+            ));
+        $payments = PembayaranKrs::query()
+            ->whereIn('mahasiswa_id', $studentIds)
+            ->get()
+            ->keyBy(fn (PembayaranKrs $item) => PembayaranKrs::periodKey(
+                $item->mahasiswa_id,
+                $item->tahun_akademik,
+                $item->semester_akademik
+            ));
+
+        $summaries->setCollection($summaries->getCollection()->map(function (Krs $summary) use ($periodRecords, $payments) {
+            $key = PembayaranKrs::periodKey($summary->mahasiswa_id, $summary->tahun_akademik, $summary->semester_akademik);
+            $records = $periodRecords->get($key, collect());
+            $summary->setRelation('periodRecords', $records);
+            $summary->setRelation('pembayaran', $payments->get($key));
+            $summary->setAttribute('total_sks', $records
+                ->where('status', '!=', 'Ditolak')
+                ->sum(fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0)));
+            $summary->setAttribute('semester_studi', $payments->get($key)?->semester
+                ?? $summary->mahasiswa?->semester
+                ?? $summary->mahasiswa?->kelas?->semester);
+
+            return $summary;
+        }));
+
+        return view('admin.krs-mahasiswa.index', [
+            'summaries' => $summaries,
+            'prodis' => Prodi::orderBy('nama_prodi')->get(),
+            'kelases' => Kelas::orderBy('nama_kelas')->get(),
+            'angkatans' => Mahasiswa::whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan'),
+            'tahunAkademiks' => Krs::where('is_manual', false)->whereNotNull('tahun_akademik')->distinct()->orderByDesc('tahun_akademik')->pluck('tahun_akademik'),
+        ]);
+    }
+
+    public function studentShow(Request $request, Mahasiswa $mahasiswa, KrsCardService $cards, LegacyListNavigation $navigation)
+    {
+        $period = $this->validatedPeriod($request);
+        $data = $cards->data($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']);
+        abort_if($data['krsRecords']->isEmpty(), 404, 'Data KRS pada periode tersebut tidak ditemukan.');
+
+        return view('admin.krs-mahasiswa.show', $data + [
+            'returnUrl' => $navigation->returnUrl($request, 'admin.krs-mahasiswa.index'),
+        ]);
+    }
+
+    public function updatePayment(Request $request, Mahasiswa $mahasiswa)
+    {
+        $data = $request->validate([
+            'tahun_akademik' => ['required', 'string', 'max:20', 'regex:/^\d{4}\/\d{4}$/'],
+            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
+            'semester' => ['required', 'integer', 'between:1,14'],
+            'status_bayar' => ['required', Rule::in(['belum_bayar', 'lunas'])],
+            'tanggal_bayar' => ['nullable', 'date'],
+            'catatan' => ['nullable', 'string', 'max:2000'],
+            'return_url' => ['nullable', 'string', 'max:4096'],
+        ]);
+
+        $exists = Krs::query()
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('is_manual', false)
+            ->where('tahun_akademik', $data['tahun_akademik'])
+            ->where('semester_akademik', $data['semester_akademik'])
+            ->exists();
+        abort_unless($exists, 404);
+
+        DB::transaction(function () use ($request, $mahasiswa, $data) {
+            PembayaranKrs::updateOrCreate([
+                'mahasiswa_id' => $mahasiswa->id,
+                'tahun_akademik' => $data['tahun_akademik'],
+                'semester_akademik' => $data['semester_akademik'],
+            ], [
+                'semester' => $data['semester'],
+                'status_bayar' => $data['status_bayar'],
+                'tanggal_bayar' => $data['status_bayar'] === 'lunas'
+                    ? ($data['tanggal_bayar'] ?? now()->toDateString())
+                    : null,
+                'catatan' => $data['catatan'] ?? null,
+                'diverifikasi_oleh' => $request->user()->id,
+            ]);
+        });
+
+        return redirect()->route('admin.krs-mahasiswa.show', [
+            'mahasiswa' => $mahasiswa,
+            'tahun_akademik' => $data['tahun_akademik'],
+            'semester_akademik' => $data['semester_akademik'],
+            'return_url' => $data['return_url'] ?? null,
+        ])->with('success', 'Status pembayaran KRS berhasil diperbarui.');
+    }
+
+    public function studentCardPdf(Request $request, Mahasiswa $mahasiswa, KrsCardService $cards)
+    {
+        $period = $this->validatedPeriod($request);
+        $data = $cards->data($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']);
+        abort_if($data['printableRecords']->isEmpty(), 404, 'Tidak ada KRS yang dapat dicetak pada periode tersebut.');
+
+        return Pdf::loadView('krs.card-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->download($cards->filename($mahasiswa, $data['semesterStudi']));
+    }
+
+    private function validatedPeriod(Request $request): array
+    {
+        return $request->validate([
+            'tahun_akademik' => ['required', 'string', 'max:20', 'regex:/^\d{4}\/\d{4}$/'],
+            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
+        ]);
+    }
+
     // ===================== INDEX =====================
 
     public function index(Request $request)

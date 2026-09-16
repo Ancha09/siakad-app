@@ -155,6 +155,8 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
 
     Route::get('/krs', [MahasiswaKrsController::class, 'index'])->name('mahasiswa.krs');
 
+    Route::get('/krs/kartu/pdf', [MahasiswaKrsController::class, 'cardPdf'])->name('mahasiswa.krs.pdf');
+
     Route::post('/krs', [MahasiswaKrsController::class, 'store'])->name('mahasiswa.krs.store');
 
     Route::post('/krs/{id}/ajukan-kembali', [MahasiswaKrsController::class, 'ajukanKembali'])->name('mahasiswa.krs.ajukan-kembali');
@@ -325,6 +327,14 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== KRS =====================
 
     Route::get('/krs', [KrsController::class, 'index'])->name('admin.krs');
+
+    Route::get('/krs-mahasiswa', [KrsController::class, 'studentIndex'])->name('admin.krs-mahasiswa.index');
+
+    Route::get('/krs-mahasiswa/{mahasiswa}', [KrsController::class, 'studentShow'])->name('admin.krs-mahasiswa.show');
+
+    Route::patch('/krs-mahasiswa/{mahasiswa}/pembayaran', [KrsController::class, 'updatePayment'])->name('admin.krs-mahasiswa.payment');
+
+    Route::get('/krs-mahasiswa/{mahasiswa}/pdf', [KrsController::class, 'studentCardPdf'])->name('admin.krs-mahasiswa.pdf');
 
     Route::get('/krs/create', [KrsController::class, 'create'])->name('admin.krs.create');
 

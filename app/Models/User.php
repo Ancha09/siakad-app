@@ -43,4 +43,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Mahasiswa::class, 'user_id');
     }
+
+    public function pembayaranKrsDiverifikasi()
+    {
+        return $this->hasMany(PembayaranKrs::class, 'diverifikasi_oleh');
+    }
 }

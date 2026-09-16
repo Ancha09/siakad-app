@@ -96,4 +96,9 @@ class Mahasiswa extends Model
             'krs_id'
         );
     }
+
+    public function pembayaranKrs()
+    {
+        return $this->hasMany(PembayaranKrs::class);
+    }
 }

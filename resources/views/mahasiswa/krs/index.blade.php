@@ -437,6 +437,18 @@
                     📋 KRS Saya
                 </h3>
 
+                @if($periodeKartuKrs->isNotEmpty())
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        @foreach($periodeKartuKrs as $periodeKartu)
+                            <a href="{{ route('mahasiswa.krs.pdf', $periodeKartu) }}"
+                               class="btn-outline"
+                               style="display:inline-block;padding:7px 11px;font-size:12px;">
+                                PDF {{ $periodeKartu['tahun_akademik'] }} {{ $periodeKartu['semester_akademik'] }}
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
             </div>
 
 
