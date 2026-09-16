@@ -295,6 +295,7 @@ test('questionnaire submission snapshots lecturer from manual grade override', f
         'dosen_id' => $tessa->id, 'dosen_override' => true,
     ]);
     $answers = collect(array_keys(Kuesioner::PERTANYAAN))->mapWithKeys(fn ($column) => [$column => 4])->all();
+    $answers['komentar'] = 'Penyampaian materi sudah jelas.';
 
     $this->actingAs($studentUser)
         ->post(route('mahasiswa.kuesioner.store', $krs), $answers)

@@ -210,6 +210,11 @@ test('submitting questionnaire unlocks a manual course and transcript without ch
     $krs->update(['is_manual' => true, 'mata_kuliah_id' => $krs->jadwal->mata_kuliah_id, 'jadwal_id' => null]);
     $krs->khs->update(['is_manual' => true, 'nilai_angka' => 93.37]);
     $answers = array_fill_keys(array_keys(Kuesioner::PERTANYAAN), 5);
+    $this->actingAs($user)
+        ->post(route('mahasiswa.kuesioner.store', $krs), $answers)
+        ->assertSessionHasErrors(['komentar' => 'Pesan dan saran wajib diisi.']);
+    $this->assertDatabaseMissing('kuesioners', ['krs_id' => $krs->id]);
+    $answers['komentar'] = 'Materi disampaikan dengan sangat baik.';
     $this->actingAs($user)->post(route('mahasiswa.kuesioner.store', $krs), $answers)->assertSessionHasNoErrors()->assertRedirect(route('mahasiswa.khs'));
     $response = $this->get(route('mahasiswa.khs'))->assertOk()->assertSee('93.37')->assertSee('3.67')->assertSee('Nilai terbuka');
     expect($response->viewData('ipk'))->toBe(3.67)
@@ -226,6 +231,7 @@ test('one questionnaire opens only its manual course while other grades and cumu
     $secondKrs = Krs::create(['mahasiswa_id' => $mahasiswa->id, 'mata_kuliah_id' => $secondCourse->id, 'is_manual' => true, 'status' => 'Disetujui', 'tahun_akademik' => '2026/2027', 'semester_akademik' => 'Ganjil']);
     $secondGrade = Khs::create(['krs_id' => $secondKrs->id, 'is_manual' => true, 'nilai_angka' => 41.23, 'nilai_huruf' => 'D', 'bobot' => 1, 'tahun_akademik' => '2026/2027', 'semester_akademik' => 'Ganjil']);
     $answers = array_fill_keys(array_keys(Kuesioner::PERTANYAAN), 5);
+    $answers['komentar'] = 'Mohon tambahkan lebih banyak contoh latihan.';
     $this->actingAs($user)->post(route('mahasiswa.kuesioner.store', $firstKrs), $answers)->assertSessionHasNoErrors();
     $response = $this->get(route('mahasiswa.khs'))->assertOk()->assertSee('93.37')->assertDontSee('41.23')->assertSee('Isi kuesioner untuk melihat nilai');
     $grades = $response->viewData('khs')->keyBy('krs_id');

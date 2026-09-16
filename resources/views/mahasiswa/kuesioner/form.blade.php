@@ -59,9 +59,11 @@
             @endforeach
 
             <div class="form-group" style="margin-top:20px;">
-                <label for="komentar">Saran atau komentar (opsional)</label>
+                <label for="komentar">Pesan dan saran <span style="color:#dc2626;">*</span></label>
                 <textarea id="komentar" name="komentar" class="form-control" rows="5"
-                          maxlength="2000" placeholder="Tuliskan masukan yang membangun untuk dosen...">{{ old('komentar') }}</textarea>
+                          required minlength="10" maxlength="2000"
+                          placeholder="Tuliskan masukan yang membangun untuk dosen (minimal 10 karakter)...">{{ old('komentar') }}</textarea>
+                <small style="display:block;margin-top:6px;color:#64748b;">Wajib diisi, minimal 10 karakter.</small>
             </div>
 
             <div style="display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;">

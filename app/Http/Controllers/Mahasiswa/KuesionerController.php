@@ -71,9 +71,11 @@ class KuesionerController extends Controller
         $aturan = collect(array_keys(Kuesioner::PERTANYAAN))
             ->mapWithKeys(fn (string $kolom) => [$kolom => ['required', 'integer', 'between:1,5']])
             ->all();
-        $aturan['komentar'] = ['nullable', 'string', 'max:2000'];
+        $aturan['komentar'] = ['required', 'string', 'min:10', 'max:2000'];
 
         $data = $request->validate($aturan, [
+            'komentar.required' => 'Pesan dan saran wajib diisi.',
+            'komentar.min' => 'Pesan dan saran minimal 10 karakter.',
             '*.required' => 'Semua pertanyaan wajib dijawab.',
             '*.between' => 'Jawaban harus berada pada skala 1 sampai 5.',
         ]);
