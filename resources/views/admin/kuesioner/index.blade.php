@@ -1,200 +1,204 @@
 @extends('layouts.admin')
 
-@section('title', 'Rekap Kuesioner')
+@section('title', 'Evaluasi Dosen')
 @section('page-title', 'Evaluasi Dosen')
-@section('page-subtitle', 'Rekap kuesioner, hasil evaluasi, dan status pengisian mahasiswa')
+@section('page-subtitle', 'Ringkasan hasil evaluasi dan dosen yang belum memiliki penilaian')
 
 @push('styles')
-<style>
-    .question-score { display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px solid #e2e8f0; }
-    .question-score:last-child { border-bottom:0; }
-    .score-pill { min-width:46px; text-align:center; border-radius:999px; padding:4px 8px; background:#dbeafe; color:#1d4ed8; font-weight:700; }
-    .status-filled { background:#dcfce7; color:#166534; padding:6px 10px; border-radius:999px; font-weight:700; white-space:nowrap; }
-    .status-empty { background:#fee2e2; color:#991b1b; padding:6px 10px; border-radius:999px; font-weight:700; white-space:nowrap; }
-</style>
+    <link rel="stylesheet" href="{{ asset('assets/css/admin-evaluasi.css') }}?v={{ filemtime(public_path('assets/css/admin-evaluasi.css')) }}">
 @endpush
 
 @section('content')
-<div class="page-card">
-    <div class="page-card-head">
-        <h2>📊 Rekap Kuesioner & Evaluasi Dosen</h2>
-    </div>
-    <div class="page-card-body">
-        <form method="GET" action="{{ route('admin.kuesioner') }}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:22px;">
-            <div style="font-weight:700;margin-bottom:14px;">🔎 Filter Rekap</div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px;">
-                <div class="form-group">
-                    <label>Tahun Akademik</label>
-                    <select name="tahun_akademik" class="form-control">
-                        <option value="">Semua Tahun</option>
-                        @foreach($tahunAkademik as $tahun)
-                            <option value="{{ $tahun }}" @selected(request('tahun_akademik') == $tahun)>{{ $tahun }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Semester</label>
-                    <select name="semester_akademik" class="form-control">
-                        <option value="">Semua Semester</option>
-                        <option value="Ganjil" @selected(request('semester_akademik') === 'Ganjil')>Ganjil</option>
-                        <option value="Genap" @selected(request('semester_akademik') === 'Genap')>Genap</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Dosen</label>
-                    <select name="dosen_id" class="form-control">
-                        <option value="">Semua Dosen</option>
-                        @foreach($dosens as $dosen)
-                            <option value="{{ $dosen->id }}" @selected((string) request('dosen_id') === (string) $dosen->id)>{{ $dosen->nama }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Mata Kuliah</label>
-                    <select name="mata_kuliah_id" class="form-control">
-                        <option value="">Semua Mata Kuliah</option>
-                        @foreach($mataKuliahs as $mk)
-                            <option value="{{ $mk->id }}" @selected((string) request('mata_kuliah_id') === (string) $mk->id)>{{ $mk->kode_mk }} - {{ $mk->nama_mk }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Program Studi</label>
-                    <select name="prodi_id" class="form-control">
-                        <option value="">Semua Prodi</option>
-                        @foreach($prodis as $prodi)
-                            <option value="{{ $prodi->id }}" @selected((string) request('prodi_id') === (string) $prodi->id)>{{ $prodi->nama_prodi }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Kelas</label>
-                    <select name="kelas_id" class="form-control">
-                        <option value="">Semua Kelas</option>
-                        @foreach($kelases as $kelas)
-                            <option value="{{ $kelas->id }}" @selected((string) request('kelas_id') === (string) $kelas->id)>{{ $kelas->nama_kelas }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Status Pengisian</label>
-                    <select name="status_pengisian" class="form-control">
-                        <option value="">Semua Status</option>
-                        <option value="sudah" @selected(request('status_pengisian') === 'sudah')>Sudah Mengisi</option>
-                        <option value="belum" @selected(request('status_pengisian') === 'belum')>Belum Mengisi</option>
-                    </select>
-                </div>
-                <div style="display:flex;align-items:end;gap:9px;">
-                    <button class="btn-primary" type="submit">Terapkan</button>
-                    <a class="btn-outline" href="{{ route('admin.kuesioner') }}">Reset</a>
-                </div>
+<div class="evaluation-page">
+    <section class="evaluation-filter" aria-labelledby="filter-evaluasi-title">
+        <div class="evaluation-section-heading">
+            <div>
+                <span class="evaluation-eyebrow">PENCARIAN DATA</span>
+                <h2 id="filter-evaluasi-title">Filter Evaluasi Dosen</h2>
+                <p>Filter periode hanya memengaruhi jawaban evaluasi. Dosen tanpa jawaban pada periode tersebut tetap dapat ditampilkan.</p>
+            </div>
+        </div>
+
+        <form method="GET" action="{{ route('admin.kuesioner') }}" class="evaluation-filter-form">
+            <label>
+                <span>Nama / NIDN</span>
+                <input type="search" name="search" value="{{ request('search') }}" placeholder="Cari nama atau NIDN dosen">
+            </label>
+
+            <label>
+                <span>Dosen</span>
+                <select name="dosen_id">
+                    <option value="">Semua dosen</option>
+                    @foreach($dosens as $dosen)
+                        <option value="{{ $dosen->id }}" @selected((string) request('dosen_id') === (string) $dosen->id)>
+                            {{ $dosen->nama }}{{ $dosen->nidn ? ' - '.$dosen->nidn : '' }}
+                        </option>
+                    @endforeach
+                </select>
+            </label>
+
+            <label>
+                <span>Mata Kuliah</span>
+                <select name="mata_kuliah_id">
+                    <option value="">Semua mata kuliah</option>
+                    @foreach($mataKuliahs as $mataKuliah)
+                        <option value="{{ $mataKuliah->id }}" @selected((string) request('mata_kuliah_id') === (string) $mataKuliah->id)>
+                            {{ $mataKuliah->kode_mk }} - {{ $mataKuliah->nama_mk }}
+                        </option>
+                    @endforeach
+                </select>
+            </label>
+
+            <label>
+                <span>Semester</span>
+                <select name="semester_akademik">
+                    <option value="">Semua semester</option>
+                    <option value="Ganjil" @selected(request('semester_akademik') === 'Ganjil')>Ganjil</option>
+                    <option value="Genap" @selected(request('semester_akademik') === 'Genap')>Genap</option>
+                </select>
+            </label>
+
+            <label>
+                <span>Tahun Akademik</span>
+                <select name="tahun_akademik">
+                    <option value="">Semua tahun</option>
+                    @foreach($tahunAkademik as $tahun)
+                        <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                    @endforeach
+                </select>
+            </label>
+
+            <label>
+                <span>Status Evaluasi</span>
+                <select name="status_evaluasi">
+                    <option value="">Semua status</option>
+                    <option value="sudah" @selected(request('status_evaluasi') === 'sudah')>Sudah dinilai</option>
+                    <option value="belum" @selected(request('status_evaluasi') === 'belum')>Belum dinilai</option>
+                </select>
+            </label>
+
+            <div class="evaluation-filter-actions">
+                <button type="submit" class="evaluation-button primary">Terapkan Filter</button>
+                <a href="{{ route('admin.kuesioner') }}" class="evaluation-button secondary">Reset</a>
             </div>
         </form>
+    </section>
 
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:25px;">
-            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:18px;">
-                <small style="color:#475569;">Wajib Mengisi</small><div style="font-size:28px;font-weight:800;color:#1d4ed8;">{{ $totalWajib }}</div>
+    <section class="evaluation-stats" aria-label="Ringkasan evaluasi dosen">
+        <article class="evaluation-stat blue">
+            <span>Total Dosen</span>
+            <strong>{{ number_format($totalDosen) }}</strong>
+            <small>Sesuai pencarian dosen</small>
+        </article>
+        <article class="evaluation-stat green">
+            <span>Sudah Dinilai</span>
+            <strong>{{ number_format($totalDinilai) }}</strong>
+            <small>Memiliki evaluasi pada filter aktif</small>
+        </article>
+        <article class="evaluation-stat amber">
+            <span>Belum Dinilai</span>
+            <strong>{{ number_format($totalBelumDinilai) }}</strong>
+            <small>Belum memiliki evaluasi pada filter aktif</small>
+        </article>
+        <article class="evaluation-stat violet">
+            <span>Total Responden</span>
+            <strong>{{ number_format($totalResponden) }}</strong>
+            <small>Jawaban anonim yang masuk</small>
+        </article>
+    </section>
+
+    <section class="evaluation-table-card" aria-labelledby="daftar-evaluasi-title">
+        <div class="evaluation-section-heading table-heading">
+            <div>
+                <span class="evaluation-eyebrow">REKAP PER DOSEN</span>
+                <h2 id="daftar-evaluasi-title">Daftar Evaluasi Dosen</h2>
+                <p>Dosen yang belum pernah dinilai tetap tercantum agar mudah dipantau.</p>
             </div>
-            <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px;">
-                <small style="color:#475569;">Sudah Mengisi</small><div style="font-size:28px;font-weight:800;color:#15803d;">{{ $totalSudah }}</div>
-            </div>
-            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:18px;">
-                <small style="color:#475569;">Belum Mengisi</small><div style="font-size:28px;font-weight:800;color:#b91c1c;">{{ $totalBelum }}</div>
-            </div>
+            <span class="evaluation-result-count">{{ number_format($evaluasiDosen->total()) }} dosen</span>
         </div>
-    </div>
-</div>
 
-<div class="page-card">
-    <div class="page-card-head"><h2>📈 Ringkasan Evaluasi Dosen</h2></div>
-    <div class="page-card-body">
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Dosen</th><th>Mata Kuliah/Kelas</th><th>Responden</th><th>Nilai Rata-rata</th><th>Rincian Indikator</th></tr></thead>
+        <div class="evaluation-table-wrap">
+            <table class="evaluation-table">
+                <thead>
+                    <tr>
+                        <th class="column-number">No</th>
+                        <th>Dosen</th>
+                        <th>Program Studi</th>
+                        <th>Mata Kuliah Terkait</th>
+                        <th>Periode</th>
+                        <th class="column-center">Responden</th>
+                        <th class="column-center">Rata-rata</th>
+                        <th class="column-center">Status</th>
+                        <th class="column-action">Aksi</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @forelse($rekapDosen as $rekap)
+                    @forelse($evaluasiDosen as $rekap)
                         <tr>
-                            <td><strong>{{ $rekap->jadwal->dosen->nama ?? '-' }}</strong></td>
-                            <td>{{ $rekap->jadwal->mataKuliah->nama_mk ?? '-' }}<br><small>{{ $rekap->jadwal->kelas->nama_kelas ?? '-' }}</small></td>
-                            <td>{{ $rekap->jumlah_responden }}</td>
-                            <td><span class="score-pill">{{ number_format($rekap->rata_rata, 2) }}</span> / 5</td>
-                            <td style="min-width:310px;">
-                                @foreach($pertanyaan as $kolom => $label)
-                                    <div class="question-score"><span>{{ $label }}</span><strong>{{ number_format($rekap->rata_pertanyaan[$kolom], 2) }}</strong></div>
-                                @endforeach
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="5" style="text-align:center;padding:30px;">Belum ada hasil evaluasi pada filter ini.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<div class="page-card">
-    <div class="page-card-head"><h2>🔐 Jawaban Kuesioner Anonim</h2></div>
-    <div class="page-card-body">
-        <div style="background:#eff6ff;color:#1e40af;padding:13px 16px;border-radius:10px;margin-bottom:16px;">
-            Nama dan NIM tidak ditampilkan pada bagian jawaban untuk menjaga kerahasiaan responden.
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>Kode Responden</th><th>Dosen/Mata Kuliah</th><th>Skor</th><th>Rincian Jawaban</th><th>Komentar</th><th>Dikirim</th></tr></thead>
-                <tbody>
-                    @forelse($jawaban as $item)
-                        <tr>
-                            <td><strong>{{ $item->kode_responden }}</strong></td>
-                            <td>{{ $item->krs->jadwal->dosen->nama ?? '-' }}<br><small>{{ $item->krs->jadwal->mataKuliah->nama_mk ?? '-' }} · {{ $item->krs->jadwal->kelas->nama_kelas ?? '-' }}</small></td>
-                            <td><span class="score-pill">{{ number_format($item->rata_rata, 2) }}</span></td>
-                            <td style="min-width:310px;">
-                                @foreach($pertanyaan as $kolom => $label)
-                                    <div class="question-score"><span>{{ $label }}</span><strong>{{ $item->{$kolom} }}/5</strong></div>
-                                @endforeach
-                            </td>
-                            <td style="min-width:250px;">{{ $item->komentar ?: '—' }}</td>
-                            <td>{{ $item->submitted_at?->format('d-m-Y H:i') }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="6" style="text-align:center;padding:30px;">Belum ada jawaban kuesioner.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-        <div style="margin-top:16px;">{{ $jawaban->appends(request()->query())->onEachSide(1)->links() }}</div>
-    </div>
-</div>
-
-<div class="page-card">
-    <div class="page-card-head"><h2>✅ Status Pengisian Mahasiswa</h2></div>
-    <div class="page-card-body">
-        <div style="background:#fff7ed;color:#9a3412;padding:13px 16px;border-radius:10px;margin-bottom:16px;">
-            Nama hanya ditampilkan di daftar status ini untuk membantu admin memantau mahasiswa yang belum mengisi. Jawabannya tetap anonim.
-        </div>
-        <div class="table-wrap">
-            <table>
-                <thead><tr><th>NIM</th><th>Nama Mahasiswa</th><th>Prodi/Kelas</th><th>Mata Kuliah</th><th>Dosen</th><th>Status</th></tr></thead>
-                <tbody>
-                    @forelse($statusMahasiswa as $item)
-                        <tr>
-                            <td>{{ $item->mahasiswa->nim ?? '-' }}</td>
-                            <td><strong>{{ $item->mahasiswa->nama ?? '-' }}</strong></td>
-                            <td>{{ $item->mahasiswa->prodi->nama_prodi ?? '-' }}<br><small>{{ $item->mahasiswa->kelas->nama_kelas ?? '-' }}</small></td>
-                            <td>{{ $item->jadwal->mataKuliah->nama_mk ?? '-' }}</td>
-                            <td>{{ $item->jadwal->dosen->nama ?? '-' }}</td>
+                            <td class="column-number">{{ ($evaluasiDosen->firstItem() ?? 1) + $loop->index }}</td>
                             <td>
-                                @if($item->kuesioner)<span class="status-filled">Sudah Mengisi</span>
-                                @else<span class="status-empty">Belum Mengisi</span>@endif
+                                <strong class="evaluation-lecturer-name">{{ $rekap->dosen->nama }}</strong>
+                                <small class="evaluation-muted">NIDN/NIP/Kode: {{ $rekap->dosen->nidn ?: '-' }}</small>
+                            </td>
+                            <td>{{ $rekap->dosen->prodi?->nama_prodi ?? '-' }}</td>
+                            <td>
+                                @forelse($rekap->mata_kuliahs->take(2) as $mataKuliah)
+                                    <span class="evaluation-chip">{{ $mataKuliah->kode_mk }} - {{ $mataKuliah->nama_mk }}</span>
+                                @empty
+                                    <span class="evaluation-muted">Belum ada data</span>
+                                @endforelse
+                                @if($rekap->mata_kuliahs->count() > 2)
+                                    <small class="evaluation-more">+{{ $rekap->mata_kuliahs->count() - 2 }} mata kuliah lain</small>
+                                @endif
+                            </td>
+                            <td>
+                                @forelse($rekap->periode->take(2) as $periode)
+                                    <span class="evaluation-period">{{ $periode }}</span>
+                                @empty
+                                    <span class="evaluation-muted">-</span>
+                                @endforelse
+                            </td>
+                            <td class="column-center"><strong>{{ $rekap->jumlah_responden }}</strong></td>
+                            <td class="column-center">
+                                @if($rekap->rata_rata !== null)
+                                    <span class="evaluation-score">{{ number_format($rekap->rata_rata, 2) }}</span>
+                                    <small class="evaluation-score-scale">/ 5</small>
+                                @else
+                                    <span class="evaluation-muted">-</span>
+                                @endif
+                            </td>
+                            <td class="column-center">
+                                @if($rekap->jumlah_responden > 0)
+                                    <span class="evaluation-status evaluated">Sudah dinilai</span>
+                                @else
+                                    <span class="evaluation-status empty">Belum dinilai</span>
+                                @endif
+                            </td>
+                            <td class="column-action">
+                                @php
+                                    $detailQuery = array_merge(request()->except('page'), [
+                                        'dosen' => $rekap->dosen->id,
+                                        'return_url' => request()->fullUrl(),
+                                    ]);
+                                @endphp
+                                <a href="{{ route('admin.kuesioner.dosen', $detailQuery) }}" class="evaluation-detail-button">Detail</a>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" style="text-align:center;padding:30px;">Tidak ada data status pengisian.</td></tr>
+                        <tr>
+                            <td colspan="9">
+                                <div class="evaluation-empty">
+                                    <strong>Data dosen tidak ditemukan.</strong>
+                                    <span>Coba ubah atau reset filter yang sedang digunakan.</span>
+                                </div>
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div style="margin-top:16px;">{{ $statusMahasiswa->appends(request()->query())->onEachSide(1)->links() }}</div>
-    </div>
+
+        {{ $evaluasiDosen->appends(request()->query())->onEachSide(1)->links() }}
+    </section>
 </div>
 @endsection

@@ -399,6 +399,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== REKAP KUESIONER =====================
 
     Route::get('/kuesioner', [AdminKuesionerController::class, 'index'])->name('admin.kuesioner');
+    Route::get('/kuesioner/dosen/{dosen}', [AdminKuesionerController::class, 'show'])->name('admin.kuesioner.dosen');
 
     // ===================== LAPORAN AKADEMIK =====================
 
