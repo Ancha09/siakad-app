@@ -17,6 +17,7 @@
                 <h2 id="filter-evaluasi-title">Filter Evaluasi Dosen</h2>
                 <p>Filter periode hanya memengaruhi jawaban evaluasi. Dosen tanpa jawaban pada periode tersebut tetap dapat ditampilkan.</p>
             </div>
+            <a href="{{ route('admin.kuesioner.pdf', request()->except('page')) }}" class="evaluation-button primary">Download PDF Full</a>
         </div>
 
         <form method="GET" action="{{ route('admin.kuesioner') }}" class="evaluation-filter-form">
@@ -181,7 +182,10 @@
                                         'return_url' => request()->fullUrl(),
                                     ]);
                                 @endphp
-                                <a href="{{ route('admin.kuesioner.dosen', $detailQuery) }}" class="evaluation-detail-button">Detail</a>
+                                <div class="evaluation-row-actions">
+                                    <a href="{{ route('admin.kuesioner.dosen', $detailQuery) }}" class="evaluation-detail-button">Detail</a>
+                                    <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge(request()->except(['page', 'return_url']), ['dosen' => $rekap->dosen->id])) }}" class="evaluation-detail-button secondary">PDF</a>
+                                </div>
                             </td>
                         </tr>
                     @empty

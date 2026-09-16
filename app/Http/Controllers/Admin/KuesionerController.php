@@ -7,24 +7,79 @@ use App\Models\Dosen;
 use App\Models\Krs;
 use App\Models\Kuesioner;
 use App\Models\MataKuliah;
+use App\Services\LecturerEvaluationService;
 use App\Services\LegacyListNavigation;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class KuesionerController extends Controller
 {
-    private const EFFECTIVE_DOSEN_SQL = 'CASE WHEN krs.is_manual = 1 THEN krs.dosen_id ELSE COALESCE(jadwals.dosen_id, krs.dosen_id) END';
-
-    private const EFFECTIVE_MATA_KULIAH_SQL = 'COALESCE(jadwals.mata_kuliah_id, krs.mata_kuliah_id)';
+    public function __construct(private readonly LecturerEvaluationService $evaluations) {}
 
     public function index(Request $request)
     {
-        abort_unless($request->user()?->role === 'admin', 403);
-
+        $this->ensureAdmin($request);
         $filters = $this->validatedFilters($request);
+
+        return view('admin.kuesioner.index', array_merge(
+            $this->overviewData($filters, true),
+            $this->filterOptions()
+        ));
+    }
+
+    public function show(Request $request, Dosen $dosen, LegacyListNavigation $navigation)
+    {
+        $this->ensureAdmin($request);
+        $filters = $this->validatedFilters($request);
+        $report = $this->evaluations->report($dosen, $filters);
+
+        return view('admin.kuesioner.show', array_merge($report, [
+            'dosen' => $dosen->loadMissing('prodi'),
+            'komentar' => $this->evaluations->comments($report['krsIds'])
+                ->paginate(10)
+                ->withQueryString(),
+            'returnUrl' => $navigation->returnUrl($request, 'admin.kuesioner'),
+        ]));
+    }
+
+    public function pdfDetail(Request $request, Dosen $dosen)
+    {
+        $this->ensureAdmin($request);
+        $filters = $this->validatedFilters($request);
+        $report = $this->evaluations->report($dosen, $filters);
+
+        return Pdf::loadView('evaluasi.detail-pdf', array_merge($report, [
+            'dosen' => $dosen->loadMissing('prodi'),
+            'komentar' => $this->evaluations->comments($report['krsIds'])->get(),
+            'reportTitle' => 'Detail Evaluasi Dosen',
+            'deskripsiFilter' => $this->filterDescription($filters),
+        ]))
+            ->setPaper('a4', 'portrait')
+            ->download('evaluasi-dosen-'.Str::slug($dosen->nidn ?: $dosen->nama).'.pdf');
+    }
+
+    public function pdf(Request $request)
+    {
+        $this->ensureAdmin($request);
+        $filters = $this->validatedFilters($request);
+
+        return Pdf::loadView('admin.kuesioner.pdf-full', array_merge(
+            $this->overviewData($filters, false),
+            [
+                'reportTitle' => 'Laporan Evaluasi Dosen',
+                'deskripsiFilter' => $this->filterDescription($filters),
+            ]
+        ))
+            ->setPaper('a4', 'landscape')
+            ->download('laporan-evaluasi-dosen-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    private function overviewData(array $filters, bool $paginate): array
+    {
         $dosenQuery = Dosen::query()
             ->with('prodi')
             ->when($filters['search'] ?? null, function ($query, string $search) {
@@ -35,18 +90,16 @@ class KuesionerController extends Controller
             })
             ->when($filters['dosen_id'] ?? null, fn ($query, $dosenId) => $query->whereKey($dosenId));
 
-        // Statistik dan status dihitung hanya untuk dosen yang cocok dengan filter nama/dosen.
-        // Filter akademik diterapkan pada jawaban sehingga dosen tanpa jawaban tetap bisa tampil.
         $dosenIds = (clone $dosenQuery)->pluck('id');
-        $evaluationRows = $this->evaluationRows($filters)
+        $evaluationRows = $this->evaluations->rows($filters)
             ->when(
                 $dosenIds->isNotEmpty(),
-                fn (QueryBuilder $query) => $query->whereIn(DB::raw(self::EFFECTIVE_DOSEN_SQL), $dosenIds),
+                fn (QueryBuilder $query) => $query->whereIn(DB::raw(LecturerEvaluationService::EFFECTIVE_DOSEN_SQL), $dosenIds),
                 fn (QueryBuilder $query) => $query->whereRaw('1 = 0')
             );
 
         $evaluatedDosenIds = (clone $evaluationRows)
-            ->selectRaw(self::EFFECTIVE_DOSEN_SQL.' AS effective_dosen_id')
+            ->selectRaw(LecturerEvaluationService::EFFECTIVE_DOSEN_SQL.' AS effective_dosen_id')
             ->distinct()
             ->pluck('effective_dosen_id')
             ->filter()
@@ -64,87 +117,47 @@ class KuesionerController extends Controller
             $dosenQuery->whereNotIn('id', $evaluatedDosenIds);
         }
 
-        $evaluasiDosen = $dosenQuery
-            ->orderBy('nama')
-            ->paginate(10)
-            ->withQueryString();
-
-        $pageDosenIds = $evaluasiDosen->getCollection()->pluck('id');
-        $pageKrsIds = $pageDosenIds->isEmpty()
+        $records = $paginate
+            ? $dosenQuery->orderBy('nama')->paginate(10)->withQueryString()
+            : $dosenQuery->orderBy('nama')->get();
+        $dosenCollection = $paginate ? $records->getCollection() : $records;
+        $recordDosenIds = $dosenCollection->pluck('id');
+        $recordKrsIds = $recordDosenIds->isEmpty()
             ? collect()
             : (clone $evaluationRows)
-                ->whereIn(DB::raw(self::EFFECTIVE_DOSEN_SQL), $pageDosenIds)
+                ->whereIn(DB::raw(LecturerEvaluationService::EFFECTIVE_DOSEN_SQL), $recordDosenIds)
                 ->pluck('kuesioners.krs_id');
-
-        $jawabanPerDosen = $this->loadAnswers($pageKrsIds)
+        $jawabanPerDosen = $this->evaluations->answers($recordKrsIds)
             ->groupBy(fn (Kuesioner $item) => $item->krs?->dosen_efektif?->id);
 
-        $evaluasiDosen->setCollection(
-            $evaluasiDosen->getCollection()->map(function (Dosen $dosen) use ($jawabanPerDosen) {
-                /** @var EloquentCollection<int, Kuesioner> $jawaban */
-                $jawaban = $jawabanPerDosen->get($dosen->id, new EloquentCollection);
+        $mapped = $dosenCollection->map(function (Dosen $dosen) use ($jawabanPerDosen) {
+            /** @var EloquentCollection<int, Kuesioner> $jawaban */
+            $jawaban = $jawabanPerDosen->get($dosen->id, new EloquentCollection);
 
-                return (object) [
-                    'dosen' => $dosen,
-                    'jumlah_responden' => $jawaban->count(),
-                    'rata_rata' => $jawaban->isEmpty() ? null : round((float) $jawaban->avg(fn (Kuesioner $item) => $item->rata_rata), 2),
-                    'mata_kuliahs' => $this->relatedCourses($jawaban),
-                    'periode' => $this->relatedPeriods($jawaban),
-                ];
-            })
-        );
+            return (object) [
+                'dosen' => $dosen,
+                'jumlah_responden' => $jawaban->count(),
+                'rata_rata' => $jawaban->isEmpty()
+                    ? null
+                    : round((float) $jawaban->avg(fn (Kuesioner $item) => $item->rata_rata), 2),
+                'mata_kuliahs' => $this->evaluations->relatedCourses($jawaban),
+                'periode' => $this->evaluations->relatedPeriods($jawaban),
+            ];
+        });
 
-        return view('admin.kuesioner.index', [
-            'evaluasiDosen' => $evaluasiDosen,
+        if ($paginate) {
+            $records->setCollection($mapped);
+        } else {
+            $records = $mapped;
+        }
+
+        return [
+            'evaluasiDosen' => $records,
             'totalDosen' => $totalDosen,
             'totalDinilai' => $totalDinilai,
             'totalBelumDinilai' => $totalBelumDinilai,
             'totalResponden' => $totalResponden,
-            'dosens' => Dosen::orderBy('nama')->get(['id', 'nama', 'nidn']),
-            'mataKuliahs' => MataKuliah::orderBy('nama_mk')->get(['id', 'kode_mk', 'nama_mk']),
-            'tahunAkademik' => Krs::whereNotNull('tahun_akademik')
-                ->distinct()
-                ->orderByDesc('tahun_akademik')
-                ->pluck('tahun_akademik'),
-        ]);
-    }
-
-    public function show(Request $request, Dosen $dosen, LegacyListNavigation $navigation)
-    {
-        abort_unless($request->user()?->role === 'admin', 403);
-
-        $filters = $this->validatedFilters($request);
-        $krsIds = $this->evaluationRows($filters)
-            ->whereRaw(self::EFFECTIVE_DOSEN_SQL.' = ?', [$dosen->id])
-            ->pluck('kuesioners.krs_id');
-
-        $jawaban = $this->loadAnswers($krsIds);
-        $rataPertanyaan = collect(Kuesioner::PERTANYAAN)
-            ->mapWithKeys(fn (string $label, string $kolom) => [
-                $kolom => $jawaban->isEmpty() ? null : round((float) $jawaban->avg($kolom), 2),
-            ]);
-
-        $komentar = Kuesioner::query()
-            ->with($this->answerRelations())
-            ->whereIn('krs_id', $krsIds)
-            ->whereNotNull('komentar')
-            ->where('komentar', '<>', '')
-            ->latest('submitted_at')
-            ->paginate(10)
-            ->withQueryString();
-
-        return view('admin.kuesioner.show', [
-            'dosen' => $dosen->loadMissing('prodi'),
-            'jumlahResponden' => $jawaban->count(),
-            'rataRata' => $jawaban->isEmpty() ? null : round((float) $jawaban->avg(fn (Kuesioner $item) => $item->rata_rata), 2),
-            'rataPertanyaan' => $rataPertanyaan,
-            'pertanyaan' => Kuesioner::PERTANYAAN,
-            'mataKuliahs' => $this->relatedCourses($jawaban),
-            'kelases' => $this->relatedClasses($jawaban),
-            'periode' => $this->relatedPeriods($jawaban),
-            'komentar' => $komentar,
-            'returnUrl' => $navigation->returnUrl($request, 'admin.kuesioner'),
-        ]);
+        ];
     }
 
     private function validatedFilters(Request $request): array
@@ -159,74 +172,34 @@ class KuesionerController extends Controller
         ]);
     }
 
-    private function evaluationRows(array $filters): QueryBuilder
-    {
-        return DB::table('kuesioners')
-            ->join('krs', 'kuesioners.krs_id', '=', 'krs.id')
-            ->leftJoin('jadwals', 'krs.jadwal_id', '=', 'jadwals.id')
-            ->whereNotNull(DB::raw(self::EFFECTIVE_DOSEN_SQL))
-            ->when($filters['tahun_akademik'] ?? null, fn (QueryBuilder $query, $tahun) => $query->where('krs.tahun_akademik', $tahun))
-            ->when($filters['semester_akademik'] ?? null, fn (QueryBuilder $query, $semester) => $query->where('krs.semester_akademik', $semester))
-            ->when($filters['mata_kuliah_id'] ?? null, fn (QueryBuilder $query, $mataKuliahId) => $query->whereRaw(self::EFFECTIVE_MATA_KULIAH_SQL.' = ?', [(int) $mataKuliahId]));
-    }
-
-    /** @return EloquentCollection<int, Kuesioner> */
-    private function loadAnswers(Collection $krsIds): EloquentCollection
-    {
-        if ($krsIds->isEmpty()) {
-            return new EloquentCollection;
-        }
-
-        return Kuesioner::query()
-            ->with($this->answerRelations())
-            ->whereIn('krs_id', $krsIds)
-            ->get();
-    }
-
-    private function answerRelations(): array
+    private function filterOptions(): array
     {
         return [
-            'krs.jadwal.mataKuliah',
-            'krs.jadwal.dosen',
-            'krs.jadwal.kelas',
-            'krs.mataKuliahManual',
-            'krs.dosenManual',
-            'krs.kelasManual',
+            'dosens' => Dosen::orderBy('nama')->get(['id', 'nama', 'nidn']),
+            'mataKuliahs' => MataKuliah::orderBy('nama_mk')->get(['id', 'kode_mk', 'nama_mk']),
+            'tahunAkademik' => Krs::whereNotNull('tahun_akademik')
+                ->distinct()
+                ->orderByDesc('tahun_akademik')
+                ->pluck('tahun_akademik'),
         ];
     }
 
-    private function relatedCourses(EloquentCollection $jawaban): Collection
+    private function filterDescription(array $filters): string
     {
-        return $jawaban
-            ->map(fn (Kuesioner $item) => $item->krs?->mata_kuliah_efektif)
-            ->filter()
-            ->unique('id')
-            ->sortBy('nama_mk')
-            ->values();
+        $parts = [
+            filled($filters['search'] ?? null) ? 'Pencarian: '.$filters['search'] : null,
+            filled($filters['dosen_id'] ?? null) ? 'Dosen: '.Dosen::find($filters['dosen_id'])?->nama : null,
+            filled($filters['mata_kuliah_id'] ?? null) ? 'Mata Kuliah: '.MataKuliah::find($filters['mata_kuliah_id'])?->nama_mk : null,
+            filled($filters['semester_akademik'] ?? null) ? 'Semester: '.$filters['semester_akademik'] : null,
+            filled($filters['tahun_akademik'] ?? null) ? 'Tahun: '.$filters['tahun_akademik'] : null,
+            filled($filters['status_evaluasi'] ?? null) ? 'Status: '.($filters['status_evaluasi'] === 'sudah' ? 'Sudah dinilai' : 'Belum dinilai') : null,
+        ];
+
+        return collect($parts)->filter()->implode(' | ') ?: 'Semua data';
     }
 
-    private function relatedClasses(EloquentCollection $jawaban): Collection
+    private function ensureAdmin(Request $request): void
     {
-        return $jawaban
-            ->map(fn (Kuesioner $item) => $item->krs?->kelas_efektif)
-            ->filter()
-            ->unique('id')
-            ->sortBy('nama_kelas')
-            ->values();
-    }
-
-    private function relatedPeriods(EloquentCollection $jawaban): Collection
-    {
-        return $jawaban
-            ->map(function (Kuesioner $item) {
-                $tahun = $item->krs?->tahun_akademik;
-                $semester = $item->krs?->semester_akademik;
-
-                return $tahun ? trim($tahun.($semester ? " - {$semester}" : '')) : null;
-            })
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+        abort_unless($request->user()?->role === 'admin', 403);
     }
 }

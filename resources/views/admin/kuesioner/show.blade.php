@@ -12,6 +12,7 @@
 <div class="evaluation-page">
     <div class="evaluation-back-row">
         <a href="{{ $returnUrl }}" class="evaluation-button secondary">&larr; Kembali ke Daftar</a>
+        <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge(request()->except(['page', 'return_url']), ['dosen' => $dosen->id])) }}" class="evaluation-button primary">Download PDF</a>
     </div>
 
     <section class="evaluation-profile-card">

@@ -99,6 +99,7 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
     // ===================== HASIL EVALUASI =====================
 
     Route::get('/evaluasi', [DosenEvaluasiController::class, 'index'])->name('evaluasi');
+    Route::get('/evaluasi/pdf', [DosenEvaluasiController::class, 'pdf'])->name('evaluasi.pdf');
 
     // ===================== PRESENSI =====================
 
@@ -399,7 +400,9 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== REKAP KUESIONER =====================
 
     Route::get('/kuesioner', [AdminKuesionerController::class, 'index'])->name('admin.kuesioner');
+    Route::get('/kuesioner/pdf', [AdminKuesionerController::class, 'pdf'])->name('admin.kuesioner.pdf');
     Route::get('/kuesioner/dosen/{dosen}', [AdminKuesionerController::class, 'show'])->name('admin.kuesioner.dosen');
+    Route::get('/kuesioner/dosen/{dosen}/pdf', [AdminKuesionerController::class, 'pdfDetail'])->name('admin.kuesioner.dosen.pdf');
 
     // ===================== LAPORAN AKADEMIK =====================
 
