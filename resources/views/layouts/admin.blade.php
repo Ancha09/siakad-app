@@ -158,7 +158,6 @@
             <x-sidebar-item route="admin.jadwal" :active="request()->routeIs('admin.jadwal', 'admin.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
             <x-sidebar-item route="admin.periode-krs" :active="request()->routeIs('admin.periode-krs', 'admin.periode-krs.*')" icon="period">Periode KRS</x-sidebar-item>
             <x-sidebar-item route="admin.krs" :active="request()->routeIs('admin.krs', 'admin.krs.*')" icon="file-check">KRS</x-sidebar-item>
-            <x-sidebar-item route="admin.krs-mahasiswa.index" :active="request()->routeIs('admin.krs-mahasiswa.*')" icon="clipboard">KRS per Mahasiswa</x-sidebar-item>
             <x-sidebar-item route="admin.khs" :active="request()->routeIs('admin.khs', 'admin.khs.*')" icon="file-chart">KHS</x-sidebar-item>
             <x-sidebar-item route="admin.nilai-manual.index" :active="request()->routeIs('admin.nilai-manual.*')" icon="file-chart">Input Nilai Lama</x-sidebar-item>
             <x-sidebar-item route="admin.skripsi" :active="request()->routeIs('admin.skripsi', 'admin.skripsi.*')" icon="graduation">Pembimbing Skripsi</x-sidebar-item>
