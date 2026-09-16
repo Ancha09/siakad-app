@@ -48,6 +48,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.prodi" />
             @method('PUT')
 
 
@@ -188,7 +189,7 @@
             {{-- BATAL --}}
 
             <a
-                href="{{ route('admin.prodi') }}"
+                href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.prodi') }}"
                 class="btn-outline"
             >
 

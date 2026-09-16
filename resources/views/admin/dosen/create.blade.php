@@ -34,6 +34,7 @@
             <form action="{{ route('admin.dosen.store') }}" method="POST">
 
                 @csrf
+                <x-list-return-url list-route="admin.dosen" />
 
                 <div class="krs-form-grid">
 
@@ -134,7 +135,7 @@
 
                 </button>
 
-                <a href="{{ route('admin.dosen') }}"
+                <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.dosen') }}"
                    class="btn-outline">
 
                     Batal

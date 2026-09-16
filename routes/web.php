@@ -17,7 +17,6 @@ use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\NilaiManualController;
 use App\Http\Controllers\Admin\PeriodeKrsController;
 use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
-use App\Http\Controllers\Admin\PresensiManualController;
 use App\Http\Controllers\Admin\PresensiExportController;
 use App\Http\Controllers\Admin\ProdiController;
 use App\Http\Controllers\Admin\RuanganController;
@@ -396,15 +395,6 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/presensi/download/excel', [PresensiExportController::class, 'excel'])->name('admin.presensi.excel');
 
     Route::get('/presensi/download/pdf', [PresensiExportController::class, 'pdf'])->name('admin.presensi.pdf');
-
-    // ===================== ABSENSI LAMA / MANUAL =====================
-
-    Route::get('/presensi-manual', [PresensiManualController::class, 'index'])->name('admin.presensi-manual.index');
-    Route::get('/presensi-manual/create', [PresensiManualController::class, 'create'])->name('admin.presensi-manual.create');
-    Route::post('/presensi-manual', [PresensiManualController::class, 'store'])->name('admin.presensi-manual.store');
-    Route::get('/presensi-manual/{presensi}/edit', [PresensiManualController::class, 'edit'])->name('admin.presensi-manual.edit');
-    Route::put('/presensi-manual/{presensi}', [PresensiManualController::class, 'update'])->name('admin.presensi-manual.update');
-    Route::delete('/presensi-manual/{presensi}', [PresensiManualController::class, 'destroy'])->name('admin.presensi-manual.destroy');
 
     // ===================== REKAP KUESIONER =====================
 

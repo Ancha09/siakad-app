@@ -2,10 +2,14 @@
 
 @section('title', 'Input Nilai Lama')
 
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('assets/css/manual-grades.css') }}?v={{ filemtime(public_path('assets/css/manual-grades.css')) }}">
+@endpush
+
 @section('content')
 @if(session('success')) <div class="alert-success">{{ session('success') }}</div> @endif
 
-<div class="page-card">
+<div class="page-card manual-grades-page">
     <div class="page-card-head">
         <div><h2>Nilai Lama / Manual</h2><small>Nilai historis tersimpan di KHS dan ikut dihitung pada transkrip/IPK.</small></div>
         <a href="{{ route('admin.nilai-manual.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary">+ Input Nilai</a>
@@ -14,7 +18,7 @@
         @include('admin.partials.legacy-filters', ['attendance' => false, 'resetRoute' => 'admin.nilai-manual.index'])
         <div class="table-wrap">
             <table>
-                <thead><tr><th>No</th><th>Mahasiswa</th><th>Periode</th><th>Mata Kuliah</th><th>Dosen</th><th>Nilai</th><th>SKS/Bobot</th><th>Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Mahasiswa</th><th>Periode</th><th>Mata Kuliah</th><th>Dosen</th><th>Nilai</th><th>SKS/Bobot</th><th class="manual-grade-actions-cell">Aksi</th></tr></thead>
                 <tbody>
                 @forelse($nilai as $item)
                     <tr>
@@ -25,11 +29,16 @@
                         <td>{{ $item->dosen_efektif?->nama ?? '-' }}</td>
                         <td>{{ number_format((float) $item->nilai_angka, 2) }} / <strong>{{ $item->nilai_huruf }}</strong></td>
                         <td>{{ $item->sks_efektif }} SKS / {{ number_format((float) $item->bobot, 2) }}</td>
-                        <td><a href="{{ route('admin.nilai-manual.edit', ['khs' => $item, 'return_url' => request()->fullUrl()]) }}" class="btn-outline">Edit</a>
-                            <form method="POST" action="{{ route('admin.nilai-manual.destroy', $item) }}" onsubmit="return confirm('Hapus permanen nilai manual ini? Nilai akan hilang dari KHS/transkrip. Pastikan sudah memiliki backup.');" style="display:inline">
-                                <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
-                                @csrf @method('DELETE') <button type="submit" class="btn-outline">Hapus</button>
-                            </form>
+                        <td class="manual-grade-actions-cell">
+                            <div class="manual-grade-actions">
+                                <a href="{{ route('admin.nilai-manual.edit', ['khs' => $item, 'return_url' => request()->fullUrl()]) }}" class="manual-grade-action manual-grade-action--edit" aria-label="Edit nilai {{ $item->krs?->mahasiswa?->nim }}">Edit</a>
+                                <form method="POST" action="{{ route('admin.nilai-manual.destroy', $item) }}" onsubmit="return confirm('Hapus permanen nilai manual ini? Nilai akan hilang dari KHS/transkrip. Pastikan sudah memiliki backup.');">
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="manual-grade-action manual-grade-action--delete" aria-label="Hapus nilai {{ $item->krs?->mahasiswa?->nim }}">Hapus</button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -38,7 +47,7 @@
                 </tbody>
             </table>
         </div>
-        <div style="margin-top:20px">{{ $nilai->links() }}</div>
+        {{ $nilai->appends(request()->query())->onEachSide(1)->links('pagination.default') }}
     </div>
 </div>
 @endsection

@@ -2,14 +2,17 @@
 
 namespace Tests\Integration;
 
+use App\Http\Controllers\Admin\PresensiManualController;
 use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Presensi;
 use App\Models\User;
+use App\Services\LegacyAcademicService;
 use App\Services\LegacyListNavigation;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -169,49 +172,35 @@ class LegacyAcademicAdminTest extends TestCase
         $this->assertSame(0, $this->get(route('admin.nilai-manual.index', ['search' => 'Tidak Ada']))->viewData('nilai')->total());
     }
 
-    public function test_attendance_edit_and_filters(): void
+    public function test_historical_attendance_filters_and_lecturer_override_still_work(): void
     {
         $grade = $this->grade(['dosen_id' => 1, 'semester' => 1]);
-        $input = $this->input(['tanggal' => '2020-09-01', 'status' => 'Hadir', 'pertemuan' => 1, 'dosen_id' => 1]);
-        $this->post(route('admin.presensi-manual.store'), $input)->assertSessionHasNoErrors();
+        $attendance = Presensi::create(['krs_id' => $grade->krs_id, 'tanggal' => '2020-09-01', 'status' => 'Izin', 'pertemuan' => 1, 'dosen_id' => 2, 'dosen_override' => true, 'is_manual' => true]);
         $this->assertSame(1, $grade->fresh()->krs->semester);
-        $attendance = Presensi::firstOrFail();
-        $this->put(route('admin.presensi-manual.update', $attendance), array_replace($input, ['status' => 'Izin', 'dosen_id' => 2]))->assertSessionHasNoErrors();
         $this->assertSame(2, $attendance->fresh()->dosen_efektif->id);
         $this->assertSame(1, $grade->fresh()->dosen_efektif->id);
-        $response = $this->get(route('admin.presensi-manual.index', ['status' => 'Izin', 'tanggal_mulai' => '2020-09-01', 'tanggal_selesai' => '2020-09-02', 'dosen_id' => 2]));
-        $response->assertOk();
-        $this->assertSame(1, $response->viewData('presensis')->total());
-        $this->assertSame(0, $this->get(route('admin.presensi-manual.index', ['status' => 'Hadir']))->viewData('presensis')->total());
-        $this->assertSame(0, $this->get(route('admin.presensi-manual.index', ['tanggal_mulai' => '2020-10-01']))->viewData('presensis')->total());
+        $legacy = app(LegacyAcademicService::class);
+        $this->assertSame(1, $legacy->filterRecords(Presensi::query(), Request::create('/', 'GET', ['status' => 'Izin', 'tanggal_mulai' => '2020-09-01', 'tanggal_selesai' => '2020-09-02', 'dosen_id' => 2]), true)->count());
+        $this->assertSame(0, $legacy->filterRecords(Presensi::query(), Request::create('/', 'GET', ['status' => 'Hadir']), true)->count());
+        $this->assertSame(0, $legacy->filterRecords(Presensi::query(), Request::create('/', 'GET', ['tanggal_mulai' => '2020-10-01']), true)->count());
     }
 
     public function test_duplicates_still_rejected_after_lecturer_changes(): void
     {
         $this->grade(['dosen_id' => 2]);
         $this->post(route('admin.nilai-manual.store'), $this->input(['dosen_id' => 1]))->assertSessionHasErrors('mata_kuliah_id');
-        $input = $this->input(['tanggal' => '2020-09-01', 'pertemuan' => 1, 'status' => 'Hadir']);
-        $this->post(route('admin.presensi-manual.store'), $input)->assertSessionHasNoErrors();
-        $this->post(route('admin.presensi-manual.store'), array_replace($input, ['pertemuan' => 2]))->assertSessionHasErrors('tanggal');
-        $this->post(route('admin.presensi-manual.store'), array_replace($input, ['tanggal' => '2020-09-02']))->assertSessionHasErrors('tanggal');
     }
 
-    public function test_delete_is_limited_to_manual_records_and_leaves_related_data(): void
+    public function test_manual_grade_delete_leaves_attendance_and_related_data(): void
     {
         $grade = $this->grade();
-        $this->post(route('admin.presensi-manual.store'), $this->input(['tanggal' => '2020-09-01', 'status' => 'Hadir']))->assertSessionHasNoErrors();
-        $attendance = Presensi::firstOrFail();
+        $attendance = Presensi::create(['krs_id' => $grade->krs_id, 'tanggal' => '2020-09-01', 'status' => 'Hadir', 'is_manual' => true]);
         $this->delete(route('admin.nilai-manual.destroy', $grade))->assertRedirect();
         $this->assertDatabaseMissing('khs', ['id' => $grade->id]);
         $this->assertDatabaseHas('presensis', ['id' => $attendance->id]);
         $this->assertDatabaseHas('krs', ['id' => $grade->krs_id]);
-        $attendance->update(['is_manual' => false]);
-        $this->delete(route('admin.presensi-manual.destroy', $attendance))->assertNotFound();
-        $attendance->update(['is_manual' => true]);
-        $this->delete(route('admin.presensi-manual.destroy', $attendance))->assertRedirect();
-        $this->assertDatabaseMissing('presensis', ['id' => $attendance->id]);
-        $this->grade();
-        $this->post(route('admin.presensi-manual.store'), $this->input(['tanggal' => '2020-09-01', 'status' => 'Hadir']))->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('mahasiswas', ['id' => 1]);
+        $this->assertDatabaseHas('mata_kuliahs', ['id' => 1]);
     }
 
     public function test_manual_routes_reject_non_admin_users(): void
@@ -220,7 +209,7 @@ class LegacyAcademicAdminTest extends TestCase
         foreach (['mahasiswa', 'dosen'] as $role) {
             $this->actingAs($this->account($role));
             $this->get(route('admin.nilai-manual.index'))->assertForbidden();
-            $this->get(route('admin.presensi-manual.index'))->assertForbidden();
+            $this->get('/admin/presensi-manual')->assertNotFound();
             $this->put(route('admin.nilai-manual.update', $grade), $this->input())->assertForbidden();
             $this->delete(route('admin.nilai-manual.destroy', $grade))->assertForbidden();
         }
@@ -248,10 +237,8 @@ class LegacyAcademicAdminTest extends TestCase
 
     public function test_attendance_report_uses_corrected_lecturer(): void
     {
-        $input = $this->input(['jadwal_id' => 1, 'dosen_id' => 1, 'tanggal' => '2020-09-01', 'status' => 'Hadir']);
-        $this->post(route('admin.presensi-manual.store'), $input)->assertSessionHasNoErrors();
-        $attendance = Presensi::firstOrFail();
-        $this->put(route('admin.presensi-manual.update', $attendance), array_replace($input, ['dosen_id' => 2]))->assertSessionHasNoErrors();
+        $grade = $this->grade(['jadwal_id' => 1, 'dosen_id' => 1]);
+        Presensi::create(['krs_id' => $grade->krs_id, 'tanggal' => '2020-09-01', 'status' => 'Hadir', 'dosen_id' => 2, 'dosen_override' => true, 'is_manual' => true]);
         $response = $this->get(route('admin.presensi', ['dosen_id' => 2]));
         $response->assertOk()->assertSee('Dosen Historis');
         $this->assertSame(1, $response->viewData('totalPresensi'));
@@ -329,19 +316,34 @@ class LegacyAcademicAdminTest extends TestCase
         $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false);
     }
 
-    public function test_attendance_navigation_preserves_page_ten_after_create_update_and_delete(): void
+    public function test_removed_manual_attendance_routes_cannot_change_existing_data(): void
     {
-        $this->seedManualPages();
-        $returnUrl = route('admin.presensi-manual.index', ['search' => 'Historis', 'status' => 'Hadir', 'tanggal_mulai' => '2020-09-01', 'tanggal_selesai' => '2020-09-02', 'page' => 10]);
-        $list = $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false)->assertSee('<td>100</td>', false);
-        $attendance = $list->viewData('presensis')->first();
-        $this->get(route('admin.presensi-manual.edit', ['presensi' => $attendance, 'return_url' => $returnUrl]))->assertOk()->assertViewHas('returnUrl', $returnUrl);
-        $input = $this->input(['mahasiswa_id' => $attendance->krs->mahasiswa_id, 'tanggal' => '2020-09-01', 'status' => 'Hadir', 'pertemuan' => 1, 'return_url' => $returnUrl]);
-        $this->put(route('admin.presensi-manual.update', $attendance), $input)->assertSessionHasNoErrors()->assertRedirect($returnUrl);
-        $this->get(route('admin.presensi-manual.create', ['return_url' => $returnUrl]))->assertOk()->assertViewHas('returnUrl', $returnUrl);
-        $this->post(route('admin.presensi-manual.store'), array_replace($input, ['mahasiswa_id' => 1]))->assertSessionHasNoErrors()->assertRedirect($returnUrl);
-        $this->delete(route('admin.presensi-manual.destroy', $attendance), ['return_url' => $returnUrl])->assertRedirect($returnUrl);
-        $this->get($returnUrl)->assertOk()->assertSee('<td>91</td>', false);
+        $grade = $this->grade();
+        $manual = Presensi::create(['krs_id' => $grade->krs_id, 'tanggal' => '2020-09-01', 'status' => 'Hadir', 'is_manual' => true]);
+        $regular = Presensi::create(['krs_id' => $grade->krs_id, 'tanggal' => '2020-09-02', 'status' => 'Hadir', 'is_manual' => false]);
+        $this->assertFalse(Route::has('admin.presensi-manual.destroy'));
+        $this->assertFalse(method_exists(PresensiManualController::class, 'destroy'));
+        foreach (['index', 'create', 'store', 'edit', 'update', 'destroy'] as $action) {
+            $this->assertFalse(Route::has('admin.presensi-manual.'.$action));
+        }
+        $this->get(route('admin.nilai-manual.index'))->assertOk()
+            ->assertDontSee('Input Absensi Lama')->assertDontSee('/admin/presensi-manual', false);
+        $this->get('/admin/presensi-manual')->assertNotFound();
+        $this->get('/admin/presensi-manual/create')->assertNotFound();
+
+        $queries = [];
+        DB::listen(function ($event) use (&$queries) {
+            $queries[] = $event->sql;
+        });
+        foreach ([$manual, $regular] as $attendance) {
+            $this->get('/admin/presensi-manual/'.$attendance->id.'/edit')->assertNotFound();
+            $this->post('/admin/presensi-manual', ['krs_id' => $attendance->krs_id, 'status' => 'Alpha'])->assertNotFound();
+            $this->put('/admin/presensi-manual/'.$attendance->id, ['status' => 'Alpha'])->assertNotFound();
+            $this->delete('/admin/presensi-manual/'.$attendance->id)->assertNotFound();
+            $this->assertDatabaseHas('presensis', ['id' => $attendance->id, 'status' => 'Hadir']);
+        }
+        $this->assertFalse((bool) array_filter($queries, fn ($query) => preg_match('/^\s*delete\b/i', $query)));
+        $this->assertDatabaseCount('presensis', 2);
     }
 
     public function test_untrusted_return_urls_cannot_redirect_outside_the_correct_admin_list(): void
@@ -365,5 +367,65 @@ class LegacyAcademicAdminTest extends TestCase
         $grade = $this->get($returnUrl)->assertOk()->viewData('nilai')->first();
         $this->delete(route('admin.nilai-manual.destroy', $grade), ['return_url' => $returnUrl])->assertRedirect($returnUrl);
         $this->get($returnUrl)->assertRedirect(route('admin.nilai-manual.index', ['search' => 'Historis', 'page' => 1]));
+    }
+
+    public function test_grade_table_numbers_and_footer_ranges_follow_first_three_pages(): void
+    {
+        $this->seedManualPages(32);
+        foreach (['admin.nilai-manual.index' => 'nilai'] as $route => $variable) {
+            foreach ([1 => [1, 10], 2 => [11, 20], 3 => [21, 30]] as $page => [$first, $last]) {
+                $response = $this->get(route($route, ['search' => 'Historis', 'page' => $page]))->assertOk();
+                $response->assertSee('<td>'.$first.'</td>', false)->assertSee('<td>'.$last.'</td>', false);
+                $this->assertSame($first, $response->viewData($variable)->firstItem());
+                $this->assertSame($last, $response->viewData($variable)->lastItem());
+                $this->assertMatchesRegularExpression('/Menampilkan\s+'.$first.'&ndash;'.$last.'\s+dari\s+31\s+data/', $response->getContent());
+            }
+        }
+    }
+
+    public function test_manual_grade_list_has_compact_actions_and_styled_filtered_pagination(): void
+    {
+        $this->seedManualPages(32);
+        $filters = ['search' => 'Historis', 'angkatan' => 2020, 'page' => 2];
+        $returnUrl = Request::create(route('admin.nilai-manual.index', $filters))->fullUrl();
+        $response = $this->get($returnUrl)->assertOk();
+        $paginator = $response->viewData('nilai');
+        $grade = $paginator->first();
+
+        $response->assertSee('assets/css/manual-grades.css?v=', false)
+            ->assertSee('class="manual-grade-actions-cell"', false)
+            ->assertSee('class="manual-grade-actions"', false)
+            ->assertSee('manual-grade-action--edit', false)
+            ->assertSee('manual-grade-action--delete', false)
+            ->assertSee('onsubmit="return confirm(', false)
+            ->assertSee('name="_token"', false)
+            ->assertSee('name="_method" value="DELETE"', false)
+            ->assertSee('name="return_url" value="'.e($returnUrl).'"', false)
+            ->assertSee('href="'.e(route('admin.nilai-manual.edit', ['khs' => $grade, 'return_url' => $returnUrl])).'"', false)
+            ->assertSee('action="'.e(route('admin.nilai-manual.destroy', $grade)).'"', false)
+            ->assertSee('class="app-pagination"', false)
+            ->assertSee('class="app-pagination__link is-active" aria-current="page">2</span>', false)
+            ->assertSee('href="'.e($paginator->previousPageUrl()).'"', false)
+            ->assertSee('href="'.e($paginator->nextPageUrl()).'"', false)
+            ->assertSee('<td>11</td>', false)
+            ->assertSee('<td>20</td>', false);
+
+        $this->assertSame(10, $paginator->perPage());
+        $this->get(route('admin.nilai-manual.index', array_replace($filters, ['page' => 1])))
+            ->assertOk()->assertSee('class="app-pagination__link is-disabled" aria-disabled="true"', false);
+        $this->get(route('admin.nilai-manual.index', array_replace($filters, ['page' => 4])))
+            ->assertOk()->assertSee('class="app-pagination__link is-disabled" aria-disabled="true"', false);
+    }
+
+    public function test_manual_grade_list_shows_summary_for_single_page_and_empty_results(): void
+    {
+        $this->grade();
+        $single = $this->get(route('admin.nilai-manual.index'))->assertOk();
+        $this->assertMatchesRegularExpression('/Menampilkan\s+1&ndash;1\s+dari\s+1\s+data/', $single->getContent());
+        $single->assertDontSee('class="app-pagination__links"', false);
+
+        $empty = $this->get(route('admin.nilai-manual.index', ['search' => 'Tidak ditemukan']))->assertOk();
+        $this->assertMatchesRegularExpression('/Menampilkan\s+0&ndash;0\s+dari\s+0\s+data/', $empty->getContent());
+        $empty->assertSee('Belum ada nilai manual.')->assertDontSee('class="app-pagination__links"', false);
     }
 }

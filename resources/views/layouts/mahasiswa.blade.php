@@ -19,7 +19,7 @@
         href="{{ asset('assets/css/style.css') }}"
     >
 
-    <link rel="stylesheet" href="{{ asset('assets/css/academic.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/academic.css') }}?v={{ filemtime(public_path('assets/css/academic.css')) }}">
     @stack('styles')
 
 </head>

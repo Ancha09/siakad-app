@@ -7,6 +7,7 @@ use App\Models\Kelas;
 use App\Models\Prodi;
 use App\Models\Dosen;
 use App\Models\Fakultas;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class KelasController extends Controller
@@ -170,7 +171,7 @@ class KelasController extends Controller
 
 
         return redirect()
-            ->route('admin.kelas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.kelas'))
             ->with(
                 'success',
                 'Kelas berhasil ditambahkan.'
@@ -228,7 +229,7 @@ class KelasController extends Controller
 
 
         return redirect()
-            ->route('admin.kelas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.kelas'))
             ->with(
                 'success',
                 'Data kelas berhasil diperbarui.'
@@ -250,7 +251,7 @@ class KelasController extends Controller
 
 
         return redirect()
-            ->route('admin.kelas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.kelas'))
             ->with(
                 'success',
                 'Kelas berhasil dihapus.'

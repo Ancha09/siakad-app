@@ -93,7 +93,7 @@
                 </tbody>
             </table>
         </div>
-        <div style="margin-top:16px;">{{ $komentar->links() }}</div>
+        <div style="margin-top:16px;">{{ $komentar->appends(request()->query())->onEachSide(1)->links() }}</div>
     </div>
 </div>
 @endsection

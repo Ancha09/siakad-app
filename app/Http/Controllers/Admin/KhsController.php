@@ -9,6 +9,7 @@ use App\Models\Kelas;
 use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Prodi;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class KhsController extends Controller
@@ -342,7 +343,7 @@ class KhsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.khs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.khs'))
             ->with(
                 'success',
                 'Data KHS berhasil ditambahkan.'
@@ -475,7 +476,7 @@ class KhsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.khs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.khs'))
             ->with(
                 'success',
                 'Data KHS berhasil diperbarui.'
@@ -491,7 +492,7 @@ class KhsController extends Controller
         $kh->delete();
 
         return redirect()
-            ->route('admin.khs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.khs'))
             ->with(
                 'success',
                 'Data KHS berhasil dihapus.'

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Prodi;
 use App\Models\Fakultas;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class ProdiController extends Controller
@@ -15,7 +16,7 @@ class ProdiController extends Controller
     {
         $prodis = Prodi::with('fakultas')
             ->latest()
-            ->paginate(10);
+            ->paginate(10)->withQueryString();
 
         return view(
             'admin.prodi.index',
@@ -69,7 +70,7 @@ class ProdiController extends Controller
 
 
         return redirect()
-            ->route('admin.prodi')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.prodi'))
             ->with(
                 'success',
                 'Data program studi berhasil ditambahkan.'
@@ -129,7 +130,7 @@ class ProdiController extends Controller
 
 
         return redirect()
-            ->route('admin.prodi')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.prodi'))
             ->with(
                 'success',
                 'Data program studi berhasil diperbarui.'
@@ -144,7 +145,7 @@ class ProdiController extends Controller
         $prodi->delete();
 
         return redirect()
-            ->route('admin.prodi')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.prodi'))
             ->with(
                 'success',
                 'Data program studi berhasil dihapus.'

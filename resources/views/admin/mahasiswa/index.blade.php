@@ -12,7 +12,7 @@
         <h2>🎓 Data Mahasiswa</h2>
 
         <a
-            href="{{ route('admin.mahasiswa.create') }}"
+            href="{{ route('admin.mahasiswa.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
         >
             + Tambah Mahasiswa
@@ -610,7 +610,7 @@
                                 >
 
                                     <a
-                                        href="{{ route('admin.mahasiswa.edit', $mahasiswa->id) }}"
+                                        href="{{ route('admin.mahasiswa.edit', ['mahasiswa' => $mahasiswa->id, 'return_url' => request()->fullUrl()]) }}"
                                         class="btn-outline"
                                         style="
                                             padding:6px 10px;
@@ -629,6 +629,7 @@
                                     >
 
                                         @csrf
+                                        <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                         @method('DELETE')
 
                                         <button
@@ -706,7 +707,7 @@
 
             <div style="margin-top:20px;">
 
-                {{ $mahasiswas->links() }}
+                {{ $mahasiswas->appends(request()->query())->onEachSide(1)->links() }}
 
             </div>
 

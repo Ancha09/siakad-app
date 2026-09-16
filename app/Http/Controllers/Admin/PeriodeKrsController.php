@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PeriodeKrs;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class PeriodeKrsController extends Controller
@@ -13,7 +14,7 @@ class PeriodeKrsController extends Controller
     public function index()
     {
         $periodeKrs = PeriodeKrs::latest()
-            ->paginate(10);
+            ->paginate(10)->withQueryString();
 
         return view(
             'admin.periode_krs.index',
@@ -66,7 +67,7 @@ class PeriodeKrsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.periode-krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs'))
             ->with(
                 'success',
                 'Periode KRS berhasil ditambahkan.'
@@ -123,7 +124,7 @@ class PeriodeKrsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.periode-krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs'))
             ->with(
                 'success',
                 'Periode KRS berhasil diperbarui.'
@@ -155,7 +156,7 @@ class PeriodeKrsController extends Controller
         $periodeKrs->delete();
 
         return redirect()
-            ->route('admin.periode-krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs'))
             ->with(
                 'success',
                 'Periode KRS berhasil dihapus.'

@@ -7,6 +7,8 @@ use Illuminate\Support\Collection;
 
 class MahasiswaNilaiService
 {
+    public const LOCKED_PLACEHOLDER = 'Isi kuesioner untuk melihat nilai';
+
     public function ringkasanMahasiswa(int $mahasiswaId): array
     {
         $khs = Khs::with(['krs.jadwal.mataKuliah', 'krs.mataKuliahManual', 'krs.kuesioner'])

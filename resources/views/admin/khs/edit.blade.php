@@ -52,6 +52,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.khs" />
             @method('PUT')
 
 
@@ -253,7 +254,7 @@
                 </button>
 
                 <a
-                    href="{{ route('admin.khs') }}"
+                    href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.khs') }}"
                     class="btn-outline"
                 >
                     Batal

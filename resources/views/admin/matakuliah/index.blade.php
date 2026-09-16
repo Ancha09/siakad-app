@@ -25,7 +25,7 @@
         <h2>📚 Data Mata Kuliah</h2>
 
         <a
-            href="{{ route('admin.matakuliah.create') }}"
+            href="{{ route('admin.matakuliah.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
         >
             ➕ Tambah Mata Kuliah
@@ -388,7 +388,7 @@
                             >
 
                                 <a
-                                    href="{{ route('admin.matakuliah.edit',$mk->id) }}"
+                                    href="{{ route('admin.matakuliah.edit', ['matakuliah' => $mk->id, 'return_url' => request()->fullUrl()]) }}"
                                     class="btn-outline"
                                     style="
                                         padding:6px 10px;
@@ -407,6 +407,7 @@
                                 >
 
                                     @csrf
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                     @method('DELETE')
 
@@ -485,7 +486,7 @@
 
             <div style="margin-top:20px;">
 
-                {{ $matakuliahs->links() }}
+                {{ $matakuliahs->appends(request()->query())->onEachSide(1)->links() }}
 
             </div>
 

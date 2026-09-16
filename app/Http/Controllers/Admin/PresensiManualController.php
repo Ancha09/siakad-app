@@ -19,6 +19,12 @@ use Illuminate\Validation\ValidationException;
 
 class PresensiManualController extends Controller
 {
+    public function __construct()
+    {
+        // Block old cached routes too; historical records and regular attendance are untouched.
+        abort(404, 'Fitur input absensi lama telah dinonaktifkan.');
+    }
+
     public function index(Request $request, LegacyAcademicService $legacy)
     {
         $query = Presensi::with(['dosenManual', 'krs.mahasiswa', 'krs.mataKuliahManual', 'krs.dosenManual', 'krs.jadwal.mataKuliah', 'krs.jadwal.dosen'])
@@ -91,17 +97,6 @@ class PresensiManualController extends Controller
         });
 
         return redirect()->to($navigation->returnUrl($request, 'admin.presensi-manual.index'))->with('success', 'Absensi lama/manual berhasil diperbarui.');
-    }
-
-    public function destroy(Request $request, Presensi $presensi, LegacyListNavigation $navigation)
-    {
-        abort_unless($presensi->is_manual, 404);
-        DB::transaction(function () use ($presensi) {
-            Mahasiswa::whereKey($presensi->krs->mahasiswa_id)->lockForUpdate()->firstOrFail();
-            $presensi->delete();
-        });
-
-        return redirect()->to($navigation->returnUrl($request, 'admin.presensi-manual.index'))->with('success', 'Entri absensi manual dihapus. KRS dan nilai tidak dihapus.');
     }
 
     private function ensureNotDuplicate(array $data, LegacyAcademicService $legacy, ?int $except = null): void

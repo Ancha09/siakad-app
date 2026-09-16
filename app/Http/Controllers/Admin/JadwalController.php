@@ -10,6 +10,7 @@ use App\Models\Ruangan;
 use App\Models\Kelas;
 use App\Models\Fakultas;
 use App\Models\Prodi;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class JadwalController extends Controller
@@ -259,7 +260,7 @@ class JadwalController extends Controller
 
 
         return redirect()
-            ->route('admin.jadwal')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.jadwal'))
             ->with(
                 'success',
                 'Data jadwal berhasil ditambahkan.'
@@ -332,7 +333,7 @@ class JadwalController extends Controller
 
 
         return redirect()
-            ->route('admin.jadwal')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.jadwal'))
             ->with(
                 'success',
                 'Data jadwal berhasil diperbarui.'
@@ -347,7 +348,7 @@ class JadwalController extends Controller
         $jadwal->delete();
 
         return redirect()
-            ->route('admin.jadwal')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.jadwal'))
             ->with(
                 'success',
                 'Data jadwal berhasil dihapus.'

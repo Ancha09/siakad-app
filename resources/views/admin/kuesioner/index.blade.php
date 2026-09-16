@@ -162,7 +162,7 @@
                 </tbody>
             </table>
         </div>
-        <div style="margin-top:16px;">{{ $jawaban->links() }}</div>
+        <div style="margin-top:16px;">{{ $jawaban->appends(request()->query())->onEachSide(1)->links() }}</div>
     </div>
 </div>
 
@@ -194,7 +194,7 @@
                 </tbody>
             </table>
         </div>
-        <div style="margin-top:16px;">{{ $statusMahasiswa->links() }}</div>
+        <div style="margin-top:16px;">{{ $statusMahasiswa->appends(request()->query())->onEachSide(1)->links() }}</div>
     </div>
 </div>
 @endsection

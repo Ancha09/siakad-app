@@ -62,6 +62,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.periode-krs" />
 
             @method('PUT')
 
@@ -313,7 +314,7 @@
 
 
                 <a
-                    href="{{ route('admin.periode-krs') }}"
+                    href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs') }}"
                     class="btn-outline"
                 >
                     Batal

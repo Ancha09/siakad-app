@@ -59,6 +59,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.periode-krs" />
 
 
             <div class="krs-form-grid">
@@ -298,7 +299,7 @@
 
 
                 <a
-                    href="{{ route('admin.periode-krs') }}"
+                    href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs') }}"
                     class="btn-outline"
                 >
                     Batal

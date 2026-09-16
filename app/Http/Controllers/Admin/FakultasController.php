@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Fakultas;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class FakultasController extends Controller
 {
     public function index()
     {
-        $fakultas = Fakultas::latest()->paginate(10);
+        $fakultas = Fakultas::latest()->paginate(10)->withQueryString();
 
         return view('admin.fakultas.index', compact('fakultas'));
     }
@@ -33,7 +34,7 @@ class FakultasController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.fakultas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas'))
             ->with('success', 'Data fakultas berhasil ditambahkan.');
     }
 
@@ -55,7 +56,7 @@ class FakultasController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.fakultas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas'))
             ->with('success', 'Data fakultas berhasil diperbarui.');
     }
 
@@ -64,7 +65,7 @@ class FakultasController extends Controller
         $fakulta->delete();
 
         return redirect()
-            ->route('admin.fakultas')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas'))
             ->with('success', 'Data fakultas berhasil dihapus.');
     }
 }

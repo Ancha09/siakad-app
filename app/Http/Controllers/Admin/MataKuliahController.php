@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class MataKuliahController extends Controller
@@ -122,7 +123,7 @@ class MataKuliahController extends Controller
 
 
         return redirect()
-            ->route('admin.matakuliah')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.matakuliah'))
             ->with(
                 'success',
                 'Data mata kuliah berhasil ditambahkan.'
@@ -173,7 +174,7 @@ class MataKuliahController extends Controller
 
 
         return redirect()
-            ->route('admin.matakuliah')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.matakuliah'))
             ->with(
                 'success',
                 'Data mata kuliah berhasil diperbarui.'
@@ -188,7 +189,7 @@ class MataKuliahController extends Controller
         $matakuliah->delete();
 
         return redirect()
-            ->route('admin.matakuliah')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.matakuliah'))
             ->with(
                 'success',
                 'Data mata kuliah berhasil dihapus.'

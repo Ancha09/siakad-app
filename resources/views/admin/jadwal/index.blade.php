@@ -22,7 +22,7 @@
         <h2>🗓️ Data Jadwal Kuliah</h2>
 
         <a
-            href="{{ route('admin.jadwal.create') }}"
+            href="{{ route('admin.jadwal.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
         >
             ➕ Tambah Jadwal
@@ -447,7 +447,7 @@
 
 
                                     <a
-                                        href="{{ route('admin.jadwal.edit', $jadwal->id) }}"
+                                        href="{{ route('admin.jadwal.edit', ['jadwal' => $jadwal->id, 'return_url' => request()->fullUrl()]) }}"
                                         class="btn-edit"
                                     >
 
@@ -462,6 +462,7 @@
                                     >
 
                                         @csrf
+                                        <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                         @method('DELETE')
 
@@ -530,7 +531,7 @@
 
         <div style="margin-top:20px;">
 
-            {{ $jadwals->links() }}
+            {{ $jadwals->appends(request()->query())->onEachSide(1)->links() }}
 
         </div>
 

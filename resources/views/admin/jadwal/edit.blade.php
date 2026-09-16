@@ -32,6 +32,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.jadwal" />
             @method('PUT')
 
 
@@ -301,7 +302,7 @@
 
 
             <a
-                href="{{ route('admin.jadwal') }}"
+                href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.jadwal') }}"
                 class="btn-outline"
             >
                 Batal

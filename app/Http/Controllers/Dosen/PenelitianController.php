@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dosen;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\Penelitian;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +58,7 @@ class PenelitianController extends Controller
 
         Penelitian::create($data);
 
-        return to_route('dosen.penelitian')->with('success', 'Karya Penelitian & P3M berhasil ditambahkan.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'dosen.penelitian'))->with('success', 'Karya Penelitian & P3M berhasil ditambahkan.');
     }
 
     public function update(Request $request, Penelitian $penelitian)
@@ -81,7 +82,7 @@ class PenelitianController extends Controller
 
         $penelitian->update($data);
 
-        return to_route('dosen.penelitian')->with('success', 'Karya berhasil diperbarui.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'dosen.penelitian'))->with('success', 'Karya berhasil diperbarui.');
     }
 
     public function destroy(Penelitian $penelitian)
@@ -92,7 +93,7 @@ class PenelitianController extends Controller
         $penelitian->delete();
         Storage::disk('local')->delete($paths);
 
-        return to_route('dosen.penelitian')->with('success', 'Karya berhasil dihapus.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'dosen.penelitian'))->with('success', 'Karya berhasil dihapus.');
     }
 
     public function download(Penelitian $penelitian, string $dokumen)

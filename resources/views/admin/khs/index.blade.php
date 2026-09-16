@@ -442,6 +442,7 @@
                                 >
 
                                     @csrf
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                     @method('DELETE')
 
@@ -508,7 +509,7 @@
 
         <div style="margin-top:20px">
 
-            {{ $khs->links() }}
+            {{ $khs->appends(request()->query())->onEachSide(1)->links() }}
 
         </div>
 

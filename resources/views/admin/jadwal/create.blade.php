@@ -26,6 +26,7 @@
         <form action="{{ route('admin.jadwal.store') }}" method="POST">
 
             @csrf
+            <x-list-return-url list-route="admin.jadwal" />
 
             <div class="krs-form-grid">
 
@@ -224,7 +225,7 @@
 
 
             <a
-                href="{{ route('admin.jadwal') }}"
+                href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.jadwal') }}"
                 class="btn-outline"
             >
                 Batal

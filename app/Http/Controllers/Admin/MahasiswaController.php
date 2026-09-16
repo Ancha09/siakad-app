@@ -8,6 +8,7 @@ use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use App\Models\User;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -198,7 +199,7 @@ class MahasiswaController extends Controller
             return back()->withInput()->with('error', 'Data mahasiswa gagal disimpan. Silakan coba kembali.');
         }
 
-        return redirect()->route('admin.mahasiswa')->with('success', 'Data mahasiswa dan akun login berhasil ditambahkan.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.mahasiswa'))->with('success', 'Data mahasiswa dan akun login berhasil ditambahkan.');
     }
 
     // ===================== EDIT =====================
@@ -268,7 +269,7 @@ class MahasiswaController extends Controller
             ]);
         });
 
-        return redirect()->route('admin.mahasiswa')->with('success', 'Data mahasiswa dan akun login berhasil diperbarui.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.mahasiswa'))->with('success', 'Data mahasiswa dan akun login berhasil diperbarui.');
     }
 
     // ===================== DELETE =====================
@@ -280,6 +281,6 @@ class MahasiswaController extends Controller
             $mahasiswa->user?->update(['is_active' => false]);
         });
 
-        return redirect()->route('admin.mahasiswa')->with('success', 'Mahasiswa dinonaktifkan tanpa menghapus riwayat akademik.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.mahasiswa'))->with('success', 'Mahasiswa dinonaktifkan tanpa menghapus riwayat akademik.');
     }
 }

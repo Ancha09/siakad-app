@@ -51,6 +51,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.mahasiswa" />
             @method('PUT')
 
 
@@ -307,7 +308,7 @@
 
 
             <a
-                href="{{ route('admin.mahasiswa') }}"
+                href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.mahasiswa') }}"
                 class="btn-outline"
             >
                 Batal

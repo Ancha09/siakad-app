@@ -8,6 +8,7 @@ use App\Models\Fakultas;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use App\Models\User;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -117,7 +118,7 @@ class DosenController extends Controller
         }
 
         return redirect()
-            ->route('admin.dosen')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.dosen'))
             ->with('success', 'Data dosen berhasil ditambahkan.');
     }
 
@@ -187,7 +188,7 @@ class DosenController extends Controller
         });
 
         return redirect()
-            ->route('admin.dosen')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.dosen'))
             ->with(
                 'success',
                 'Data dosen dan mahasiswa wali berhasil diperbarui.'
@@ -203,6 +204,6 @@ class DosenController extends Controller
             $dosen->user?->update(['is_active' => false]);
         });
 
-        return redirect()->route('admin.dosen')->with('success', 'Dosen dinonaktifkan tanpa menghapus jadwal atau riwayat akademik.');
+        return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.dosen'))->with('success', 'Dosen dinonaktifkan tanpa menghapus jadwal atau riwayat akademik.');
     }
 }

@@ -10,6 +10,7 @@ use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class KrsController extends Controller
@@ -320,7 +321,7 @@ class KrsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.krs'))
             ->with(
                 'success',
                 'Data KRS berhasil ditambahkan.'
@@ -411,7 +412,7 @@ class KrsController extends Controller
         ]);
 
         return redirect()
-            ->route('admin.krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.krs'))
             ->with(
                 'success',
                 'Data KRS berhasil diperbarui.'
@@ -426,7 +427,7 @@ class KrsController extends Controller
         $kr->delete();
 
         return redirect()
-            ->route('admin.krs')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.krs'))
             ->with(
                 'success',
                 'Data KRS berhasil dihapus.'

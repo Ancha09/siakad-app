@@ -9,7 +9,7 @@
 @endif
 
 <div class="toolbar">
-    <a href="{{ route('admin.dosen.create') }}" class="btn-primary">➕ Tambah Dosen</a>
+    <a href="{{ route('admin.dosen.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary">➕ Tambah Dosen</a>
 </div>
 
 <div class="page-card">
@@ -103,10 +103,11 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{{ route('admin.dosen.edit', $dosen->id) }}" class="btn-edit">✏ Edit</a>
+                                    <a href="{{ route('admin.dosen.edit', ['dosen' => $dosen->id, 'return_url' => request()->fullUrl()]) }}" class="btn-edit">✏ Edit</a>
 
                                     <form action="{{ route('admin.dosen.destroy', $dosen->id) }}" method="POST">
                                         @csrf
+                                        <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                         @method('DELETE')
                                         <button type="submit" class="btn-delete"
                                                 @disabled(! $dosen->is_active)
@@ -129,7 +130,7 @@
         </div>
 
         @if($dosens->hasPages())
-            <div style="margin-top:20px">{{ $dosens->links() }}</div>
+            <div style="margin-top:20px">{{ $dosens->appends(request()->query())->onEachSide(1)->links() }}</div>
         @endif
     </div>
 </div>

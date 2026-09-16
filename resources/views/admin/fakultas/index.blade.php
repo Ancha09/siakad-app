@@ -19,7 +19,7 @@
     <input type="text" placeholder="Cari kode atau nama fakultas...">
 </div>
 
-<a href="{{ route('admin.fakultas.create') }}" class="btn-primary">
+<a href="{{ route('admin.fakultas.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary">
     ➕ Tambah Fakultas
 </a>
 ```
@@ -66,13 +66,14 @@
 
                         <div class="action-buttons">
 
-                            <a href="{{ route('admin.fakultas.edit', $item->id) }}" class="btn-edit">
+                            <a href="{{ route('admin.fakultas.edit', ['fakulta' => $item->id, 'return_url' => request()->fullUrl()]) }}" class="btn-edit">
                                 ✏ Edit
                             </a>
 
                             <form action="{{ route('admin.fakultas.destroy', $item->id) }}" method="POST">
 
                                 @csrf
+                                <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                 @method('DELETE')
 
                                 <button type="submit"
@@ -109,7 +110,7 @@
 
     <div style="margin-top:20px">
 
-        {{ $fakultas->links() }}
+        {{ $fakultas->appends(request()->query())->onEachSide(1)->links() }}
 
     </div>
 

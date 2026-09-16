@@ -52,7 +52,7 @@
 
 
     <a
-        href="{{ route('admin.periode-krs.create') }}"
+        href="{{ route('admin.periode-krs.create', ['return_url' => request()->fullUrl()]) }}"
         class="btn-primary"
     >
         ➕ Tambah Periode KRS
@@ -240,6 +240,7 @@
                                 >
 
                                     @csrf
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                     @method('PATCH')
 
@@ -275,10 +276,7 @@
                                 {{-- EDIT --}}
 
                                 <a
-                                    href="{{ route(
-                                        'admin.periode-krs.edit',
-                                        $item->id
-                                    ) }}"
+                                    href="{{ route('admin.periode-krs.edit', ['periodeKrs' => $item->id, 'return_url' => request()->fullUrl()]) }}"
                                     class="btn-edit"
                                 >
                                     ✏ Edit
@@ -296,6 +294,7 @@
                                 >
 
                                     @csrf
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                     @method('DELETE')
 
@@ -362,7 +361,7 @@
 
         <div style="margin-top:20px;">
 
-            {{ $periodeKrs->links() }}
+            {{ $periodeKrs->appends(request()->query())->onEachSide(1)->links() }}
 
         </div>
 

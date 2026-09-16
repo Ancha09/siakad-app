@@ -250,7 +250,7 @@
                     @if($ipkTerlihat !== null)
                         {{ number_format($ipkTerlihat, 2) }}
                     @elseif($jumlahKuesionerTertunda > 0)
-                        🔒
+                        <span style="font-size:14px;font-weight:500;">{{ \App\Services\MahasiswaNilaiService::LOCKED_PLACEHOLDER }}</span>
                     @else
                         -
                     @endif

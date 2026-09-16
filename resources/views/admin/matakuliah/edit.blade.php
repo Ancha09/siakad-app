@@ -45,6 +45,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.matakuliah" />
             @method('PUT')
 
             <div class="krs-form-grid">
@@ -183,7 +184,7 @@
                 </button>
 
                 <a
-                    href="{{ route('admin.matakuliah') }}"
+                    href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.matakuliah') }}"
                     class="btn-outline"
                 >
                     Batal

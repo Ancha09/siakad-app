@@ -13,7 +13,7 @@
         <h2>🏫 Data Kelas</h2>
 
         <a
-            href="{{ route('admin.kelas.create') }}"
+            href="{{ route('admin.kelas.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
         >
             + Tambah Kelas
@@ -494,7 +494,7 @@
                                 >
 
                                     <a
-                                        href="{{ route('admin.kelas.edit', $kelas->id) }}"
+                                        href="{{ route('admin.kelas.edit', ['kelas' => $kelas->id, 'return_url' => request()->fullUrl()]) }}"
                                         class="btn-outline"
                                         style="
                                             padding:5px 10px;
@@ -514,6 +514,7 @@
                                     >
 
                                         @csrf
+                                        <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
 
                                         @method('DELETE')
 
@@ -584,7 +585,7 @@
 
         <div style="margin-top:20px;">
 
-            {{ $kelases->links() }}
+            {{ $kelases->appends(request()->query())->onEachSide(1)->links() }}
 
         </div>
 

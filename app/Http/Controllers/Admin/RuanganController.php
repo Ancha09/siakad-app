@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Ruangan;
+use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 
 class RuanganController extends Controller
@@ -11,7 +12,7 @@ class RuanganController extends Controller
     // ===================== INDEX =====================
     public function index()
     {
-        $ruangans = Ruangan::latest()->paginate(10);
+        $ruangans = Ruangan::latest()->paginate(10)->withQueryString();
 
         return view('admin.ruangan.index', compact('ruangans'));
     }
@@ -40,7 +41,7 @@ class RuanganController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.ruangan')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.ruangan'))
             ->with('success', 'Data ruangan berhasil ditambahkan.');
     }
 
@@ -68,7 +69,7 @@ class RuanganController extends Controller
         ]));
 
         return redirect()
-            ->route('admin.ruangan')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.ruangan'))
             ->with('success', 'Data ruangan berhasil diperbarui.');
     }
 
@@ -78,7 +79,7 @@ class RuanganController extends Controller
         $ruangan->delete();
 
         return redirect()
-            ->route('admin.ruangan')
+            ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.ruangan'))
             ->with('success', 'Data ruangan berhasil dihapus.');
     }
 }

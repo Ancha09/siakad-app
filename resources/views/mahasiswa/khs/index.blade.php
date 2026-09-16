@@ -197,7 +197,7 @@
                     @if($ipk !== null)
                         {{ number_format($ipk, 2) }}
                     @elseif($jumlahKuesionerTertunda > 0)
-                        🔒
+                        <span style="font-size:14px;font-weight:500;">{{ \App\Services\MahasiswaNilaiService::LOCKED_PLACEHOLDER }}</span>
                     @else
                         -
                     @endif
@@ -261,7 +261,7 @@
                             @if(($ipsPerSemester[$semester] ?? null) !== null)
                                 {{ number_format($ipsPerSemester[$semester], 2) }}
                             @else
-                                🔒
+                                <span style="font-size:13px;font-weight:500;">{{ \App\Services\MahasiswaNilaiService::LOCKED_PLACEHOLDER }}</span>
                             @endif
 
                         </span>
@@ -353,9 +353,12 @@
 
                                     {{-- NILAI ANGKA --}}
 
+                                    @if(! $item->krs?->kuesioner)
+                                        <td colspan="3">{{ \App\Services\MahasiswaNilaiService::LOCKED_PLACEHOLDER }}</td>
+                                    @else
                                     <td>
 
-                                        {{ $item->krs?->kuesioner ? ($item->nilai_angka ?? '-') : '🔒' }}
+                                        {{ $item->nilai_angka ?? '-' }}
 
                                     </td>
 
@@ -365,7 +368,7 @@
                                     <td>
 
                                         <strong>
-                                            {{ $item->krs?->kuesioner ? ($item->nilai_huruf ?? '-') : '🔒' }}
+                                            {{ $item->nilai_huruf ?? '-' }}
                                         </strong>
 
                                     </td>
@@ -375,9 +378,10 @@
 
                                     <td>
 
-                                        {{ $item->krs?->kuesioner ? ($item->bobot ?? '-') : '🔒' }}
+                                        {{ $item->bobot ?? '-' }}
 
                                     </td>
+                                    @endif
 
 
                                     {{-- STATUS KUESIONER --}}

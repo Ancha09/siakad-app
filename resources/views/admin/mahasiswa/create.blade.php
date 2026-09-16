@@ -62,6 +62,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.mahasiswa" />
 
             <div class="krs-form-grid">
 
@@ -306,7 +307,7 @@
 
             {{-- BATAL --}}
             <a
-                href="{{ route('admin.mahasiswa') }}"
+                href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.mahasiswa') }}"
                 class="btn-outline"
             >
 

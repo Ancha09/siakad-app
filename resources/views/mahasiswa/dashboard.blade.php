@@ -152,7 +152,7 @@
               <strong style="font-size:30px;color:#94a3b8;line-height:1;">—</strong>
             @else
               <span style="display:inline-flex;align-items:center;gap:8px;padding:9px 13px;border-radius:999px;background:#fff7ed;color:#9a3412;font-size:13px;font-weight:700;">
-                &#128274; IPK terkunci
+                {{ \App\Services\MahasiswaNilaiService::LOCKED_PLACEHOLDER }}
               </span>
             @endif
           </div>

@@ -27,6 +27,7 @@
     <form action="{{ route('admin.fakultas.update', $fakultas->id) }}" method="POST">
 
         @csrf
+        <x-list-return-url list-route="admin.fakultas" />
         @method('PUT')
 
         <div class="krs-form-grid">
@@ -49,7 +50,7 @@
             💾 Update
         </button>
 
-        <a href="{{ route('admin.fakultas') }}" class="btn-outline">
+        <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas') }}" class="btn-outline">
             Batal
         </a>
 

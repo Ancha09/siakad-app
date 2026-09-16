@@ -119,7 +119,7 @@
             <h3 style="margin-bottom:12px;color:#0f2a55;">Mahasiswa dengan Kehadiran di Bawah 75%</h3>
             <div class="table-wrap"><table><thead><tr><th>No</th><th>NIM</th><th>Nama Mahasiswa</th><th>Program Studi</th><th>Kelas</th><th>Mata Kuliah</th><th>Hadir</th><th>Izin</th><th>Sakit</th><th>Alpha</th><th>Kehadiran</th></tr></thead><tbody>
                 @forelse($kehadiranRendah as $item)<tr><td>{{ $kehadiranRendah->firstItem() + $loop->index }}</td><td>{{ $item->nim }}</td><td><strong>{{ $item->nama }}</strong></td><td>{{ $item->prodi }}</td><td>{{ $item->kelas }}</td><td>{{ $item->mata_kuliah }}</td><td>{{ $item->hadir }}</td><td>{{ $item->izin }}</td><td>{{ $item->sakit }}</td><td>{{ $item->alpha }}</td><td class="danger-score">{{ number_format($item->persentase, 1) }}%</td></tr>@empty<tr><td colspan="11" class="empty">Tidak ada mahasiswa dengan kehadiran di bawah 75%.</td></tr>@endforelse
-            </tbody></table></div><div class="pagination-wrap">{{ $kehadiranRendah->links() }}</div>
+            </tbody></table></div><div class="pagination-wrap">{{ $kehadiranRendah->appends(request()->query())->onEachSide(1)->links() }}</div>
         </div>
     </div>
 
@@ -152,7 +152,7 @@
             <div class="section-note">IP Akademik mengikuti data KHS pada filter aktif dengan rumus total (SKS × bobot) dibagi total SKS bernilai. Status akademik tidak ditampilkan karena tidak tersedia sebagai kolom di database.</div>
             <div class="table-wrap"><table><thead><tr><th>No</th><th>NIM</th><th>Nama Mahasiswa</th><th>Program Studi</th><th>Kelas</th><th>Total SKS Disetujui</th><th>IP Akademik</th><th>Kehadiran</th></tr></thead><tbody>
                 @forelse($detailMahasiswa as $item)<tr><td>{{ $detailMahasiswa->firstItem() + $loop->index }}</td><td>{{ $item->nim }}</td><td><strong>{{ $item->nama }}</strong></td><td>{{ $item->prodi }}</td><td>{{ $item->kelas }}</td><td>{{ $item->total_sks }}</td><td class="score">{{ $item->ip === null ? '-' : number_format($item->ip, 2) }}</td><td class="{{ $item->kehadiran !== null && $item->kehadiran < 75 ? 'danger-score' : '' }}">{{ $item->kehadiran === null ? '-' : number_format($item->kehadiran, 1).'%' }}</td></tr>@empty<tr><td colspan="8" class="empty">Belum ada data akademik mahasiswa pada filter ini.</td></tr>@endforelse
-            </tbody></table></div><div class="pagination-wrap">{{ $detailMahasiswa->links() }}</div>
+            </tbody></table></div><div class="pagination-wrap">{{ $detailMahasiswa->appends(request()->query())->onEachSide(1)->links() }}</div>
         </div>
     </div>
 </div>

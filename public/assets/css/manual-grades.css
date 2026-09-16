@@ -1,0 +1,78 @@
+/* Scoped to the manual grade list; other admin tables keep their existing styles. */
+.manual-grades-page .page-card-head { gap: 16px; flex-wrap: wrap; }
+.manual-grades-page .page-card-head > .btn-primary { flex-shrink: 0; }
+.manual-grades-page .table-wrap table { min-width: 900px; }
+.manual-grades-page td { vertical-align: middle; }
+.manual-grades-page .manual-grade-actions-cell {
+    width: 148px;
+    min-width: 148px;
+    box-sizing: border-box;
+    text-align: center;
+    white-space: nowrap;
+}
+.manual-grade-actions { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.manual-grade-actions form { display: flex; margin: 0; padding: 0; flex-shrink: 0; }
+.manual-grade-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 18px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.manual-grade-action--edit { background: var(--blue, #2563eb); border-color: var(--blue, #2563eb); color: #fff; }
+.manual-grade-action--edit:hover { background: var(--navy, #1e3a8a); border-color: var(--navy, #1e3a8a); color: #fff; }
+.manual-grade-action--delete { background: #fff; border-color: #fecaca; color: #b91c1c; }
+.manual-grade-action--delete:hover { background: #fef2f2; border-color: #f87171; }
+.manual-grade-action:focus-visible,
+.manual-grades-page .app-pagination__link:focus-visible { outline: 3px solid var(--sky, #93c5fd); outline-offset: 2px; }
+.manual-grades-page .app-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--gray-200, #e2e8f0);
+    color: var(--gray-500, #64748b);
+    font-size: 12px;
+}
+.manual-grades-page .app-pagination__summary { margin: 0; line-height: 1.6; }
+.manual-grades-page .app-pagination__links,
+.manual-grades-page .app-pagination__pages { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.manual-grades-page .app-pagination__link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 7px 10px;
+    border: 1px solid var(--gray-200, #e2e8f0);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--blue, #2563eb);
+    font-weight: 600;
+    line-height: 16px;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.manual-grades-page a.app-pagination__link:hover { background: var(--pale, #eff6ff); border-color: var(--sky, #93c5fd); }
+.manual-grades-page .app-pagination__link.is-active { background: var(--blue, #2563eb); border-color: var(--blue, #2563eb); color: #fff; }
+.manual-grades-page .app-pagination__link.is-disabled { background: var(--gray-50, #f8fafc); color: #94a3b8; cursor: not-allowed; }
+@media (max-width: 700px) {
+    .manual-grades-page .app-pagination { align-items: flex-start; flex-direction: column; }
+    .manual-grades-page .app-pagination__links { justify-content: flex-start; }
+    .manual-grades-page .app-pagination__link { min-height: 36px; }
+}

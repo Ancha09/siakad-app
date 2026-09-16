@@ -66,6 +66,7 @@
         <summary>Tambah Kegiatan Penelitian atau P3M</summary>
         <div class="create-body">
             <form method="POST" enctype="multipart/form-data" action="{{ route('dosen.penelitian.store') }}">
+                <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                 @csrf
                 <div class="form-grid">
                     <div class="form-group span-all"><label>Judul Kegiatan</label><input class="form-control" name="judul" value="{{ old('judul') }}" maxlength="255" placeholder="Masukkan judul penelitian atau pengabdian" required></div>
@@ -125,6 +126,7 @@
                             <summary>Edit kegiatan dan dokumen</summary>
                             <div class="edit-body">
                                 <form method="POST" enctype="multipart/form-data" action="{{ route('dosen.penelitian.update', $penelitian) }}">
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                     @csrf @method('PUT')
                                     <div class="form-grid">
                                         <div class="form-group span-all"><label>Judul Kegiatan</label><input class="form-control" name="judul" value="{{ $penelitian->judul }}" maxlength="255" required></div>
@@ -140,6 +142,7 @@
                                     <button class="btn-edit" type="submit" style="margin-top:14px;">Simpan Perubahan</button>
                                 </form>
                                 <form method="POST" action="{{ route('dosen.penelitian.destroy', $penelitian) }}" style="margin-top:8px;" onsubmit="return confirm('Hapus kegiatan beserta seluruh dokumennya?')">
+                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                     @csrf @method('DELETE')
                                     <button class="btn-delete" type="submit">Hapus Kegiatan</button>
                                 </form>
@@ -151,7 +154,7 @@
                 @endforelse
             </div>
 
-            @if($penelitians->hasPages())<div style="margin-top:18px;">{{ $penelitians->links() }}</div>@endif
+            {{ $penelitians->appends(request()->query())->onEachSide(1)->links() }}
         </div>
     </section>
 </div>

@@ -1,10 +1,11 @@
-@if ($paginator->hasPages())
+@php($paginator->appends(request()->query()))
     <nav class="app-pagination" role="navigation" aria-label="Navigasi halaman">
         <p class="app-pagination__summary">
             Menampilkan {{ $paginator->firstItem() ?? 0 }}&ndash;{{ $paginator->lastItem() ?? 0 }}
             dari {{ $paginator->total() }} data
         </p>
 
+        @if ($paginator->hasPages())
         <div class="app-pagination__links">
             @if ($paginator->onFirstPage())
                 <span class="app-pagination__link is-disabled" aria-disabled="true">
@@ -50,5 +51,5 @@
                 </span>
             @endif
         </div>
+        @endif
     </nav>
-@endif

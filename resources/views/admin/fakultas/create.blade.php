@@ -27,6 +27,7 @@
     <form action="{{ route('admin.fakultas.store') }}" method="POST">
 
         @csrf
+        <x-list-return-url list-route="admin.fakultas" />
 
         <div class="krs-form-grid">
 
@@ -48,7 +49,7 @@
             💾 Simpan
         </button>
 
-        <a href="{{ route('admin.fakultas') }}" class="btn-outline">
+        <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas') }}" class="btn-outline">
             Batal
         </a>
 

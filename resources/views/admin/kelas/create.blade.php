@@ -48,6 +48,7 @@
         >
 
             @csrf
+            <x-list-return-url list-route="admin.kelas" />
 
 
             <div class="krs-form-grid">
@@ -225,7 +226,7 @@
 
 
                 <a
-                    href="{{ route('admin.kelas') }}"
+                    href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.kelas') }}"
                     class="btn-outline"
                 >
 

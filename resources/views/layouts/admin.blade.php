@@ -31,7 +31,7 @@
     >
 
 
-    <link rel="stylesheet" href="{{ asset('assets/css/academic.css') }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/academic.css') }}?v={{ filemtime(public_path('assets/css/academic.css')) }}">
     @stack('styles')
 
 </head>
@@ -160,7 +160,6 @@
             <x-sidebar-item route="admin.krs" :active="request()->routeIs('admin.krs', 'admin.krs.*')" icon="file-check">KRS</x-sidebar-item>
             <x-sidebar-item route="admin.khs" :active="request()->routeIs('admin.khs', 'admin.khs.*')" icon="file-chart">KHS</x-sidebar-item>
             <x-sidebar-item route="admin.nilai-manual.index" :active="request()->routeIs('admin.nilai-manual.*')" icon="file-chart">Input Nilai Lama</x-sidebar-item>
-            <x-sidebar-item route="admin.presensi-manual.index" :active="request()->routeIs('admin.presensi-manual.*')" icon="attendance">Input Absensi Lama</x-sidebar-item>
             <x-sidebar-item route="admin.skripsi" :active="request()->routeIs('admin.skripsi', 'admin.skripsi.*')" icon="graduation">Pembimbing Skripsi</x-sidebar-item>
 
             <div class="nav-section-label">Monitoring &amp; Laporan</div>
