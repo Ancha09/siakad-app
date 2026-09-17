@@ -1,0 +1,28 @@
+warning: in the working copy of 'resources/views/admin/presensi/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/mahasiswa/khs/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+warning: in the working copy of 'resources/views/mahasiswa/krs/index.blade.php', CRLF will be replaced by LF the next time Git touches it
+ app/Http/Controllers/Admin/DosenController.php     |   22 [32m+[m[31m-[m
+ .../Admin/LaporanAkademikController.php            |  187 [32m++[m[31m-[m
+ .../Controllers/Mahasiswa/DashboardController.php  |   42 [32m+[m[31m-[m
+ app/Http/Controllers/Mahasiswa/KhsController.php   |   55 [32m+[m[31m-[m
+ app/Http/Controllers/Mahasiswa/KrsController.php   |  303 [32m++[m[31m---[m
+ .../Controllers/Mahasiswa/KuesionerController.php  |    2 [32m+[m[31m-[m
+ app/Http/Controllers/SkripsiController.php         |   97 [32m+[m[31m-[m
+ composer.json                                      |    4 [32m+[m[31m-[m
+ composer.lock                                      | 1226 [32m++++++++++++++++++[m[31m--[m
+ resources/views/admin/dosen/index.blade.php        |  260 [32m+++[m[31m--[m
+ resources/views/admin/laporan/laporan.blade.php    |    4 [32m+[m[31m-[m
+ resources/views/admin/laporan/print.blade.php      |   70 [32m+[m[31m-[m
+ resources/views/admin/presensi/index.blade.php     |    2 [32m+[m[31m-[m
+ resources/views/layouts/admin.blade.php            |   44 [32m+[m[31m-[m
+ resources/views/mahasiswa/dashboard.blade.php      |   47 [32m+[m[31m-[m
+ resources/views/mahasiswa/khs/index.blade.php      |   22 [32m+[m[31m-[m
+ resources/views/mahasiswa/krs/index.blade.php      |   35 [32m+[m[31m-[m
+ resources/views/mahasiswa/kuesioner/form.blade.php |    4 [32m+[m[31m-[m
+ resources/views/profile/edit.blade.php             |  123 [32m+[m[31m-[m
+ resources/views/skripsi/admin.blade.php            |   13 [32m+[m[31m-[m
+ resources/views/skripsi/mahasiswa.blade.php        |    4 [32m+[m[31m-[m
+ resources/views/skripsi/partials/style.blade.php   |   69 [32m+[m[31m-[m
+ routes/skripsi.php                                 |    2 [32m+[m
+ routes/web.php                                     |   22 [32m+[m[31m-[m
+ 24 files changed, 1882 insertions(+), 777 deletions(-)
