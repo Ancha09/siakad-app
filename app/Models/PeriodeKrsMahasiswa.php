@@ -14,13 +14,14 @@ class PeriodeKrsMahasiswa extends Model
         'status_akses',
         'tanggal_dibuka',
         'tanggal_ditutup',
-        'admin_id',
+        'dibuka_oleh',
         'catatan',
     ];
 
     protected function casts(): array
     {
         return [
+            'status_akses' => 'boolean',
             'tanggal_dibuka' => 'datetime',
             'tanggal_ditutup' => 'datetime',
         ];
@@ -36,13 +37,13 @@ class PeriodeKrsMahasiswa extends Model
         return $this->belongsTo(Mahasiswa::class);
     }
 
-    public function admin()
+    public function pembuka()
     {
-        return $this->belongsTo(User::class, 'admin_id');
+        return $this->belongsTo(User::class, 'dibuka_oleh');
     }
 
     public function isDibuka(): bool
     {
-        return $this->status_akses === 'dibuka';
+        return $this->status_akses;
     }
 }

@@ -6,7 +6,6 @@ use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
-use App\Models\PembayaranKrs;
 use App\Models\Prodi;
 use App\Models\Ruangan;
 use App\Models\User;
@@ -113,17 +112,14 @@ test('admin can filter and open KRS grouped per student and academic period', fu
         'semester' => 2,
         'semester_akademik' => 'Genap',
         'tahun_akademik' => '2025/2026',
-        'status_bayar' => 'belum_bayar',
     ]));
 
     $response->assertOk()
         ->assertSee('Windiye Maharani')
         ->assertDontSee('Mahasiswa KRS Lain')
-        ->assertSee('3 SKS')
-        ->assertSee('Belum Bayar');
+        ->assertSee('3 SKS');
     expect($response->viewData('summaries')->total())->toBe(1)
-        ->and($response->viewData('summaries')->url(2))->toContain('search=1025207')
-        ->and($response->viewData('summaries')->url(2))->toContain('status_bayar=belum_bayar');
+        ->and($response->viewData('summaries')->url(2))->toContain('search=1025207');
 
     $this->get(route('admin.krs-mahasiswa.show', [
         'mahasiswa' => $data['student'],
@@ -134,33 +130,6 @@ test('admin can filter and open KRS grouped per student and academic period', fu
         ->assertSee('Geologi Dinamik')
         ->assertSee('Dosen Wali Dinamis')
         ->assertSee('Ruang KRS');
-});
-
-test('admin can record manual KRS payment and filter paid students', function () {
-    $data = makeStudentKrsReviewData();
-
-    $this->actingAs($data['admin'])->patch(route('admin.krs-mahasiswa.payment', $data['student']), [
-        'tahun_akademik' => '2025/2026',
-        'semester_akademik' => 'Genap',
-        'semester' => 2,
-        'status_bayar' => 'lunas',
-        'tanggal_bayar' => '2026-02-14',
-        'catatan' => 'Diverifikasi manual oleh admin.',
-    ])->assertSessionHasNoErrors();
-
-    $this->assertDatabaseHas('pembayaran_krs', [
-        'mahasiswa_id' => $data['student']->id,
-        'semester' => 2,
-        'tahun_akademik' => '2025/2026',
-        'semester_akademik' => 'Genap',
-        'status_bayar' => 'lunas',
-        'diverifikasi_oleh' => $data['admin']->id,
-    ]);
-    expect(PembayaranKrs::firstOrFail()->tanggal_bayar->toDateString())->toBe('2026-02-14');
-
-    $paid = $this->get(route('admin.krs-mahasiswa.index', ['status_bayar' => 'lunas']));
-    $paid->assertOk()->assertSee('Windiye Maharani')->assertDontSee('Mahasiswa KRS Lain');
-    expect($paid->viewData('summaries')->total())->toBe(1);
 });
 
 test('admin and each student download a dynamic KRS PDF while role access stays isolated', function () {

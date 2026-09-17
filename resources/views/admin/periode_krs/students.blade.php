@@ -82,15 +82,6 @@
                 </div>
 
                 <div>
-                    <label for="status_bayar">Status Bayar</label>
-                    <select id="status_bayar" class="form-control" name="status_bayar">
-                        <option value="">Semua status</option>
-                        <option value="lunas" @selected(request('status_bayar') === 'lunas')>Sudah Bayar</option>
-                        <option value="belum_bayar" @selected(request('status_bayar') === 'belum_bayar')>Belum Bayar</option>
-                    </select>
-                </div>
-
-                <div>
                     <label for="status_akses">Status Akses</label>
                     <select id="status_akses" class="form-control" name="status_akses">
                         <option value="">Semua status</option>
@@ -114,15 +105,41 @@
         <h3 style="margin:0;">Daftar Mahasiswa</h3>
     </div>
     <div class="page-card-body">
+        <form
+            id="bulk-access-form"
+            method="POST"
+            action="{{ route('admin.periode-krs.students.access-bulk', $periodeKrs) }}"
+            style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:16px;"
+            onsubmit="return confirm('Ubah akses KRS semua mahasiswa yang dipilih?')"
+        >
+            @csrf
+            @method('PATCH')
+            <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
+            <div>
+                <label for="bulk_status_akses">Aksi mahasiswa terpilih</label>
+                <select id="bulk_status_akses" class="form-control" name="status_akses" required>
+                    <option value="1">Buka KRS</option>
+                    <option value="0">Tutup KRS</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-primary">Terapkan ke Pilihan</button>
+        </form>
+
         <div class="table-wrap">
             <table>
                 <thead>
                     <tr>
+                        <th style="width:38px;">
+                            <input
+                                type="checkbox"
+                                aria-label="Pilih semua mahasiswa di halaman ini"
+                                onclick="document.querySelectorAll('.student-access-checkbox').forEach((item) => item.checked = this.checked)"
+                            >
+                        </th>
                         <th>No</th>
                         <th>Mahasiswa</th>
                         <th>Prodi / Kelas</th>
                         <th>Semester</th>
-                        <th>Status Bayar & Catatan</th>
                         <th>Status Akses</th>
                         <th style="width:130px;">Aksi Akses</th>
                     </tr>
@@ -131,10 +148,19 @@
                     @forelse($mahasiswas as $mahasiswa)
                         @php
                             $akses = $mahasiswa->aksesPeriodeKrs->first();
-                            $pembayaran = $mahasiswa->pembayaranKrs->first();
-                            $statusAkses = $akses?->status_akses ?? 'belum_dibuka';
+                            $statusAkses = $akses ? ($akses->status_akses ? 'dibuka' : 'ditutup') : 'belum_dibuka';
                         @endphp
                         <tr>
+                            <td>
+                                <input
+                                    class="student-access-checkbox"
+                                    form="bulk-access-form"
+                                    type="checkbox"
+                                    name="mahasiswa_ids[]"
+                                    value="{{ $mahasiswa->id }}"
+                                    aria-label="Pilih {{ $mahasiswa->nama }}"
+                                >
+                            </td>
                             <td>{{ $mahasiswas->firstItem() + $loop->index }}</td>
                             <td>
                                 <strong>{{ $mahasiswa->nama }}</strong><br>
@@ -145,19 +171,6 @@
                                 <small style="color:#64748b;">{{ $mahasiswa->kelas?->nama_kelas ?? '-' }} · Angkatan {{ $mahasiswa->angkatan ?? $mahasiswa->kelas?->angkatan ?? '-' }}</small>
                             </td>
                             <td>{{ $mahasiswa->semester ?? $mahasiswa->kelas?->semester ?? '-' }}</td>
-                            <td style="min-width:230px;">
-                                <form method="POST" action="{{ route('admin.periode-krs.students.payment', [$periodeKrs, $mahasiswa]) }}" style="display:grid;gap:7px;">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
-                                    <select class="form-control" name="status_bayar" style="padding:7px 9px;">
-                                        <option value="belum_bayar" @selected(($pembayaran?->status_bayar ?? 'belum_bayar') === 'belum_bayar')>Belum Bayar</option>
-                                        <option value="lunas" @selected($pembayaran?->status_bayar === 'lunas')>Sudah Bayar</option>
-                                    </select>
-                                    <input class="form-control" type="text" name="catatan" maxlength="2000" value="{{ $pembayaran?->catatan }}" placeholder="Catatan pembayaran (opsional)" style="padding:7px 9px;">
-                                    <button type="submit" class="btn-outline" style="padding:7px 10px;">Simpan Pembayaran</button>
-                                </form>
-                            </td>
                             <td>
                                 @if($statusAkses === 'dibuka')
                                     <span class="badge badge-green">Dibuka</span>
@@ -176,10 +189,10 @@
                                     @method('PATCH')
                                     <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
                                     @if($statusAkses === 'dibuka')
-                                        <input type="hidden" name="status_akses" value="ditutup">
+                                        <input type="hidden" name="status_akses" value="0">
                                         <button type="submit" class="btn-delete" style="white-space:nowrap;" onclick="return confirm('Tutup akses KRS mahasiswa ini?')">Tutup KRS</button>
                                     @else
-                                        <input type="hidden" name="status_akses" value="dibuka">
+                                        <input type="hidden" name="status_akses" value="1">
                                         <button type="submit" class="btn-primary" style="white-space:nowrap;" onclick="return confirm('Buka akses KRS hanya untuk mahasiswa ini?')">Buka KRS</button>
                                     @endif
                                 </form>

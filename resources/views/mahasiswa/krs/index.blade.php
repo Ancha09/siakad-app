@@ -192,7 +192,7 @@
 
             @if(!$aksesKrsDibuka)
                 <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:16px;border-radius:8px;margin-bottom:25px;">
-                    <strong>Akses KRS Anda belum dibuka. Silakan hubungi admin.</strong>
+                    <strong>Akses KRS Anda belum dibuka oleh admin.</strong>
                 </div>
             @endif
 
@@ -938,7 +938,7 @@
                     <div style="text-align:center;padding:45px 20px;color:#9a3412;">
                         <div style="font-size:40px;margin-bottom:10px;">🔒</div>
                         <strong style="display:block;font-size:16px;">Akses KRS Anda belum dibuka</strong>
-                        <p style="margin-top:8px;font-size:13px;">Silakan hubungi admin untuk pemeriksaan pembayaran dan pembukaan akses KRS.</p>
+                        <p style="margin-top:8px;font-size:13px;">Akses KRS Anda belum dibuka oleh admin.</p>
                     </div>
 
                 @elseif($jadwals->count() == 0)

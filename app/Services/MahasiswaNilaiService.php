@@ -36,13 +36,18 @@ class MahasiswaNilaiService
 
     public function hitungIndeks(Collection $khs): float
     {
-        $totalSks = $khs->sum(fn (Khs $item) => $item->sks_efektif);
+        $nilaiFinal = $khs->filter(fn (Khs $item) => $item->nilai_angka !== null
+            && $item->nilai_huruf !== null
+            && $item->bobot !== null
+            && $item->sks_efektif > 0);
+
+        $totalSks = $nilaiFinal->sum(fn (Khs $item) => $item->sks_efektif);
 
         if ($totalSks <= 0) {
             return 0.0;
         }
 
-        $totalMutu = $khs->sum(function (Khs $item) {
+        $totalMutu = $nilaiFinal->sum(function (Khs $item) {
             $sks = $item->sks_efektif;
 
             return $sks * (float) ($item->bobot ?? 0);

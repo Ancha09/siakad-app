@@ -29,7 +29,6 @@
         .course-name { font-weight: bold; }
         .muted { color: #4b5563; font-size: 8px; line-height: 1.35; }
         .total-row td { font-weight: bold; }
-        .payment { margin-top: 8px; text-align: right; font-size: 9px; }
         .signatures { width: 100%; border-collapse: collapse; margin-top: 17px; page-break-inside: avoid; }
         .signatures td { width: 50%; border: 0; padding: 0 18px; text-align: center; vertical-align: top; }
         .signature-space { height: 58px; }
@@ -118,11 +117,6 @@
         </tr>
         </tbody>
     </table>
-
-    <div class="payment">
-        Status pembayaran KRS:
-        <strong>{{ $pembayaran?->status_bayar === 'lunas' ? 'SUDAH BAYAR / LUNAS' : 'BELUM BAYAR' }}</strong>
-    </div>
 
     <table class="signatures">
         <tr>

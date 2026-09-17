@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 
 @section('title', 'KRS per Mahasiswa')
-@section('page-subtitle', 'Pemeriksaan KRS, pembayaran manual, dan kartu KRS mahasiswa')
+@section('page-subtitle', 'Pemeriksaan dan kartu KRS mahasiswa')
 
 @section('content')
     @if(session('success'))
@@ -72,14 +72,6 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="status_bayar">Status Pembayaran</label>
-                    <select id="status_bayar" class="form-control" name="status_bayar">
-                        <option value="">Semua status</option>
-                        <option value="belum_bayar" @selected(request('status_bayar') === 'belum_bayar')>Belum Bayar</option>
-                        <option value="lunas" @selected(request('status_bayar') === 'lunas')>Sudah Bayar</option>
-                    </select>
-                </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <button type="submit" class="btn-primary">Terapkan Filter</button>
                     <a href="{{ route('admin.krs-mahasiswa.index') }}" class="btn-outline">Reset</a>
@@ -105,13 +97,11 @@
                         <th>Semester</th>
                         <th>Mata Kuliah</th>
                         <th>Total SKS</th>
-                        <th>Pembayaran</th>
                         <th style="width:110px;">Aksi</th>
                     </tr>
                     </thead>
                     <tbody>
                     @forelse($summaries as $item)
-                        @php($payment = $item->pembayaran)
                         <tr>
                             <td>{{ $summaries->firstItem() + $loop->index }}</td>
                             <td>
@@ -127,14 +117,6 @@
                             <td>{{ $item->jumlah_mata_kuliah }} mata kuliah</td>
                             <td>{{ $item->total_sks }} SKS</td>
                             <td>
-                                @if($payment?->status_bayar === 'lunas')
-                                    <span class="badge badge-green">Sudah Bayar</span>
-                                    @if($payment->tanggal_bayar)<br><small>{{ $payment->tanggal_bayar->format('d-m-Y') }}</small>@endif
-                                @else
-                                    <span class="badge" style="background:#fef3c7;color:#92400e;">Belum Bayar</span>
-                                @endif
-                            </td>
-                            <td>
                                 <a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;"
                                    href="{{ route('admin.krs-mahasiswa.show', [
                                        'mahasiswa' => $item->mahasiswa_id,
@@ -145,7 +127,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b;">Tidak ada KRS mahasiswa yang sesuai dengan filter.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;padding:36px;color:#64748b;">Tidak ada KRS mahasiswa yang sesuai dengan filter.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

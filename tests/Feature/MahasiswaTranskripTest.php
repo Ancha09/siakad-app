@@ -126,6 +126,59 @@ test('student with completed questionnaire can download a real transcript pdf', 
     expect($response->getContent())->toStartWith('%PDF-');
 });
 
+test('editing a manual grade from C to A refreshes semester and cumulative indexes everywhere', function () {
+    ['user' => $user, 'mahasiswa' => $mahasiswa, 'krs' => $krs] = buatDataTranskrip(true);
+    ['user' => $otherUser, 'krs' => $otherKrs] = buatDataTranskrip(true);
+    $grade = $krs->khs;
+    $otherGrade = $otherKrs->khs;
+    $grade->update(['is_manual' => true, 'nilai_angka' => 55, 'nilai_huruf' => 'C', 'bobot' => 2]);
+    $otherGrade->update(['is_manual' => true, 'nilai_angka' => 55, 'nilai_huruf' => 'C', 'bobot' => 2]);
+
+    $before = $this->actingAs($user)->get(route('mahasiswa.khs'))->assertOk();
+    expect($before->viewData('ipk'))->toBe(2.0)
+        ->and($before->viewData('ipsPerSemester')['2026/2027 - Ganjil'])->toBe(2.0);
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $this->actingAs($admin)->put(route('admin.nilai-manual.update', $grade), [
+        'mahasiswa_id' => $mahasiswa->id,
+        'prodi_id' => $mahasiswa->prodi_id,
+        'mata_kuliah_id' => $krs->jadwal->mata_kuliah_id,
+        'jadwal_id' => $krs->jadwal_id,
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+        'nilai_angka' => 85,
+        // Simulate the stale values a previously rendered edit form submitted.
+        'nilai_huruf' => 'C',
+        'bobot' => 2,
+        'sks' => 3,
+    ])->assertSessionHasNoErrors();
+
+    $grade->refresh();
+    expect((float) $grade->nilai_angka)->toBe(85.0)
+        ->and($grade->nilai_huruf)->toBe('A')
+        ->and((float) $grade->bobot)->toBe(4.0);
+
+    $html = $this->actingAs($user)->get(route('mahasiswa.khs'))->assertOk();
+    expect($html->viewData('ipk'))->toBe(4.0)
+        ->and($html->viewData('ipsPerSemester')['2026/2027 - Ganjil'])->toBe(4.0);
+
+    $pdfData = null;
+    View::composer('mahasiswa.khs.transkrip-pdf', function ($view) use (&$pdfData) {
+        $pdfData = $view->getData();
+    });
+    $this->get(route('mahasiswa.transkrip.pdf'))
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf')
+        ->assertDownload('transkrip-'.$mahasiswa->nim.'.pdf');
+    expect($pdfData['ipk'])->toBe(4.0)
+        ->and((float) $pdfData['khs']->first()->bobot)->toBe(4.0);
+
+    $other = $this->actingAs($otherUser)->get(route('mahasiswa.khs'))->assertOk();
+    expect((float) $otherGrade->fresh()->bobot)->toBe(2.0)
+        ->and($other->viewData('ipk'))->toBe(2.0)
+        ->and(Khs::count())->toBe(2);
+});
+
 test('transcript pdf is rendered from the dedicated transcript template', function () {
     ['user' => $user, 'mahasiswa' => $mahasiswa] = buatDataTranskrip(true);
     $templateRendered = false;

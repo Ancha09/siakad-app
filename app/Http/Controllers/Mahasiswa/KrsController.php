@@ -261,7 +261,7 @@ class KrsController extends Controller
         if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
             return back()->with(
                 'error',
-                'Akses KRS Anda belum dibuka. Silakan hubungi admin.'
+                'Akses KRS Anda belum dibuka oleh admin.'
             );
         }
 
@@ -475,7 +475,7 @@ class KrsController extends Controller
                 ->route('mahasiswa.krs')
                 ->with(
                     'error',
-                    'Akses KRS Anda belum dibuka. Silakan hubungi admin.'
+                    'Akses KRS Anda belum dibuka oleh admin.'
                 );
         }
 
@@ -581,7 +581,7 @@ class KrsController extends Controller
         return PeriodeKrsMahasiswa::query()
             ->where('periode_krs_id', $periodeKrs->id)
             ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('status_akses', 'dibuka')
+            ->where('status_akses', true)
             ->exists();
     }
 }

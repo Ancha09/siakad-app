@@ -29,10 +29,10 @@
                 <div class="form-group"><label>Dosen Pengampu</label><select name="dosen_id" class="form-control"><option value="">Tidak diketahui</option>@foreach($dosens as $dosen)<option value="{{ $dosen->id }}" @selected(old('dosen_id', ($editing ? $khs->dosen_efektif?->id : null)) == $dosen->id)>{{ $dosen->nama }}</option>@endforeach</select><small>Pilih dosen yang benar untuk data historis; boleh berbeda dari dosen pada jadwal.</small></div>
                 <div class="form-group"><label>Jadwal</label><select name="jadwal_id" class="form-control"><option value="">Tidak ada jadwal</option>@foreach($jadwals as $jadwal)<option value="{{ $jadwal->id }}" @selected(old('jadwal_id', $recordKrs?->jadwal_id) == $jadwal->id)>{{ $jadwal->mataKuliah?->kode_mk ?? '-' }} · {{ $jadwal->tahun_akademik ?? '-' }} · {{ $jadwal->dosen?->nama ?? 'tanpa dosen' }}</option>@endforeach</select><small>Jika dipilih, jadwal harus sesuai mata kuliah, periode, dan kelas. Jadwal asli tidak diubah.</small></div>
                 <div class="form-group"><label>Kelas</label><select name="kelas_id" class="form-control"><option value="">Tidak diketahui</option>@foreach($kelases as $kelas)<option value="{{ $kelas->id }}" @selected(old('kelas_id', $recordKrs?->kelas_id ?? $recordKrs?->jadwal?->kelas_id) == $kelas->id)>{{ $kelas->nama_kelas }}</option>@endforeach</select></div>
-                <div class="form-group"><label>Nilai Angka *</label><input type="number" step="0.01" min="0" max="100" name="nilai_angka" class="form-control" value="{{ old('nilai_angka', $khs->nilai_angka ?? '') }}" required></div>
-                <div class="form-group"><label>Nilai Huruf</label><select name="nilai_huruf" class="form-control"><option value="">Hitung otomatis</option>@foreach($gradeLetters as $letter)<option value="{{ $letter }}" @selected(old('nilai_huruf', $khs->nilai_huruf ?? '') === $letter)>{{ $letter }}</option>@endforeach</select></div>
+                <div class="form-group"><label>Nilai Angka *</label><input id="nilai_angka" type="number" step="0.01" min="0" max="100" name="nilai_angka" class="form-control" value="{{ old('nilai_angka', $khs->nilai_angka ?? '') }}" required></div>
+                <div class="form-group"><label>Nilai Huruf</label><select id="nilai_huruf" name="nilai_huruf" class="form-control"><option value="">Hitung otomatis</option>@foreach($gradeLetters as $letter)<option value="{{ $letter }}" @selected(old('nilai_huruf', $khs->nilai_huruf ?? '') === $letter)>{{ $letter }}</option>@endforeach</select></div>
                 <div class="form-group"><label>SKS</label><input type="number" min="1" max="30" name="sks" class="form-control" value="{{ old('sks', $khs->sks ?? '') }}" placeholder="Ikuti mata kuliah"></div>
-                <div class="form-group"><label>Bobot</label><input type="number" step="0.01" min="0" max="4" name="bobot" class="form-control" value="{{ old('bobot', $khs->bobot ?? '') }}" placeholder="Hitung otomatis"></div>
+                <div class="form-group"><label>Bobot (otomatis)</label><input id="bobot" type="number" step="0.01" min="0" max="4" name="bobot" class="form-control" value="{{ old('bobot', $khs->bobot ?? '') }}" placeholder="Mengikuti nilai huruf" readonly><small>Bobot selalu mengikuti pemetaan nilai huruf sistem.</small></div>
             </div>
             <p style="color:#64748b">* Wajib. Angkatan, semester mahasiswa, prodi, dosen, jadwal, kelas, nilai huruf, SKS, dan bobot boleh kosong.</p>
             <p style="color:#64748b">Dosen pengampu tersimpan khusus untuk entri nilai ini. Identitas akademik pada KRS manual berlaku bersama untuk mata kuliah/periode yang sama. Untuk mengganti nama pada master dosen, gunakan menu Data Dosen.</p>
@@ -41,3 +41,32 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const nilaiAngka = document.getElementById('nilai_angka');
+        const nilaiHuruf = document.getElementById('nilai_huruf');
+        const bobot = document.getElementById('bobot');
+        const bobotHuruf = { A: 4, 'A-': 3.75, 'B+': 3.5, B: 3, 'B-': 2.75, 'C+': 2.5, C: 2, D: 1, E: 0 };
+        const batasNilai = [[85, 'A'], [80, 'A-'], [75, 'B+'], [70, 'B'], [65, 'B-'], [60, 'C+'], [55, 'C'], [40, 'D'], [0, 'E']];
+
+        nilaiAngka?.addEventListener('input', function () {
+            const angka = Number(nilaiAngka.value);
+            if (nilaiAngka.value === '' || Number.isNaN(angka)) {
+                nilaiHuruf.value = '';
+                bobot.value = '';
+                return;
+            }
+
+            const hasil = batasNilai.find(([minimum]) => angka >= minimum);
+            nilaiHuruf.value = hasil?.[1] ?? 'E';
+            bobot.value = bobotHuruf[nilaiHuruf.value].toFixed(2);
+        });
+
+        nilaiHuruf?.addEventListener('change', function () {
+            bobot.value = nilaiHuruf.value === '' ? '' : bobotHuruf[nilaiHuruf.value].toFixed(2);
+        });
+    });
+</script>
+@endpush

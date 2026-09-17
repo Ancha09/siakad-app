@@ -332,8 +332,6 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::get('/krs-mahasiswa/{mahasiswa}', [KrsController::class, 'studentShow'])->name('admin.krs-mahasiswa.show');
 
-    Route::patch('/krs-mahasiswa/{mahasiswa}/pembayaran', [KrsController::class, 'updatePayment'])->name('admin.krs-mahasiswa.payment');
-
     Route::get('/krs-mahasiswa/{mahasiswa}/pdf', [KrsController::class, 'studentCardPdf'])->name('admin.krs-mahasiswa.pdf');
 
     Route::get('/krs/create', [KrsController::class, 'create'])->name('admin.krs.create');
@@ -358,7 +356,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::patch('/periode-krs/{periodeKrs}/mahasiswa/{mahasiswa}/akses', [PeriodeKrsController::class, 'updateStudentAccess'])->name('admin.periode-krs.students.access');
 
-    Route::patch('/periode-krs/{periodeKrs}/mahasiswa/{mahasiswa}/pembayaran', [PeriodeKrsController::class, 'updateStudentPayment'])->name('admin.periode-krs.students.payment');
+    Route::patch('/periode-krs/{periodeKrs}/mahasiswa/akses-bulk', [PeriodeKrsController::class, 'updateBulkStudentAccess'])->name('admin.periode-krs.students.access-bulk');
 
     Route::get('/periode-krs/{periodeKrs}/edit', [PeriodeKrsController::class, 'edit'])->name('admin.periode-krs.edit');
 

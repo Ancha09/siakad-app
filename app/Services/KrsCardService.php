@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\Dosen;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
-use App\Models\PembayaranKrs;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Str;
 
@@ -36,15 +35,8 @@ class KrsCardService
     {
         $mahasiswa->loadMissing(['prodi.fakultas', 'kelas.dosenWali', 'dosenWali']);
         $records = $this->records($mahasiswa, $tahunAkademik, $semesterAkademik);
-        $payment = PembayaranKrs::query()
-            ->with('verifier')
-            ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('tahun_akademik', $tahunAkademik)
-            ->where('semester_akademik', $semesterAkademik)
-            ->first();
         $printableRecords = $records->where('status', '!=', 'Ditolak')->values();
-        $semesterStudi = $payment?->semester
-            ?? $mahasiswa->semester
+        $semesterStudi = $mahasiswa->semester
             ?? $mahasiswa->kelas?->semester
             ?? $printableRecords->map(fn (Krs $item) => $item->mata_kuliah_efektif?->semester)->filter()->max();
         $ketuaProdi = $mahasiswa->prodi_id
@@ -62,7 +54,6 @@ class KrsCardService
             'mahasiswa' => $mahasiswa,
             'krsRecords' => $records,
             'printableRecords' => $printableRecords,
-            'pembayaran' => $payment,
             'tahunAkademik' => $tahunAkademik,
             'semesterAkademik' => $semesterAkademik,
             'semesterStudi' => $semesterStudi,

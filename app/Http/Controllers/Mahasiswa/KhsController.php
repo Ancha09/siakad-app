@@ -94,25 +94,7 @@ class KhsController extends Controller
                 return $item->krs?->kuesioner !== null;
             });
 
-            $sksSemester = $dataTerlihat->sum(function ($item) {
-
-                return $item->sks_efektif;
-
-            });
-
-            $mutuSemester = $dataTerlihat->sum(function ($item) {
-
-                $sks = $item->sks_efektif;
-
-                $bobot = $item->bobot ?? 0;
-
-                return $sks * $bobot;
-
-            });
-
-            $ipsPerSemester[$semester] = $sksSemester > 0
-                ? round($mutuSemester / $sksSemester, 2)
-                : 0;
+            $ipsPerSemester[$semester] = $nilaiService->hitungIndeks($dataTerlihat);
         }
 
         // Jangan teruskan nilai yang terkunci ke lapisan tampilan.

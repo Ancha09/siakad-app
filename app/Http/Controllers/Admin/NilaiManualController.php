@@ -106,7 +106,8 @@ class NilaiManualController extends Controller
             }
 
             $krs = $legacy->resolveKrs($data, overwriteMetadata: true, currentKrsId: $khs->krs_id);
-            [$huruf, $bobot] = $this->grade($data);
+            $nilaiAngkaBerubah = (float) $khs->nilai_angka !== (float) $data['nilai_angka'];
+            [$huruf, $bobot] = $this->grade($data, $nilaiAngkaBerubah);
             $khs->update([
                 'dosen_id' => $data['dosen_id'] ?? null,
                 'dosen_override' => true,
@@ -156,20 +157,23 @@ class NilaiManualController extends Controller
         ]);
     }
 
-    private function grade(array $data): array
+    private function grade(array $data, bool $forceFromNumber = false): array
     {
-        if (! empty($data['nilai_huruf'])) {
-            return [$data['nilai_huruf'], $data['bobot'] ?? self::GRADE_WEIGHTS[$data['nilai_huruf']]];
-        }
-
         $nilai = (float) $data['nilai_angka'];
+        $hurufOtomatis = 'E';
         foreach ([[85, 'A'], [80, 'A-'], [75, 'B+'], [70, 'B'], [65, 'B-'], [60, 'C+'], [55, 'C'], [40, 'D'], [0, 'E']] as [$minimum, $huruf]) {
             if ($nilai >= $minimum) {
-                return [$huruf, $data['bobot'] ?? self::GRADE_WEIGHTS[$huruf]];
+                $hurufOtomatis = $huruf;
+
+                break;
             }
         }
 
-        return ['E', 0.00];
+        $huruf = $forceFromNumber || empty($data['nilai_huruf'])
+            ? $hurufOtomatis
+            : $data['nilai_huruf'];
+
+        return [$huruf, self::GRADE_WEIGHTS[$huruf]];
     }
 
     private function syncEvaluationContext(Krs $krs, array $data): void

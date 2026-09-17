@@ -53,6 +53,15 @@ class MahasiswaNilaiServiceTest extends TestCase
         $this->assertFalse($summary['terkunci']);
     }
 
+    public function test_unfinished_grade_is_not_counted_in_the_index_denominator(): void
+    {
+        $final = $this->grade(4, 3, true);
+        $unfinished = $this->grade(0, 3, true);
+        $unfinished->fill(['nilai_angka' => null, 'nilai_huruf' => null, 'bobot' => null]);
+
+        $this->assertSame(4.0, (new MahasiswaNilaiService)->hitungIndeks(collect([$final, $unfinished])));
+    }
+
     private function grade(float $weight, int $credits, bool $questionnaireCompleted): Khs
     {
         $course = new MataKuliah(['sks' => $credits]);
@@ -63,7 +72,7 @@ class MahasiswaNilaiServiceTest extends TestCase
         $krs->setRelation('jadwal', $schedule);
         $krs->setRelation('kuesioner', $questionnaireCompleted ? new Kuesioner : null);
 
-        $grade = new Khs(['bobot' => $weight]);
+        $grade = new Khs(['nilai_angka' => 85, 'nilai_huruf' => 'A', 'bobot' => $weight]);
         $grade->setRelation('krs', $krs);
 
         return $grade;

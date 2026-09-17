@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             $table->foreignId('periode_krs_id')->constrained('periode_krs')->cascadeOnDelete();
             $table->foreignId('mahasiswa_id')->constrained('mahasiswas')->cascadeOnDelete();
-            $table->string('status_akses', 20)->default('ditutup');
+            $table->boolean('status_akses')->default(false);
             $table->timestamp('tanggal_dibuka')->nullable();
             $table->timestamp('tanggal_ditutup')->nullable();
-            $table->foreignId('admin_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('dibuka_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->text('catatan')->nullable();
             $table->timestamps();
 

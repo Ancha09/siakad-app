@@ -46,54 +46,6 @@
         </div>
     </div>
 
-    <div class="page-card" style="margin-bottom:20px;">
-        <div class="page-card-head"><h2>Status Pembayaran Manual</h2></div>
-        <div class="page-card-body">
-            <div style="margin-bottom:15px;">
-                @if($pembayaran?->status_bayar === 'lunas')
-                    <span class="badge badge-green">Sudah Bayar / Lunas</span>
-                    <small style="margin-left:8px;color:#64748b;">Diverifikasi {{ $pembayaran->verifier?->name ?? 'Admin' }}{{ $pembayaran->tanggal_bayar ? ' pada '.$pembayaran->tanggal_bayar->format('d-m-Y') : '' }}</small>
-                @else
-                    <span class="badge" style="background:#fef3c7;color:#92400e;">Belum Bayar</span>
-                @endif
-            </div>
-
-            <form method="POST" action="{{ route('admin.krs-mahasiswa.payment', $mahasiswa) }}"
-                  style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;">
-                @csrf
-                @method('PATCH')
-                <input type="hidden" name="tahun_akademik" value="{{ $tahunAkademik }}">
-                <input type="hidden" name="semester_akademik" value="{{ $semesterAkademik }}">
-                <input type="hidden" name="return_url" value="{{ $returnUrl }}">
-                <div class="form-group" style="margin:0;">
-                    <label for="semester">Semester Studi</label>
-                    <select id="semester" class="form-control" name="semester" required>
-                        @foreach(range(1, 14) as $semester)
-                            <option value="{{ $semester }}" @selected((int) old('semester', $pembayaran?->semester ?? $semesterStudi) === $semester)>Semester {{ $semester }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="status_bayar">Status Pembayaran</label>
-                    <select id="status_bayar" class="form-control" name="status_bayar" required>
-                        <option value="belum_bayar" @selected(old('status_bayar', $pembayaran?->status_bayar ?? 'belum_bayar') === 'belum_bayar')>Belum Bayar</option>
-                        <option value="lunas" @selected(old('status_bayar', $pembayaran?->status_bayar) === 'lunas')>Sudah Bayar / Lunas</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label for="tanggal_bayar">Tanggal Bayar</label>
-                    <input id="tanggal_bayar" class="form-control" type="date" name="tanggal_bayar" value="{{ old('tanggal_bayar', $pembayaran?->tanggal_bayar?->format('Y-m-d')) }}">
-                </div>
-                <div class="form-group" style="margin:0;grid-column:span 2;">
-                    <label for="catatan">Catatan</label>
-                    <input id="catatan" class="form-control" type="text" name="catatan" maxlength="2000" value="{{ old('catatan', $pembayaran?->catatan) }}" placeholder="Opsional">
-                </div>
-                <div><button type="submit" class="btn-primary">Simpan Status Bayar</button></div>
-            </form>
-            <p style="margin:12px 0 0;color:#64748b;font-size:12px;">Pencatatan ini hanya verifikasi manual admin dan tidak terhubung ke payment gateway.</p>
-        </div>
-    </div>
-
     <div class="page-card">
         <div class="page-card-head" style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
             <h2>Daftar Mata Kuliah</h2>

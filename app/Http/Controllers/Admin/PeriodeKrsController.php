@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Kelas;
 use App\Models\Mahasiswa;
-use App\Models\PembayaranKrs;
 use App\Models\PeriodeKrs;
 use App\Models\PeriodeKrsMahasiswa;
 use App\Models\Prodi;
@@ -14,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PeriodeKrsController extends Controller
 {
@@ -55,7 +55,6 @@ class PeriodeKrsController extends Controller
             'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'semester' => ['nullable', 'integer', 'between:1,14'],
-            'status_bayar' => ['nullable', Rule::in(['belum_bayar', 'lunas'])],
             'status_akses' => ['nullable', Rule::in(['belum_dibuka', 'dibuka', 'ditutup'])],
             'page' => ['nullable', 'integer', 'between:1,100000'],
         ]);
@@ -65,10 +64,8 @@ class PeriodeKrsController extends Controller
                 'prodi',
                 'kelas',
                 'aksesPeriodeKrs' => fn ($query) => $query->where('periode_krs_id', $periodeKrs->id),
-                'pembayaranKrs' => fn ($query) => $query
-                    ->where('tahun_akademik', $periodeKrs->tahun_akademik)
-                    ->where('semester_akademik', $periodeKrs->semester),
             ])
+            ->where('is_active', true)
             ->when($filters['search'] ?? null, function (Builder $query, string $search) {
                 $query->where(function (Builder $student) use ($search) {
                     $student->where('nim', 'like', "%{$search}%")
@@ -95,26 +92,14 @@ class PeriodeKrsController extends Controller
         if (($filters['status_akses'] ?? null) === 'dibuka') {
             $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $query
                 ->where('periode_krs_id', $periodeKrs->id)
-                ->where('status_akses', 'dibuka'));
+                ->where('status_akses', true));
         } elseif (($filters['status_akses'] ?? null) === 'ditutup') {
             $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $query
                 ->where('periode_krs_id', $periodeKrs->id)
-                ->where('status_akses', 'ditutup'));
+                ->where('status_akses', false));
         } elseif (($filters['status_akses'] ?? null) === 'belum_dibuka') {
             $students->whereDoesntHave('aksesPeriodeKrs', fn (Builder $query) => $query
                 ->where('periode_krs_id', $periodeKrs->id));
-        }
-
-        if (($filters['status_bayar'] ?? null) === 'lunas') {
-            $students->whereHas('pembayaranKrs', fn (Builder $query) => $query
-                ->where('tahun_akademik', $periodeKrs->tahun_akademik)
-                ->where('semester_akademik', $periodeKrs->semester)
-                ->where('status_bayar', 'lunas'));
-        } elseif (($filters['status_bayar'] ?? null) === 'belum_bayar') {
-            $students->whereDoesntHave('pembayaranKrs', fn (Builder $query) => $query
-                ->where('tahun_akademik', $periodeKrs->tahun_akademik)
-                ->where('semester_akademik', $periodeKrs->semester)
-                ->where('status_bayar', 'lunas'));
         }
 
         return view('admin.periode_krs.students', [
@@ -129,25 +114,21 @@ class PeriodeKrsController extends Controller
     public function updateStudentAccess(Request $request, PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa)
     {
         $data = $request->validate([
-            'status_akses' => ['required', Rule::in(['dibuka', 'ditutup'])],
+            'status_akses' => ['required', 'boolean'],
             'return_url' => ['nullable', 'string', 'max:4096'],
         ]);
 
-        DB::transaction(function () use ($request, $periodeKrs, $mahasiswa, $data) {
-            $current = PeriodeKrsMahasiswa::firstOrNew([
-                'periode_krs_id' => $periodeKrs->id,
-                'mahasiswa_id' => $mahasiswa->id,
-            ]);
+        abort_unless($mahasiswa->is_active, 404);
+        $isOpen = (bool) $data['status_akses'];
 
-            $current->fill([
-                'status_akses' => $data['status_akses'],
-                'tanggal_dibuka' => $data['status_akses'] === 'dibuka' ? now() : $current->tanggal_dibuka,
-                'tanggal_ditutup' => $data['status_akses'] === 'ditutup' ? now() : null,
-                'admin_id' => $request->user()->id,
-            ])->save();
-        });
+        DB::transaction(fn () => $this->saveStudentAccess(
+            $periodeKrs,
+            $mahasiswa->id,
+            $isOpen,
+            $request->user()->id
+        ));
 
-        $message = $data['status_akses'] === 'dibuka'
+        $message = $isOpen
             ? "Akses KRS {$mahasiswa->nama} berhasil dibuka."
             : "Akses KRS {$mahasiswa->nama} berhasil ditutup.";
 
@@ -160,26 +141,31 @@ class PeriodeKrsController extends Controller
             ->with('success', $message);
     }
 
-    public function updateStudentPayment(Request $request, PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa)
+    public function updateBulkStudentAccess(Request $request, PeriodeKrs $periodeKrs)
     {
         $data = $request->validate([
-            'status_bayar' => ['required', Rule::in(['belum_bayar', 'lunas'])],
-            'catatan' => ['nullable', 'string', 'max:2000'],
+            'mahasiswa_ids' => ['required', 'array', 'min:1', 'max:500'],
+            'mahasiswa_ids.*' => ['required', 'integer', 'distinct', 'exists:mahasiswas,id'],
+            'status_akses' => ['required', 'boolean'],
             'return_url' => ['nullable', 'string', 'max:4096'],
         ]);
 
-        DB::transaction(function () use ($request, $periodeKrs, $mahasiswa, $data) {
-            PembayaranKrs::updateOrCreate([
-                'mahasiswa_id' => $mahasiswa->id,
-                'tahun_akademik' => $periodeKrs->tahun_akademik,
-                'semester_akademik' => $periodeKrs->semester,
-            ], [
-                'semester' => $mahasiswa->semester ?? $mahasiswa->kelas?->semester,
-                'status_bayar' => $data['status_bayar'],
-                'tanggal_bayar' => $data['status_bayar'] === 'lunas' ? now()->toDateString() : null,
-                'catatan' => $data['catatan'] ?? null,
-                'diverifikasi_oleh' => $request->user()->id,
+        $studentIds = Mahasiswa::query()
+            ->whereIn('id', $data['mahasiswa_ids'])
+            ->where('is_active', true)
+            ->pluck('id');
+
+        if ($studentIds->count() !== count($data['mahasiswa_ids'])) {
+            throw ValidationException::withMessages([
+                'mahasiswa_ids' => 'Pilihan hanya boleh berisi mahasiswa aktif.',
             ]);
+        }
+
+        $isOpen = (bool) $data['status_akses'];
+        DB::transaction(function () use ($request, $periodeKrs, $studentIds, $isOpen) {
+            foreach ($studentIds as $studentId) {
+                $this->saveStudentAccess($periodeKrs, $studentId, $isOpen, $request->user()->id);
+            }
         });
 
         return redirect()
@@ -188,7 +174,33 @@ class PeriodeKrsController extends Controller
                 'admin.periode-krs.students',
                 ['periodeKrs' => $periodeKrs]
             ))
-            ->with('success', "Status pembayaran {$mahasiswa->nama} berhasil diperbarui.");
+            ->with(
+                'success',
+                $studentIds->count().' akses KRS mahasiswa berhasil '.($isOpen ? 'dibuka.' : 'ditutup.')
+            );
+    }
+
+    private function saveStudentAccess(
+        PeriodeKrs $periodeKrs,
+        int $studentId,
+        bool $isOpen,
+        int $adminId
+    ): void {
+        $current = PeriodeKrsMahasiswa::firstOrNew([
+            'periode_krs_id' => $periodeKrs->id,
+            'mahasiswa_id' => $studentId,
+        ]);
+
+        if (! $isOpen && ! $current->exists) {
+            return;
+        }
+
+        $current->fill([
+            'status_akses' => $isOpen,
+            'tanggal_dibuka' => $isOpen ? now() : $current->tanggal_dibuka,
+            'tanggal_ditutup' => $isOpen ? null : now(),
+            'dibuka_oleh' => $isOpen ? $adminId : $current->dibuka_oleh,
+        ])->save();
     }
 
     // ===================== CREATE =====================

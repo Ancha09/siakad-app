@@ -97,11 +97,6 @@ class Mahasiswa extends Model
         );
     }
 
-    public function pembayaranKrs()
-    {
-        return $this->hasMany(PembayaranKrs::class);
-    }
-
     public function aksesPeriodeKrs()
     {
         return $this->hasMany(PeriodeKrsMahasiswa::class);
