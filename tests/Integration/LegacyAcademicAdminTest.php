@@ -191,6 +191,25 @@ class LegacyAcademicAdminTest extends TestCase
         $this->post(route('admin.nilai-manual.store'), $this->input(['dosen_id' => 1]))->assertSessionHasErrors('mata_kuliah_id');
     }
 
+    public function test_manual_grade_course_picker_is_searchable_and_keeps_the_selected_course(): void
+    {
+        $create = $this->get(route('admin.nilai-manual.create'))->assertOk();
+        $create->assertSee('data-course-picker', false)
+            ->assertSee('placeholder="Ketik kode atau nama mata kuliah"', false)
+            ->assertSee('name="mata_kuliah_id"', false)
+            ->assertSee('MK001 - Algoritma (3 SKS)')
+            ->assertSee('Mata kuliah tidak ditemukan');
+
+        $grade = $this->grade();
+        $this->get(route('admin.nilai-manual.edit', $grade))
+            ->assertOk()
+            ->assertSee('value="MK001 - Algoritma (3 SKS)"', false)
+            ->assertSee('name="mata_kuliah_id" value="1"', false);
+
+        $this->post(route('admin.nilai-manual.store'), $this->input(['mata_kuliah_id' => 999999]))
+            ->assertSessionHasErrors('mata_kuliah_id');
+    }
+
     public function test_manual_grade_delete_leaves_attendance_and_related_data(): void
     {
         $grade = $this->grade();
