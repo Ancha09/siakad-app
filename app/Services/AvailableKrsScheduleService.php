@@ -10,8 +10,8 @@ use Illuminate\Support\Collection;
 class AvailableKrsScheduleService
 {
     /**
-     * Ambil jadwal berdasarkan periode, prodi, dan semester studi mahasiswa.
-     * Kelas lama pada mahasiswa maupun jadwal sengaja tidak dijadikan syarat.
+     * Ambil jadwal berdasarkan periode, prodi/kurikulum, dan paritas semester.
+     * Kelas dan semester studi mahasiswa sengaja tidak dijadikan syarat.
      */
     public function forStudent(
         Mahasiswa $mahasiswa,
@@ -47,7 +47,11 @@ class AvailableKrsScheduleService
 
         $candidates = $query->get()
             ->filter(fn (Jadwal $jadwal) => $this->matchesPeriod($jadwal, $periodeKrs))
-            ->filter(fn (Jadwal $jadwal) => $this->matchesStudyProgramAndSemester($jadwal, $mahasiswa))
+            ->filter(fn (Jadwal $jadwal) => $this->matchesStudyProgramAndAcademicTerm(
+                $jadwal,
+                $mahasiswa,
+                $periodeKrs
+            ))
             ->values();
 
         return $candidates
@@ -85,11 +89,38 @@ class AvailableKrsScheduleService
         };
     }
 
-    private function matchesStudyProgramAndSemester(Jadwal $jadwal, Mahasiswa $mahasiswa): bool
+    public function normalizeCourseSemester(mixed $semester): ?int
+    {
+        if (is_int($semester)) {
+            return $semester > 0 ? $semester : null;
+        }
+
+        if (is_float($semester) && floor($semester) === $semester) {
+            $number = (int) $semester;
+
+            return $number > 0 ? $number : null;
+        }
+
+        if (! is_string($semester) && ! is_numeric($semester)) {
+            return null;
+        }
+
+        preg_match('/\d+/', trim((string) $semester), $matches);
+        $number = isset($matches[0]) ? (int) $matches[0] : 0;
+
+        return $number > 0 ? $number : null;
+    }
+
+    private function matchesStudyProgramAndAcademicTerm(
+        Jadwal $jadwal,
+        Mahasiswa $mahasiswa,
+        PeriodeKrs $periodeKrs
+    ): bool
     {
         $course = $jadwal->mataKuliah;
+        $academicSemester = $this->normalizeAcademicSemester($periodeKrs->semester);
 
-        if (! $course) {
+        if (! $course || $academicSemester === null) {
             return false;
         }
 
@@ -97,10 +128,10 @@ class AvailableKrsScheduleService
             ->filter(fn ($kurikulum) => (int) $kurikulum->prodi_id === (int) $mahasiswa->prodi_id);
 
         if ($curriculumEntries->isNotEmpty()) {
-            return $mahasiswa->semester === null
-                || $curriculumEntries->contains(
-                    fn ($kurikulum) => (int) $kurikulum->pivot->semester === (int) $mahasiswa->semester
-                );
+            return $curriculumEntries->contains(fn ($kurikulum) => $this->semesterMatchesAcademicTerm(
+                $kurikulum->pivot->semester,
+                $academicSemester
+            ));
         }
 
         $courseProgramId = $course->prodi_id;
@@ -108,12 +139,21 @@ class AvailableKrsScheduleService
             || ($mahasiswa->prodi_id !== null
                 && (int) $courseProgramId === (int) $mahasiswa->prodi_id);
 
-        $courseSemester = $course->semester;
-        $semesterMatches = $courseSemester === null
-            || $mahasiswa->semester === null
-            || (int) $courseSemester === (int) $mahasiswa->semester;
+        return $programMatches
+            && $this->semesterMatchesAcademicTerm($course->semester, $academicSemester);
+    }
 
-        return $programMatches && $semesterMatches;
+    private function semesterMatchesAcademicTerm(mixed $semester, string $academicSemester): bool
+    {
+        $number = $this->normalizeCourseSemester($semester);
+
+        if ($number === null) {
+            return false;
+        }
+
+        return $academicSemester === 'Ganjil'
+            ? $number % 2 === 1
+            : $number % 2 === 0;
     }
 
     private function sortKey(Jadwal $jadwal): array

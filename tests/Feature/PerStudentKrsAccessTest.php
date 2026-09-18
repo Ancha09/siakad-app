@@ -109,6 +109,34 @@ function makePerStudentKrsAccessData(): array
     );
 }
 
+function makeAcademicParitySchedule(
+    array $data,
+    int $semester,
+    string $academicSemester,
+    ?int $programId = null
+): Jadwal {
+    $course = MataKuliah::create([
+        'kode_mk' => 'PAR-'.$academicSemester.'-'.$semester,
+        'nama_mk' => 'Mata Kuliah Semester '.$semester,
+        'sks' => 2,
+        'semester' => $semester,
+        'prodi_id' => func_num_args() >= 4 ? $programId : $data['prodi']->id,
+    ]);
+
+    return Jadwal::create([
+        'mata_kuliah_id' => $course->id,
+        'dosen_id' => $data['dosen']->id,
+        'ruangan_id' => $data['room']->id,
+        // Nilai kelas legacy dibuat berbeda/null untuk membuktikan filter tidak memakainya.
+        'kelas_id' => $semester % 2 === 0 ? $data['kelas']->id : null,
+        'hari' => 'Kamis',
+        'jam_mulai' => sprintf('%02d:00:00', 7 + $semester),
+        'jam_selesai' => sprintf('%02d:00:00', 8 + $semester),
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => $academicSemester,
+    ]);
+}
+
 test('admin opens and closes one student KRS access without affecting another student', function () {
     $data = makePerStudentKrsAccessData();
     $returnUrl = route('admin.periode-krs.students', [
@@ -477,6 +505,72 @@ test('student sees and can take a cross program course assigned to their curricu
     ]);
 });
 
+test('odd KRS period shows every available odd course semester regardless of current student semester', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all', 'semester' => 'Ganjil']);
+    $data['student']->update(['semester' => 5, 'kelas_id' => null]);
+
+    $schedules = collect();
+    foreach (range(2, 7) as $semester) {
+        $schedules->put(
+            $semester,
+            makeAcademicParitySchedule(
+                $data,
+                $semester,
+                'Ganjil',
+                $semester === 7 ? null : $data['prodi']->id
+            )
+        );
+    }
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    $availableIds = $response->viewData('jadwals')->pluck('id');
+
+    expect($availableIds)
+        ->toContain($data['schedule']->id)
+        ->toContain($schedules->get(3)->id)
+        ->toContain($schedules->get(5)->id)
+        ->toContain($schedules->get(7)->id)
+        ->not->toContain($schedules->get(2)->id)
+        ->not->toContain($schedules->get(4)->id)
+        ->not->toContain($schedules->get(6)->id);
+});
+
+test('even KRS period shows every available even course semester and excludes odd semesters', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all', 'semester' => 'Genap']);
+
+    $schedules = collect();
+    foreach (range(1, 8) as $semester) {
+        $schedules->put($semester, makeAcademicParitySchedule($data, $semester, 'Genap'));
+    }
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    $availableIds = $response->viewData('jadwals')->pluck('id');
+
+    foreach ([2, 4, 6, 8] as $semester) {
+        expect($availableIds)->toContain($schedules->get($semester)->id);
+    }
+    foreach ([1, 3, 5, 7] as $semester) {
+        expect($availableIds)->not->toContain($schedules->get($semester)->id);
+    }
+});
+
+test('academic and course semester formats are normalized safely', function () {
+    $service = app(\App\Services\AvailableKrsScheduleService::class);
+
+    expect($service->normalizeAcademicSemester('Semester Ganjil'))->toBe('Ganjil')
+        ->and($service->normalizeAcademicSemester('ganjil'))->toBe('Ganjil')
+        ->and($service->normalizeAcademicSemester('1'))->toBe('Ganjil')
+        ->and($service->normalizeAcademicSemester('Semester Genap'))->toBe('Genap')
+        ->and($service->normalizeAcademicSemester('genap'))->toBe('Genap')
+        ->and($service->normalizeAcademicSemester('2'))->toBe('Genap')
+        ->and($service->normalizeCourseSemester('Semester 7'))->toBe(7)
+        ->and($service->normalizeCourseSemester(' 8 '))->toBe(8)
+        ->and($service->normalizeCourseSemester(null))->toBeNull()
+        ->and($service->normalizeCourseSemester('tidak diketahui'))->toBeNull();
+});
+
 test('student sees a classless matching schedule with normalized academic year', function () {
     $data = makePerStudentKrsAccessData();
     $data['period']->update(['access_mode' => 'all']);
@@ -504,7 +598,7 @@ test('student without a class sees a matching program and semester schedule', fu
     expect($response->viewData('jadwals')->pluck('id'))->toContain($data['schedule']->id);
 });
 
-test('student does not see schedules from another program or study semester', function () {
+test('student does not see schedules from another program or opposite academic semester', function () {
     $data = makePerStudentKrsAccessData();
     $data['period']->update(['access_mode' => 'all']);
     $otherProgram = Prodi::create([
@@ -520,10 +614,10 @@ test('student does not see schedules from another program or study semester', fu
         'prodi_id' => $otherProgram->id,
     ]);
     $otherSemesterCourse = MataKuliah::create([
-        'kode_mk' => 'IF301-A',
-        'nama_mk' => 'Mata Kuliah Semester Lain',
+        'kode_mk' => 'IF202-A',
+        'nama_mk' => 'Mata Kuliah Semester Genap',
         'sks' => 2,
-        'semester' => 3,
+        'semester' => 2,
         'prodi_id' => $data['prodi']->id,
     ]);
 
@@ -594,8 +688,7 @@ test('empty KRS schedule list shows an actionable message', function () {
     $this->actingAs($data['studentUser'])
         ->get(route('mahasiswa.krs'))
         ->assertOk()
-        ->assertSee('Belum ada mata kuliah tersedia untuk periode KRS ini.')
-        ->assertSee('Hubungi admin akademik.');
+        ->assertSee('Belum ada mata kuliah tersedia untuk semester akademik periode ini. Hubungi admin akademik.');
 });
 
 test('admin schedule input stores the same academic period format used by KRS', function () {

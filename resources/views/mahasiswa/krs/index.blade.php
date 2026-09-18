@@ -965,8 +965,7 @@
                                 font-size:13px;
                             "
                         >
-                            Belum ada mata kuliah tersedia untuk periode KRS ini.
-                            Hubungi admin akademik.
+                            Belum ada mata kuliah tersedia untuk semester akademik periode ini. Hubungi admin akademik.
                         </p>
 
                     </div>
