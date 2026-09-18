@@ -7,7 +7,6 @@ use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
-use App\Models\PeriodeKrsMahasiswa;
 use App\Services\KrsCardService;
 use App\Services\MahasiswaNilaiService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -31,15 +30,9 @@ class KrsController extends Controller
 
         // ===================== PERIODE KRS AKTIF =====================
 
-        $periodeKrs = PeriodeKrs::where('status', 'Dibuka')
-            ->where('tanggal_mulai', '<=', now())
-            ->where('tanggal_selesai', '>=', now())
-            ->latest()
-            ->first();
-
-        $aksesKrsDibuka = $periodeKrs
-            ? $this->aksesKrsDibuka($periodeKrs, $mahasiswa)
-            : false;
+        $periodeKrs = $this->periodeKrsTerbaru();
+        $pesanAksesKrs = $this->pesanPenolakanKrs($periodeKrs, $mahasiswa);
+        $aksesKrsDibuka = $pesanAksesKrs === null;
 
         // =========================================================
         // HITUNG IPK MAHASISWA
@@ -194,7 +187,8 @@ class KrsController extends Controller
                 'jumlahNilai',
                 'batasSks',
                 'periodeKartuKrs',
-                'aksesKrsDibuka'
+                'aksesKrsDibuka',
+                'pesanAksesKrs'
             )
         );
     }
@@ -233,35 +227,14 @@ class KrsController extends Controller
 
         // ===================== CEK PERIODE KRS =====================
 
-        $periodeKrs = PeriodeKrs::where(
-            'status',
-            'Dibuka'
-        )
-            ->where(
-                'tanggal_mulai',
-                '<=',
-                now()
-            )
-            ->where(
-                'tanggal_selesai',
-                '>=',
-                now()
-            )
-            ->latest()
-            ->first();
+        $periodeKrs = $this->periodeKrsTerbaru();
+        $pesanPenolakan = $this->pesanPenolakanKrs($periodeKrs, $mahasiswa);
 
-        if (! $periodeKrs) {
+        if ($pesanPenolakan !== null) {
 
             return back()->with(
                 'error',
-                'Pengisian KRS sedang ditutup atau periode KRS telah berakhir.'
-            );
-        }
-
-        if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
-            return back()->with(
-                'error',
-                'Akses KRS Anda belum dibuka oleh admin.'
+                $pesanPenolakan
             );
         }
 
@@ -443,39 +416,16 @@ class KrsController extends Controller
 
         // ===================== CEK PERIODE KRS =====================
 
-        $periodeKrs = PeriodeKrs::where(
-            'status',
-            'Dibuka'
-        )
-            ->where(
-                'tanggal_mulai',
-                '<=',
-                now()
-            )
-            ->where(
-                'tanggal_selesai',
-                '>=',
-                now()
-            )
-            ->latest()
-            ->first();
+        $periodeKrs = $this->periodeKrsTerbaru();
+        $pesanPenolakan = $this->pesanPenolakanKrs($periodeKrs, $mahasiswa);
 
-        if (! $periodeKrs) {
+        if ($pesanPenolakan !== null) {
 
             return redirect()
                 ->route('mahasiswa.krs')
                 ->with(
                     'error',
-                    'Pengajuan KRS kembali tidak dapat dilakukan karena periode KRS sedang ditutup.'
-                );
-        }
-
-        if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
-            return redirect()
-                ->route('mahasiswa.krs')
-                ->with(
-                    'error',
-                    'Akses KRS Anda belum dibuka oleh admin.'
+                    $pesanPenolakan
                 );
         }
 
@@ -578,10 +528,41 @@ class KrsController extends Controller
 
     private function aksesKrsDibuka(PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa): bool
     {
-        return PeriodeKrsMahasiswa::query()
-            ->where('periode_krs_id', $periodeKrs->id)
-            ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('status_akses', true)
-            ->exists();
+        return $periodeKrs->allowsMahasiswa($mahasiswa);
+    }
+
+    private function periodeKrsTerbaru(): ?PeriodeKrs
+    {
+        $periodeAktif = PeriodeKrs::query()
+            ->where('status', 'Dibuka')
+            ->where('tanggal_mulai', '<=', now())
+            ->where('tanggal_selesai', '>=', now())
+            ->latest('tanggal_mulai')
+            ->latest('id')
+            ->first();
+
+        return $periodeAktif
+            ?? PeriodeKrs::query()->latest('tanggal_mulai')->latest('id')->first();
+    }
+
+    private function pesanPenolakanKrs(?PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa): ?string
+    {
+        if (! $periodeKrs || $periodeKrs->status !== 'Dibuka') {
+            return 'Pengisian KRS sedang ditutup.';
+        }
+
+        if (now()->lt($periodeKrs->tanggal_mulai)) {
+            return 'Periode KRS belum dimulai.';
+        }
+
+        if (now()->gt($periodeKrs->tanggal_selesai)) {
+            return 'Periode KRS sudah berakhir.';
+        }
+
+        if (! $this->aksesKrsDibuka($periodeKrs, $mahasiswa)) {
+            return 'Akses KRS Anda belum dibuka oleh admin.';
+        }
+
+        return null;
     }
 }

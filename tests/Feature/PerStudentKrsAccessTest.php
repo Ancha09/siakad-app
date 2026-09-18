@@ -107,7 +107,7 @@ test('admin opens and closes one student KRS access without affecting another st
         ->assertOk()
         ->assertSee('Mahasiswa Akses A')
         ->assertDontSee('Mahasiswa Akses B')
-        ->assertSee('Belum Dibuka');
+        ->assertSee('Ditutup');
 
     $this->patch(route('admin.periode-krs.students.access', [$data['period'], $data['student']]), [
         'status_akses' => 1,
@@ -140,7 +140,7 @@ test('admin opens and closes one student KRS access without affecting another st
     $this->get(route('admin.periode-krs.students', [
         'periodeKrs' => $data['period'],
         'status_akses' => 'ditutup',
-    ]))->assertOk()->assertSee('Mahasiswa Akses A')->assertDontSee('Mahasiswa Akses B');
+    ]))->assertOk()->assertSee('Mahasiswa Akses A')->assertSee('Mahasiswa Akses B');
 });
 
 test('student can submit KRS only when global period and personal access are both open', function () {
@@ -198,7 +198,7 @@ test('student can submit KRS only when global period and personal access are bot
     $data['period']->update(['status' => 'Ditutup']);
     $this->actingAs($data['studentUser'])
         ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
-        ->assertSessionHas('error', 'Pengisian KRS sedang ditutup atau periode KRS telah berakhir.');
+        ->assertSessionHas('error', 'Pengisian KRS sedang ditutup.');
 });
 
 test('ended period rejects KRS even when personal access is open', function () {
@@ -215,8 +215,126 @@ test('ended period rejects KRS even when personal access is open', function () {
 
     $this->actingAs($data['studentUser'])
         ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
-        ->assertSessionHas('error', 'Pengisian KRS sedang ditutup atau periode KRS telah berakhir.');
+        ->assertSessionHas('error', 'Periode KRS sudah berakhir.');
     $this->assertDatabaseCount('krs', 0);
+});
+
+test('closed mode rejects every student even when an old pivot is open', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'closed']);
+    DB::table('periode_krs_mahasiswas')->insert([
+        'periode_krs_id' => $data['period']->id,
+        'mahasiswa_id' => $data['student']->id,
+        'status_akses' => true,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('error', 'Akses KRS Anda belum dibuka oleh admin.');
+    $this->assertDatabaseCount('krs', 0);
+});
+
+test('all mode allows every active student without pivot rows', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+
+    foreach ([$data['studentUser'], $data['otherStudentUser']] as $user) {
+        $this->actingAs($user)
+            ->get(route('mahasiswa.krs'))
+            ->assertOk()
+            ->assertSee('Algoritma Akses KRS');
+    }
+    $this->assertDatabaseCount('periode_krs_mahasiswas', 0);
+});
+
+test('all except mode rejects exclusions and allows students without an exception', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all_except']);
+
+    $this->actingAs($data['admin'])->patch(
+        route('admin.periode-krs.students.access', [$data['period'], $data['student']]),
+        ['status_akses' => 0]
+    )->assertSessionHasNoErrors();
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('error', 'Akses KRS Anda belum dibuka oleh admin.');
+    $this->actingAs($data['otherStudentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('Algoritma Akses KRS');
+});
+
+test('future period reports that KRS has not started', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update([
+        'access_mode' => 'all',
+        'tanggal_mulai' => now()->addDay(),
+        'tanggal_selesai' => now()->addDays(2),
+    ]);
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('error', 'Periode KRS belum dimulai.');
+});
+
+test('an active period takes priority over a newer future period', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    PeriodeKrs::create([
+        'tahun_akademik' => '2027/2028',
+        'semester' => 'Ganjil',
+        'tanggal_mulai' => now()->addMonth(),
+        'tanggal_selesai' => now()->addMonths(2),
+        'minimal_sks' => 0,
+        'maksimal_sks' => 24,
+        'status' => 'Dibuka',
+        'access_mode' => 'all',
+    ]);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('Algoritma Akses KRS')
+        ->assertDontSee('Periode KRS belum dimulai.');
+});
+
+test('period form stores selected access and renders searchable student controls', function () {
+    $data = makePerStudentKrsAccessData();
+
+    $this->actingAs($data['admin'])
+        ->get(route('admin.periode-krs.create'))
+        ->assertOk()
+        ->assertSee('Pengaturan Akses Mahasiswa')
+        ->assertSee('Cari nama/NIM')
+        ->assertSee('Pilih Semua Hasil Filter');
+
+    $this->post(route('admin.periode-krs.store'), [
+        'tahun_akademik' => '2027/2028',
+        'semester' => 'Genap',
+        'tanggal_mulai' => now()->addMonth()->format('Y-m-d H:i:s'),
+        'tanggal_selesai' => now()->addMonths(2)->format('Y-m-d H:i:s'),
+        'minimal_sks' => 0,
+        'maksimal_sks' => 24,
+        'status' => 'Dibuka',
+        'access_mode' => 'selected',
+        'mahasiswa_ids' => [$data['student']->id],
+    ])->assertSessionHasNoErrors();
+
+    $period = PeriodeKrs::where('tahun_akademik', '2027/2028')->firstOrFail();
+    expect($period->access_mode)->toBe('selected');
+    $this->assertDatabaseHas('periode_krs_mahasiswas', [
+        'periode_krs_id' => $period->id,
+        'mahasiswa_id' => $data['student']->id,
+        'status_akses' => true,
+        'dibuka_oleh' => $data['admin']->id,
+    ]);
+    $this->assertDatabaseMissing('periode_krs_mahasiswas', [
+        'periode_krs_id' => $period->id,
+        'mahasiswa_id' => $data['otherStudent']->id,
+    ]);
 });
 
 test('admin can open and close KRS access in bulk without duplicate pivot rows', function () {

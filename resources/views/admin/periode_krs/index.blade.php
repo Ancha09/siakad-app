@@ -135,6 +135,8 @@
 
                     <th>Status</th>
 
+                    <th>Mode Akses</th>
+
                     <th>Keterangan</th>
 
                     <th width="310">Aksi</th>
@@ -243,6 +245,15 @@
 
                             @endif
 
+                        </td>
+
+                        <td>
+                            {{ [
+                                'closed' => 'Semua ditutup',
+                                'all' => 'Semua dibuka',
+                                'selected' => 'Mahasiswa tertentu',
+                                'all_except' => 'Semua kecuali pilihan',
+                            ][$item->access_mode ?? 'selected'] }}
                         </td>
 
 
@@ -365,7 +376,7 @@
                     <tr>
 
                         <td
-                            colspan="10"
+                            colspan="11"
                             style="
                                 text-align:center;
                                 padding:45px;

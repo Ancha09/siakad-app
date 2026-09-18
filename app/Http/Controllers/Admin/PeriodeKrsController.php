@@ -89,17 +89,8 @@ class PeriodeKrsController extends Controller
                 });
             });
 
-        if (($filters['status_akses'] ?? null) === 'dibuka') {
-            $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $query
-                ->where('periode_krs_id', $periodeKrs->id)
-                ->where('status_akses', true));
-        } elseif (($filters['status_akses'] ?? null) === 'ditutup') {
-            $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $query
-                ->where('periode_krs_id', $periodeKrs->id)
-                ->where('status_akses', false));
-        } elseif (($filters['status_akses'] ?? null) === 'belum_dibuka') {
-            $students->whereDoesntHave('aksesPeriodeKrs', fn (Builder $query) => $query
-                ->where('periode_krs_id', $periodeKrs->id));
+        if (! empty($filters['status_akses'])) {
+            $this->applyAccessFilter($students, $periodeKrs, $filters['status_akses']);
         }
 
         return view('admin.periode_krs.students', [
@@ -121,12 +112,20 @@ class PeriodeKrsController extends Controller
         abort_unless($mahasiswa->is_active, 404);
         $isOpen = (bool) $data['status_akses'];
 
-        DB::transaction(fn () => $this->saveStudentAccess(
-            $periodeKrs,
-            $mahasiswa->id,
-            $isOpen,
-            $request->user()->id
-        ));
+        DB::transaction(function () use ($request, $periodeKrs, $mahasiswa, $isOpen) {
+            if ($isOpen && $periodeKrs->access_mode === 'closed') {
+                $periodeKrs->update(['access_mode' => 'selected']);
+            } elseif (! $isOpen && $periodeKrs->access_mode === 'all') {
+                $periodeKrs->update(['access_mode' => 'all_except']);
+            }
+
+            $this->saveStudentAccess(
+                $periodeKrs,
+                $mahasiswa->id,
+                $isOpen,
+                $request->user()->id
+            );
+        });
 
         $message = $isOpen
             ? "Akses KRS {$mahasiswa->nama} berhasil dibuka."
@@ -162,7 +161,14 @@ class PeriodeKrsController extends Controller
         }
 
         $isOpen = (bool) $data['status_akses'];
+
         DB::transaction(function () use ($request, $periodeKrs, $studentIds, $isOpen) {
+            if ($isOpen && $periodeKrs->access_mode === 'closed') {
+                $periodeKrs->update(['access_mode' => 'selected']);
+            } elseif (! $isOpen && $periodeKrs->access_mode === 'all') {
+                $periodeKrs->update(['access_mode' => 'all_except']);
+            }
+
             foreach ($studentIds as $studentId) {
                 $this->saveStudentAccess($periodeKrs, $studentId, $isOpen, $request->user()->id);
             }
@@ -191,8 +197,12 @@ class PeriodeKrsController extends Controller
             'mahasiswa_id' => $studentId,
         ]);
 
-        if (! $isOpen && ! $current->exists) {
-            return;
+        if (! $current->exists) {
+            $mode = $periodeKrs->access_mode ?? 'selected';
+            if (($isOpen && in_array($mode, ['all', 'all_except'], true))
+                || (! $isOpen && in_array($mode, ['closed', 'selected'], true))) {
+                return;
+            }
         }
 
         $current->fill([
@@ -207,25 +217,17 @@ class PeriodeKrsController extends Controller
 
     public function create()
     {
-        return view('admin.periode_krs.create');
+        return view('admin.periode_krs.create', $this->studentAccessFormData());
     }
 
     // ===================== STORE =====================
 
     public function store(Request $request)
     {
-        $request->validate([
-            'tahun_akademik' => 'required|max:20',
-            'semester' => 'required|in:Ganjil,Genap',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
-            'minimal_sks' => 'required|integer|min:0|max:30',
-            'maksimal_sks' => 'required|integer|min:1|max:30',
-            'status' => 'required|in:Dibuka,Ditutup',
-            'keterangan' => 'nullable|string',
-        ]);
+        $data = $this->validatedPeriod($request);
+        $studentIds = $this->validatedStudentIds($data);
 
-        if ($request->minimal_sks > $request->maksimal_sks) {
+        if ($data['minimal_sks'] > $data['maksimal_sks']) {
             return back()
                 ->withInput()
                 ->withErrors([
@@ -233,16 +235,10 @@ class PeriodeKrsController extends Controller
                 ]);
         }
 
-        PeriodeKrs::create([
-            'tahun_akademik' => $request->tahun_akademik,
-            'semester' => $request->semester,
-            'tanggal_mulai' => $request->tanggal_mulai,
-            'tanggal_selesai' => $request->tanggal_selesai,
-            'minimal_sks' => $request->minimal_sks,
-            'maksimal_sks' => $request->maksimal_sks,
-            'status' => $request->status,
-            'keterangan' => $request->keterangan,
-        ]);
+        DB::transaction(function () use ($request, $data, $studentIds) {
+            $periodeKrs = PeriodeKrs::create($this->periodAttributes($data));
+            $this->syncFormAccess($periodeKrs, $studentIds, $request->user()->id);
+        });
 
         return redirect()
             ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs'))
@@ -256,9 +252,11 @@ class PeriodeKrsController extends Controller
 
     public function edit(PeriodeKrs $periodeKrs)
     {
+        $selectedAccessIds = $this->selectedAccessIds($periodeKrs);
+
         return view(
             'admin.periode_krs.edit',
-            compact('periodeKrs')
+            $this->studentAccessFormData() + compact('periodeKrs', 'selectedAccessIds')
         );
     }
 
@@ -268,18 +266,10 @@ class PeriodeKrsController extends Controller
         Request $request,
         PeriodeKrs $periodeKrs
     ) {
-        $request->validate([
-            'tahun_akademik' => 'required|max:20',
-            'semester' => 'required|in:Ganjil,Genap',
-            'tanggal_mulai' => 'required|date',
-            'tanggal_selesai' => 'required|date|after:tanggal_mulai',
-            'minimal_sks' => 'required|integer|min:0|max:30',
-            'maksimal_sks' => 'required|integer|min:1|max:30',
-            'status' => 'required|in:Dibuka,Ditutup',
-            'keterangan' => 'nullable|string',
-        ]);
+        $data = $this->validatedPeriod($request);
+        $studentIds = $this->validatedStudentIds($data);
 
-        if ($request->minimal_sks > $request->maksimal_sks) {
+        if ($data['minimal_sks'] > $data['maksimal_sks']) {
             return back()
                 ->withInput()
                 ->withErrors([
@@ -287,16 +277,10 @@ class PeriodeKrsController extends Controller
                 ]);
         }
 
-        $periodeKrs->update([
-            'tahun_akademik' => $request->tahun_akademik,
-            'semester' => $request->semester,
-            'tanggal_mulai' => $request->tanggal_mulai,
-            'tanggal_selesai' => $request->tanggal_selesai,
-            'minimal_sks' => $request->minimal_sks,
-            'maksimal_sks' => $request->maksimal_sks,
-            'status' => $request->status,
-            'keterangan' => $request->keterangan,
-        ]);
+        DB::transaction(function () use ($request, $periodeKrs, $data, $studentIds) {
+            $periodeKrs->update($this->periodAttributes($data));
+            $this->syncFormAccess($periodeKrs, $studentIds, $request->user()->id);
+        });
 
         return redirect()
             ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.periode-krs'))
@@ -304,6 +288,151 @@ class PeriodeKrsController extends Controller
                 'success',
                 'Periode KRS berhasil diperbarui.'
             );
+    }
+
+    private function validatedPeriod(Request $request): array
+    {
+        $data = $request->validate([
+            'tahun_akademik' => ['required', 'string', 'max:20'],
+            'semester' => ['required', Rule::in(['Ganjil', 'Genap'])],
+            'tanggal_mulai' => ['required', 'date'],
+            'tanggal_selesai' => ['required', 'date', 'after:tanggal_mulai'],
+            'minimal_sks' => ['required', 'integer', 'min:0', 'max:30'],
+            'maksimal_sks' => ['required', 'integer', 'min:1', 'max:30'],
+            'status' => ['required', Rule::in(['Dibuka', 'Ditutup'])],
+            'access_mode' => ['nullable', Rule::in(PeriodeKrs::ACCESS_MODES)],
+            'mahasiswa_ids' => ['nullable', 'array', 'max:5000'],
+            'mahasiswa_ids.*' => ['integer', 'distinct', 'exists:mahasiswas,id'],
+            'keterangan' => ['nullable', 'string'],
+        ]);
+        $data['access_mode'] ??= 'closed';
+
+        return $data;
+    }
+
+    private function validatedStudentIds(array $data): array
+    {
+        $ids = collect($data['mahasiswa_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
+
+        if ($data['access_mode'] === 'selected' && $ids->isEmpty()) {
+            throw ValidationException::withMessages([
+                'mahasiswa_ids' => 'Pilih minimal satu mahasiswa untuk mode hanya mahasiswa tertentu.',
+            ]);
+        }
+
+        $activeCount = Mahasiswa::query()->whereIn('id', $ids)->where('is_active', true)->count();
+        if ($activeCount !== $ids->count()) {
+            throw ValidationException::withMessages([
+                'mahasiswa_ids' => 'Pilihan hanya boleh berisi mahasiswa aktif.',
+            ]);
+        }
+
+        return $ids->all();
+    }
+
+    private function periodAttributes(array $data): array
+    {
+        return collect($data)->only([
+            'tahun_akademik',
+            'semester',
+            'tanggal_mulai',
+            'tanggal_selesai',
+            'minimal_sks',
+            'maksimal_sks',
+            'status',
+            'access_mode',
+            'keterangan',
+        ])->all();
+    }
+
+    private function studentAccessFormData(): array
+    {
+        return [
+            'mahasiswas' => Mahasiswa::with(['prodi', 'kelas'])
+                ->where('is_active', true)
+                ->orderBy('nama')
+                ->get(),
+            'prodis' => Prodi::orderBy('nama_prodi')->get(),
+            'kelases' => Kelas::orderBy('nama_kelas')->get(),
+            'angkatans' => Mahasiswa::where('is_active', true)
+                ->whereNotNull('angkatan')
+                ->distinct()
+                ->orderByDesc('angkatan')
+                ->pluck('angkatan'),
+        ];
+    }
+
+    private function selectedAccessIds(PeriodeKrs $periodeKrs): array
+    {
+        $mode = $periodeKrs->access_mode ?? 'selected';
+        if (! in_array($mode, ['selected', 'all_except'], true)) {
+            return [];
+        }
+
+        return $periodeKrs->aksesMahasiswa()
+            ->where('status_akses', $mode === 'selected')
+            ->pluck('mahasiswa_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    private function syncFormAccess(PeriodeKrs $periodeKrs, array $studentIds, int $adminId): void
+    {
+        if (! in_array($periodeKrs->access_mode, ['selected', 'all_except'], true)) {
+            return;
+        }
+
+        $selected = collect($studentIds);
+        $selectedStatus = $periodeKrs->access_mode === 'selected';
+        $existing = $periodeKrs->aksesMahasiswa()
+            ->whereHas('mahasiswa', fn (Builder $query) => $query->where('is_active', true))
+            ->get();
+
+        foreach ($existing as $access) {
+            $this->saveStudentAccess(
+                $periodeKrs,
+                $access->mahasiswa_id,
+                $selected->contains($access->mahasiswa_id) ? $selectedStatus : ! $selectedStatus,
+                $adminId
+            );
+        }
+
+        foreach ($selected->diff($existing->pluck('mahasiswa_id')) as $studentId) {
+            $this->saveStudentAccess($periodeKrs, (int) $studentId, $selectedStatus, $adminId);
+        }
+    }
+
+    private function applyAccessFilter(Builder $students, PeriodeKrs $periodeKrs, string $status): void
+    {
+        $mode = $periodeKrs->access_mode ?? 'selected';
+        $relation = fn (Builder $query, bool $isOpen) => $query
+            ->where('periode_krs_id', $periodeKrs->id)
+            ->where('status_akses', $isOpen);
+
+        if ($status === 'belum_dibuka') {
+            $students->whereDoesntHave('aksesPeriodeKrs', fn (Builder $query) => $query
+                ->where('periode_krs_id', $periodeKrs->id));
+
+            return;
+        }
+
+        if ($status === 'dibuka') {
+            match ($mode) {
+                'all' => null,
+                'all_except' => $students->whereDoesntHave('aksesPeriodeKrs', fn (Builder $query) => $relation($query, false)),
+                'selected' => $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $relation($query, true)),
+                default => $students->whereRaw('1 = 0'),
+            };
+
+            return;
+        }
+
+        match ($mode) {
+            'closed' => null,
+            'all' => $students->whereRaw('1 = 0'),
+            'all_except' => $students->whereHas('aksesPeriodeKrs', fn (Builder $query) => $relation($query, false)),
+            default => $students->whereDoesntHave('aksesPeriodeKrs', fn (Builder $query) => $relation($query, true)),
+        };
     }
 
     // ===================== TOGGLE STATUS =====================

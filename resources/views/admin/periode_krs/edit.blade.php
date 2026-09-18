@@ -298,6 +298,7 @@
 
             </div>
 
+            @include('admin.periode_krs.partials.access-settings')
 
             {{-- ===================== BUTTON ===================== --}}
 

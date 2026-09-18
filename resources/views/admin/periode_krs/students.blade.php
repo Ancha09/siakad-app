@@ -21,6 +21,14 @@
             {{ $periodeKrs->tahun_akademik }} · {{ $periodeKrs->semester }} ·
             {{ $periodeKrs->tanggal_mulai->format('d/m/Y H:i') }}–{{ $periodeKrs->tanggal_selesai->format('d/m/Y H:i') }}
         </p>
+        <p style="margin:5px 0 0;color:#334155;font-size:13px;font-weight:600;">
+            Mode akses: {{ [
+                'closed' => 'Ditutup untuk semua',
+                'all' => 'Dibuka untuk semua',
+                'selected' => 'Hanya mahasiswa tertentu',
+                'all_except' => 'Semua kecuali mahasiswa tertentu',
+            ][$periodeKrs->access_mode ?? 'selected'] }}
+        </p>
     </div>
     <a href="{{ route('admin.periode-krs') }}" class="btn-outline">Kembali ke Periode KRS</a>
 </div>
@@ -148,7 +156,7 @@
                     @forelse($mahasiswas as $mahasiswa)
                         @php
                             $akses = $mahasiswa->aksesPeriodeKrs->first();
-                            $statusAkses = $akses ? ($akses->status_akses ? 'dibuka' : 'ditutup') : 'belum_dibuka';
+                            $statusAkses = $periodeKrs->allowsMahasiswa($mahasiswa) ? 'dibuka' : 'ditutup';
                         @endphp
                         <tr>
                             <td>
@@ -177,10 +185,8 @@
                                     @if($akses?->tanggal_dibuka)
                                         <br><small style="color:#64748b;">{{ $akses->tanggal_dibuka->format('d/m/Y H:i') }}</small>
                                     @endif
-                                @elseif($statusAkses === 'ditutup')
-                                    <span class="badge badge-gray">Ditutup</span>
                                 @else
-                                    <span class="badge" style="background:#fef3c7;color:#92400e;">Belum Dibuka</span>
+                                    <span class="badge badge-gray">Ditutup</span>
                                 @endif
                             </td>
                             <td>
