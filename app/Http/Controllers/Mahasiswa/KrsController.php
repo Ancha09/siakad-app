@@ -133,6 +133,7 @@ class KrsController extends Controller
         // ===================== JADWAL TERSEDIA =====================
 
         $jadwals = collect();
+        $jadwalsBySemester = collect();
 
         if ($periodeKrs && $aksesKrsDibuka) {
 
@@ -141,6 +142,23 @@ class KrsController extends Controller
                 $periodeKrs,
                 $jadwalDiambil
             );
+
+            $requiredParity = $scheduleService->requiredParity($periodeKrs->semester);
+            $jadwalsBySemester = $jadwals
+                ->groupBy(fn (Jadwal $jadwal) => $scheduleService->semesterNumberForStudent(
+                    $jadwal,
+                    $mahasiswa,
+                    $requiredParity
+                ))
+                ->filter(fn ($items, $semester) => is_numeric($semester))
+                ->sortKeys(SORT_NUMERIC)
+                ->map(fn ($items) => $items
+                    ->sortBy(fn (Jadwal $jadwal) => strtolower(
+                        ($jadwal->mataKuliah?->kode_mk ?? '').'|'.
+                        ($jadwal->mataKuliah?->nama_mk ?? '').'|'.
+                        str_pad((string) $jadwal->id, 10, '0', STR_PAD_LEFT)
+                    ))
+                    ->values());
 
             Log::debug('KRS available schedule lookup', [
                 'periode_krs_id' => $periodeKrs->id,
@@ -163,6 +181,7 @@ class KrsController extends Controller
                 'mahasiswa',
                 'krs',
                 'jadwals',
+                'jadwalsBySemester',
                 'totalSks',
                 'sisaSks',
                 'periodeKrs',

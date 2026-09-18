@@ -930,7 +930,7 @@
                         <p style="margin-top:8px;font-size:13px;">{{ $pesanAksesKrs }}</p>
                     </div>
 
-                @elseif($jadwals->count() == 0)
+                @elseif($jadwalsBySemester->isEmpty())
 
                     <div
                         style="
@@ -973,191 +973,85 @@
 
                 @else
 
-                    <div
-                        class="table-wrap"
-                        style="overflow-x:auto;"
-                    >
+                    @foreach($jadwalsBySemester as $semesterAngka => $jadwalSemester)
+                        <section style="margin-bottom:28px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;">
+                                <h4 style="margin:0;font-size:17px;color:#0f172a;">
+                                    Semester {{ $semesterAngka }}
+                                </h4>
+                                <span class="badge badge-blue">
+                                    {{ $jadwalSemester->count() }} mata kuliah
+                                </span>
+                            </div>
 
-                        <table
-                            style="
-                                width:100%;
-                                table-layout:auto;
-                            "
-                        >
+                            <div class="table-wrap" style="overflow-x:auto;">
+                                <table style="width:100%;table-layout:auto;">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Kode MK</th>
+                                            <th>Mata Kuliah</th>
+                                            <th>SKS</th>
+                                            <th>Dosen</th>
+                                            <th>Ruangan</th>
+                                            <th>Jadwal</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
 
-                            <thead>
+                                    <tbody>
+                                        @foreach($jadwalSemester as $jadwal)
+                                            <tr>
+                                                <td>{{ $loop->iteration }}</td>
+                                                <td>{{ $jadwal->mataKuliah->kode_mk ?? '-' }}</td>
+                                                <td>
+                                                    <strong>{{ $jadwal->mataKuliah->nama_mk ?? '-' }}</strong>
+                                                </td>
+                                                <td>
+                                                    <span class="badge badge-blue">
+                                                        {{ $jadwal->mataKuliah->sks ?? 0 }} SKS
+                                                    </span>
+                                                </td>
+                                                <td>{{ $jadwal->dosen->nama ?? '-' }}</td>
+                                                <td>{{ $jadwal->ruangan->nama_ruangan ?? '-' }}</td>
+                                                <td>
+                                                    <strong>{{ $jadwal->hari }}</strong><br>
+                                                    <small style="color:#64748b;">
+                                                        {{ $jadwal->jam_mulai }} - {{ $jadwal->jam_selesai }}
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <form action="{{ route('mahasiswa.krs.store') }}" method="POST">
+                                                        @csrf
+                                                        <input type="hidden" name="jadwal_id" value="{{ $jadwal->id }}">
 
-                                <tr>
-
-                                    <th>
-                                        No
-                                    </th>
-
-                                    <th>
-                                        Kode MK
-                                    </th>
-
-                                    <th>
-                                        Mata Kuliah
-                                    </th>
-
-                                    <th>
-                                        SKS
-                                    </th>
-
-                                    <th>
-                                        Dosen
-                                    </th>
-
-                                    <th>
-                                        Ruangan
-                                    </th>
-
-                                    <th>
-                                        Jadwal
-                                    </th>
-
-                                    <th>
-                                        Aksi
-                                    </th>
-
-                                </tr>
-
-                            </thead>
-
-
-                            <tbody>
-
-                                @foreach($jadwals as $jadwal)
-
-                                    <tr>
-
-                                        <td>
-                                            {{ $loop->iteration }}
-                                        </td>
-
-
-                                        <td>
-                                            {{ $jadwal->mataKuliah->kode_mk ?? '-' }}
-                                        </td>
-
-
-                                        <td>
-
-                                            <strong>
-                                                {{ $jadwal->mataKuliah->nama_mk ?? '-' }}
-                                            </strong>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <span class="badge badge-blue">
-                                                {{ $jadwal->mataKuliah->sks ?? 0 }}
-                                                SKS
-                                            </span>
-
-                                        </td>
-
-
-                                        <td>
-                                            {{ $jadwal->dosen->nama ?? '-' }}
-                                        </td>
-
-
-                                        <td>
-                                            {{ $jadwal->ruangan->nama_ruangan ?? '-' }}
-                                        </td>
-
-
-                                        <td>
-
-                                            <strong>
-                                                {{ $jadwal->hari }}
-                                            </strong>
-
-                                            <br>
-
-                                            <small
-                                                style="color:#64748b;"
-                                            >
-                                                {{ $jadwal->jam_mulai }}
-                                                -
-                                                {{ $jadwal->jam_selesai }}
-                                            </small>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <form
-                                                action="{{ route('mahasiswa.krs.store') }}"
-                                                method="POST"
-                                            >
-
-                                                @csrf
-
-                                                <input
-                                                    type="hidden"
-                                                    name="jadwal_id"
-                                                    value="{{ $jadwal->id }}"
-                                                >
-
-
-                                                @if(
-                                                    $periodeKrs &&
-                                                    $aksesKrsDibuka &&
-                                                    (
-                                                        $totalSks +
-                                                        ($jadwal->mataKuliah->sks ?? 0)
-                                                    ) <=
-                                                    $batasSks
-                                                )
-
-                                                    <button
-                                                        type="submit"
-                                                        class="btn-primary"
-                                                        style="
-                                                            padding:6px 12px;
-                                                            font-size:11px;
-                                                        "
-                                                    >
-                                                        ➕ Ambil
-                                                    </button>
-
-                                                @else
-
-                                                    <button
-                                                        type="button"
-                                                        class="btn-outline"
-                                                        style="
-                                                            padding:6px 12px;
-                                                            font-size:11px;
-                                                            color:#94a3b8;
-                                                            cursor:not-allowed;
-                                                        "
-                                                        disabled
-                                                    >
-                                                        🔒 Batas SKS
-                                                    </button>
-
-                                                @endif
-
-                                            </form>
-
-                                        </td>
-
-                                    </tr>
-
-                                @endforeach
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
+                                                        @if(
+                                                            $periodeKrs &&
+                                                            $aksesKrsDibuka &&
+                                                            ($totalSks + ($jadwal->mataKuliah->sks ?? 0)) <= $batasSks
+                                                        )
+                                                            <button type="submit" class="btn-primary" style="padding:6px 12px;font-size:11px;">
+                                                                ➕ Ambil
+                                                            </button>
+                                                        @else
+                                                            <button
+                                                                type="button"
+                                                                class="btn-outline"
+                                                                style="padding:6px 12px;font-size:11px;color:#94a3b8;cursor:not-allowed;"
+                                                                disabled
+                                                            >
+                                                                🔒 Batas SKS
+                                                            </button>
+                                                        @endif
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </section>
+                    @endforeach
 
                 @endif
 

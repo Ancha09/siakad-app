@@ -479,6 +479,17 @@ test('student sees and can take a cross program course assigned to their curricu
         'semester' => 1,
         'jenis' => 'Wajib',
     ]);
+    $oppositeParityCourse = MataKuliah::create([
+        'kode_mk' => 'MKU102',
+        'nama_mk' => 'MKU Genap pada Periode Ganjil',
+        'sks' => 2,
+        'semester' => 2,
+        'prodi_id' => $otherProgram->id,
+    ]);
+    $curriculum->mataKuliahs()->attach($oppositeParityCourse->id, [
+        'semester' => 2,
+        'jenis' => 'Wajib',
+    ]);
     $generalSchedule = Jadwal::create([
         'mata_kuliah_id' => $generalCourse->id,
         'dosen_id' => null,
@@ -490,10 +501,23 @@ test('student sees and can take a cross program course assigned to their curricu
         'tahun_akademik' => '2026/2027',
         'semester_akademik' => 'Ganjil',
     ]);
+    $oppositeParitySchedule = Jadwal::create([
+        'mata_kuliah_id' => $oppositeParityCourse->id,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'kelas_id' => $data['kelas']->id,
+        'hari' => 'Rabu',
+        'jam_mulai' => '10:00:00',
+        'jam_selesai' => '12:00:00',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
 
     $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
     $response->assertOk()->assertSee('Bahasa Inggris Lintas Prodi');
-    expect($response->viewData('jadwals')->pluck('id'))->toContain($generalSchedule->id);
+    expect($response->viewData('jadwals')->pluck('id'))
+        ->toContain($generalSchedule->id)
+        ->not->toContain($oppositeParitySchedule->id);
 
     $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $generalSchedule->id])
         ->assertSessionHasNoErrors();
@@ -511,20 +535,21 @@ test('odd KRS period shows every available odd course semester regardless of cur
     $data['student']->update(['semester' => 5, 'kelas_id' => null]);
 
     $schedules = collect();
-    foreach (range(2, 7) as $semester) {
+    foreach (range(2, 8) as $semester) {
         $schedules->put(
             $semester,
             makeAcademicParitySchedule(
                 $data,
                 $semester,
                 'Ganjil',
-                $semester === 7 ? null : $data['prodi']->id
+                in_array($semester, [6, 7], true) ? null : $data['prodi']->id
             )
         );
     }
 
     $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
     $availableIds = $response->viewData('jadwals')->pluck('id');
+    $semesterGroups = $response->viewData('jadwalsBySemester');
 
     expect($availableIds)
         ->toContain($data['schedule']->id)
@@ -533,7 +558,10 @@ test('odd KRS period shows every available odd course semester regardless of cur
         ->toContain($schedules->get(7)->id)
         ->not->toContain($schedules->get(2)->id)
         ->not->toContain($schedules->get(4)->id)
-        ->not->toContain($schedules->get(6)->id);
+        ->not->toContain($schedules->get(6)->id)
+        ->not->toContain($schedules->get(8)->id);
+    expect($semesterGroups->keys()->values()->all())->toBe([1, 3, 5, 7]);
+    $response->assertSeeInOrder(['Semester 1', 'Semester 3', 'Semester 5', 'Semester 7']);
 });
 
 test('even KRS period shows every available even course semester and excludes odd semesters', function () {
@@ -547,6 +575,7 @@ test('even KRS period shows every available even course semester and excludes od
 
     $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
     $availableIds = $response->viewData('jadwals')->pluck('id');
+    $semesterGroups = $response->viewData('jadwalsBySemester');
 
     foreach ([2, 4, 6, 8] as $semester) {
         expect($availableIds)->toContain($schedules->get($semester)->id);
@@ -554,6 +583,8 @@ test('even KRS period shows every available even course semester and excludes od
     foreach ([1, 3, 5, 7] as $semester) {
         expect($availableIds)->not->toContain($schedules->get($semester)->id);
     }
+    expect($semesterGroups->keys()->values()->all())->toBe([2, 4, 6, 8]);
+    $response->assertSeeInOrder(['Semester 2', 'Semester 4', 'Semester 6', 'Semester 8']);
 });
 
 test('academic and course semester formats are normalized safely', function () {
@@ -562,10 +593,15 @@ test('academic and course semester formats are normalized safely', function () {
     expect($service->normalizeAcademicSemester('Semester Ganjil'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('ganjil'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('1'))->toBe('Ganjil')
+        ->and($service->normalizeAcademicSemester('odd'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('Semester Genap'))->toBe('Genap')
         ->and($service->normalizeAcademicSemester('genap'))->toBe('Genap')
         ->and($service->normalizeAcademicSemester('2'))->toBe('Genap')
+        ->and($service->normalizeAcademicSemester('even'))->toBe('Genap')
+        ->and($service->requiredParity('Semester_Ganjil'))->toBe('odd')
+        ->and($service->requiredParity('even'))->toBe('even')
         ->and($service->normalizeCourseSemester('Semester 7'))->toBe(7)
+        ->and($service->normalizeCourseSemester('semester_1'))->toBe(1)
         ->and($service->normalizeCourseSemester(' 8 '))->toBe(8)
         ->and($service->normalizeCourseSemester(null))->toBeNull()
         ->and($service->normalizeCourseSemester('tidak diketahui'))->toBeNull();
