@@ -19,14 +19,14 @@ class KrsController extends Controller
 
         $krs = Krs::with([
             'mahasiswa.prodi',
-            'mahasiswa.kelas',
+            'mahasiswa.dosenWali',
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
         ])
         ->where('is_manual', false)
-        ->whereHas('jadwal', function ($query) use ($dosen) {
-            $query->where('dosen_id', $dosen->id);
+        ->whereHas('mahasiswa', function ($query) use ($dosen) {
+            $query->where('dosen_wali_id', $dosen->id);
         })
         ->orderByDesc('created_at')
         ->get();
@@ -72,8 +72,8 @@ class KrsController extends Controller
 
         $krs = Krs::where('id', $id)
             ->where('is_manual', false)
-            ->whereHas('jadwal', function ($query) use ($dosen) {
-                $query->where('dosen_id', $dosen->id);
+            ->whereHas('mahasiswa', function ($query) use ($dosen) {
+                $query->where('dosen_wali_id', $dosen->id);
             })
             ->firstOrFail();
 
@@ -148,8 +148,8 @@ class KrsController extends Controller
 
         $krs = Krs::where('id', $id)
             ->where('is_manual', false)
-            ->whereHas('jadwal', function ($query) use ($dosen) {
-                $query->where('dosen_id', $dosen->id);
+            ->whereHas('mahasiswa', function ($query) use ($dosen) {
+                $query->where('dosen_wali_id', $dosen->id);
             })
             ->firstOrFail();
 

@@ -37,15 +37,6 @@
                 </select>
             </div>
             <div class="form-group">
-                <label for="student-access-kelas">Kelas</label>
-                <select id="student-access-kelas" class="form-control">
-                    <option value="">Semua kelas</option>
-                    @foreach($kelases as $kelas)
-                        <option value="{{ $kelas->id }}">{{ $kelas->nama_kelas }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="form-group">
                 <label for="student-access-angkatan">Angkatan</label>
                 <select id="student-access-angkatan" class="form-control">
                     <option value="">Semua angkatan</option>
@@ -68,14 +59,13 @@
                     class="student-access-row"
                     data-search="{{ Illuminate\Support\Str::lower($mahasiswa->nim.' '.$mahasiswa->nama) }}"
                     data-prodi="{{ $mahasiswa->prodi_id }}"
-                    data-kelas="{{ $mahasiswa->kelas_id }}"
-                    data-angkatan="{{ $mahasiswa->angkatan ?? $mahasiswa->kelas?->angkatan }}"
+                    data-angkatan="{{ $mahasiswa->angkatan }}"
                     style="display:flex;gap:10px;align-items:flex-start;padding:10px;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;"
                 >
                     <input class="student-access-input" type="checkbox" name="mahasiswa_ids[]" value="{{ $mahasiswa->id }}" @checked($checkedStudentIds->contains($mahasiswa->id))>
                     <span>
                         <strong>{{ $mahasiswa->nim }} — {{ $mahasiswa->nama }}</strong><br>
-                        <small style="color:#64748b;">{{ $mahasiswa->prodi?->nama_prodi ?? '-' }} · {{ $mahasiswa->kelas?->nama_kelas ?? '-' }} · Angkatan {{ $mahasiswa->angkatan ?? $mahasiswa->kelas?->angkatan ?? '-' }}</small>
+                        <small style="color:#64748b;">{{ $mahasiswa->prodi?->nama_prodi ?? '-' }} · Angkatan {{ $mahasiswa->angkatan ?? '-' }}</small>
                     </span>
                 </label>
             @empty
@@ -93,7 +83,6 @@
         const help = document.getElementById('access-mode-help');
         const search = document.getElementById('student-access-search');
         const prodi = document.getElementById('student-access-prodi');
-        const kelas = document.getElementById('student-access-kelas');
         const angkatan = document.getElementById('student-access-angkatan');
         const rows = [...document.querySelectorAll('.student-access-row')];
         const inputs = [...document.querySelectorAll('.student-access-input')];
@@ -122,14 +111,13 @@
             rows.forEach((row) => {
                 const visible = (!keyword || row.dataset.search.includes(keyword))
                     && (!prodi.value || row.dataset.prodi === prodi.value)
-                    && (!kelas.value || row.dataset.kelas === kelas.value)
                     && (!angkatan.value || row.dataset.angkatan === angkatan.value);
                 row.style.display = visible ? 'flex' : 'none';
             });
         }
 
         mode.addEventListener('change', updateMode);
-        [search, prodi, kelas, angkatan].forEach((field) => field.addEventListener('input', filterRows));
+        [search, prodi, angkatan].forEach((field) => field.addEventListener('input', filterRows));
         inputs.forEach((input) => input.addEventListener('change', updateSummary));
         document.getElementById('select-filtered-students').addEventListener('click', function () {
             rows.filter((row) => row.style.display !== 'none').forEach((row) => {

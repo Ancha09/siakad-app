@@ -68,16 +68,6 @@
                 </div>
 
                 <div>
-                    <label for="kelas_id">Kelas</label>
-                    <select id="kelas_id" class="form-control" name="kelas_id">
-                        <option value="">Semua kelas</option>
-                        @foreach($kelases as $kelas)
-                            <option value="{{ $kelas->id }}" @selected((string) request('kelas_id') === (string) $kelas->id)>{{ $kelas->nama_kelas }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div>
                     <label for="angkatan">Angkatan</label>
                     <select id="angkatan" class="form-control" name="angkatan">
                         <option value="">Semua angkatan</option>
@@ -154,7 +144,7 @@
                         </th>
                         <th>No</th>
                         <th>Mahasiswa</th>
-                        <th>Prodi / Kelas</th>
+                        <th>Prodi / Angkatan</th>
                         <th>Semester</th>
                         <th>Status Akses</th>
                         <th style="width:130px;">Aksi Akses</th>
@@ -184,9 +174,9 @@
                             </td>
                             <td>
                                 {{ $mahasiswa->prodi?->nama_prodi ?? '-' }}<br>
-                                <small style="color:#64748b;">{{ $mahasiswa->kelas?->nama_kelas ?? '-' }} · Angkatan {{ $mahasiswa->angkatan ?? $mahasiswa->kelas?->angkatan ?? '-' }}</small>
+                                <small style="color:#64748b;">Angkatan {{ $mahasiswa->angkatan ?? '-' }}</small>
                             </td>
-                            <td>{{ $mahasiswa->semester ?? $mahasiswa->kelas?->semester ?? '-' }}</td>
+                            <td>{{ $mahasiswa->semester ?? '-' }}</td>
                             <td>
                                 @if($statusAkses === 'dibuka')
                                     <span class="badge badge-green">Dibuka</span>

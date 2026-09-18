@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Dosen;
 use App\Models\Fakultas;
-use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Models\Prodi;
 use App\Models\User;
@@ -32,21 +32,11 @@ class MahasiswaController extends Controller
             ->orderBy('nama_prodi')
             ->get();
 
-        // ===================== DATA KELAS =====================
-
-        $kelases = Kelas::with([
-            'prodi',
-            'dosenWali',
-        ])
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
-            ->get();
-
         // ===================== QUERY MAHASISWA =====================
 
         $query = Mahasiswa::with([
             'prodi.fakultas',
-            'kelas.dosenWali',
+            'dosenWali',
         ]);
 
         // ===================== SEARCH =====================
@@ -81,16 +71,6 @@ class MahasiswaController extends Controller
             $query->where(
                 'prodi_id',
                 $request->prodi_id
-            );
-        }
-
-        // ===================== FILTER KELAS =====================
-
-        if ($request->filled('kelas_id')) {
-
-            $query->where(
-                'kelas_id',
-                $request->kelas_id
             );
         }
 
@@ -135,7 +115,6 @@ class MahasiswaController extends Controller
                 'mahasiswas',
                 'fakultas',
                 'prodis',
-                'kelases',
                 'angkatans'
             )
         );
@@ -147,17 +126,14 @@ class MahasiswaController extends Controller
     {
         $prodis = Prodi::orderBy('nama_prodi')->get();
 
-        $kelases = Kelas::with([
-            'prodi',
-            'dosenWali',
-        ])
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
+        $dosens = Dosen::query()
+            ->where('is_active', true)
+            ->orderBy('nama')
             ->get();
 
         return view(
             'admin.mahasiswa.create',
-            compact('prodis', 'kelases')
+            compact('prodis', 'dosens')
         );
     }
 
@@ -173,7 +149,7 @@ class MahasiswaController extends Controller
             'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'semester' => ['nullable', 'integer', 'min:1', 'max:14'],
             'prodi_id' => ['required', 'integer', 'exists:prodis,id'],
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'dosen_wali_id' => ['nullable', 'integer', 'exists:dosens,id'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
         try {
@@ -208,12 +184,10 @@ class MahasiswaController extends Controller
     {
         $prodis = Prodi::orderBy('nama_prodi')->get();
 
-        $kelases = Kelas::with([
-            'prodi',
-            'dosenWali',
-        ])
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
+        $dosens = Dosen::query()
+            ->where('is_active', true)
+            ->orWhere('id', $mahasiswa->dosen_wali_id)
+            ->orderBy('nama')
             ->get();
 
         return view(
@@ -221,7 +195,7 @@ class MahasiswaController extends Controller
             compact(
                 'mahasiswa',
                 'prodis',
-                'kelases'
+                'dosens'
             )
         );
     }
@@ -240,7 +214,7 @@ class MahasiswaController extends Controller
             'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'semester' => ['nullable', 'integer', 'min:1', 'max:14'],
             'prodi_id' => ['required', 'integer', 'exists:prodis,id'],
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'dosen_wali_id' => ['nullable', 'integer', 'exists:dosens,id'],
             'is_active' => ['nullable', 'boolean'],
             'password' => [Rule::requiredIf($mahasiswa->user_id === null), 'nullable', 'string', 'min:8', 'confirmed'],
         ]);

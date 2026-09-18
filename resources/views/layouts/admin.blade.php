@@ -149,7 +149,6 @@
             <x-sidebar-item route="admin.prodi" :active="request()->routeIs('admin.prodi', 'admin.prodi.*')" icon="school">Program Studi</x-sidebar-item>
             <x-sidebar-item route="admin.dosen" :active="request()->routeIs('admin.dosen', 'admin.dosen.*')" icon="graduation">Data Dosen</x-sidebar-item>
             <x-sidebar-item route="admin.mahasiswa" :active="request()->routeIs('admin.mahasiswa', 'admin.mahasiswa.*')" icon="users">Data Mahasiswa</x-sidebar-item>
-            <x-sidebar-item route="admin.kelas" :active="request()->routeIs('admin.kelas', 'admin.kelas.*')" icon="layers">Data Kelas</x-sidebar-item>
             <x-sidebar-item route="admin.matakuliah" :active="request()->routeIs('admin.matakuliah', 'admin.matakuliah.*')" icon="book">Mata Kuliah</x-sidebar-item>
             <x-sidebar-item route="admin.ruangan" :active="request()->routeIs('admin.ruangan', 'admin.ruangan.*')" icon="door">Ruangan</x-sidebar-item>
 

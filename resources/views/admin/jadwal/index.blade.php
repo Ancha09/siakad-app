@@ -71,7 +71,7 @@
                         name="search"
                         class="form-control"
                         value="{{ request('search') }}"
-                        placeholder="Mata kuliah / dosen / kelas..."
+                        placeholder="Mata kuliah atau dosen..."
                     >
 
                 </div>
@@ -170,43 +170,6 @@
                 </div>
 
 
-                {{-- ================= KELAS ================= --}}
-
-                <div class="form-group">
-
-                    <label>Kelas</label>
-
-                    <select
-                        name="kelas_id"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Kelas
-                        </option>
-
-                        @foreach($kelases as $kelas)
-
-                            <option
-                                value="{{ $kelas->id }}"
-                                {{ request('kelas_id') == $kelas->id ? 'selected' : '' }}
-                            >
-
-                                {{ $kelas->nama_kelas }}
-
-                                -
-                                
-                                {{ $kelas->prodi->nama_prodi ?? '-' }}
-
-                            </option>
-
-                        @endforeach
-
-                    </select>
-
-                </div>
-
-
                 {{-- ================= HARI ================= --}}
 
                 <div class="form-group">
@@ -260,16 +223,12 @@
                             Semua Semester
                         </option>
 
-                        @for($i = 1; $i <= 14; $i++)
-
-                            <option
-                                value="{{ $i }}"
-                                {{ request('semester_akademik') == $i ? 'selected' : '' }}
-                            >
-                                Semester {{ $i }}
-                            </option>
-
-                        @endfor
+                        <option value="Ganjil" {{ in_array(strtolower((string) request('semester_akademik')), ['ganjil', '1', 'semester 1'], true) ? 'selected' : '' }}>
+                            Ganjil
+                        </option>
+                        <option value="Genap" {{ in_array(strtolower((string) request('semester_akademik')), ['genap', '2', 'semester 2'], true) ? 'selected' : '' }}>
+                            Genap
+                        </option>
 
                     </select>
 
@@ -318,8 +277,6 @@
                         <th>Mata Kuliah</th>
 
                         <th>Dosen</th>
-
-                        <th>Kelas</th>
 
                         <th>Ruangan</th>
 
@@ -374,32 +331,6 @@
                             <td>
 
                                 {{ $jadwal->dosen->nama ?? '-' }}
-
-                            </td>
-
-
-                            {{-- KELAS --}}
-
-                            <td>
-
-                                <strong>
-
-                                    {{ $jadwal->kelas->nama_kelas ?? '-' }}
-
-                                </strong>
-
-
-                                @if($jadwal->kelas)
-
-                                    <br>
-
-                                    <small style="color:#64748b;">
-
-                                        {{ $jadwal->kelas->prodi->nama_prodi ?? '-' }}
-
-                                    </small>
-
-                                @endif
 
                             </td>
 
@@ -493,7 +424,7 @@
                         <tr>
 
                             <td
-                                colspan="8"
+                                colspan="7"
                                 style="
                                     text-align:center;
                                     padding:40px;

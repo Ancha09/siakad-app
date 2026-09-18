@@ -3,6 +3,8 @@
 use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Kelas;
+use App\Models\Krs;
+use App\Models\Kurikulum;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\PeriodeKrs;
@@ -90,7 +92,21 @@ function makePerStudentKrsAccessData(): array
         'status' => 'Dibuka',
     ]);
 
-    return compact('admin', 'studentUser', 'otherStudentUser', 'prodi', 'kelas', 'student', 'otherStudent', 'schedule', 'period');
+    return compact(
+        'admin',
+        'studentUser',
+        'otherStudentUser',
+        'lecturerUser',
+        'prodi',
+        'dosen',
+        'kelas',
+        'student',
+        'otherStudent',
+        'course',
+        'room',
+        'schedule',
+        'period'
+    );
 }
 
 test('admin opens and closes one student KRS access without affecting another student', function () {
@@ -407,6 +423,303 @@ test('KRS pages never query a payment table', function () {
     expect(collect($queries)->contains(
         fn (string $sql) => str_contains($sql, 'pembayaran_krs')
     ))->toBeFalse();
+});
+
+test('student sees and can take a cross program course assigned to their curriculum without class matching', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+
+    $otherProgram = Prodi::create([
+        'kode_prodi' => 'MKU-UMUM',
+        'nama_prodi' => 'Program Pengelola MKU',
+        'jenjang' => 'S1',
+    ]);
+    $generalCourse = MataKuliah::create([
+        'kode_mk' => 'MKU101',
+        'nama_mk' => 'Bahasa Inggris Lintas Prodi',
+        'sks' => 2,
+        'semester' => 1,
+        'prodi_id' => $otherProgram->id,
+    ]);
+    $curriculum = Kurikulum::create([
+        'prodi_id' => $data['prodi']->id,
+        'nama_kurikulum' => 'Kurikulum Informatika 2026',
+        'tahun_mulai' => 2026,
+        'status' => 'Aktif',
+    ]);
+    $curriculum->mataKuliahs()->attach($generalCourse->id, [
+        'semester' => 1,
+        'jenis' => 'Wajib',
+    ]);
+    $generalSchedule = Jadwal::create([
+        'mata_kuliah_id' => $generalCourse->id,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'kelas_id' => null,
+        'hari' => 'Selasa',
+        'jam_mulai' => '10:00:00',
+        'jam_selesai' => '12:00:00',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    $response->assertOk()->assertSee('Bahasa Inggris Lintas Prodi');
+    expect($response->viewData('jadwals')->pluck('id'))->toContain($generalSchedule->id);
+
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $generalSchedule->id])
+        ->assertSessionHasNoErrors();
+    $this->assertDatabaseHas('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $generalSchedule->id,
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+});
+
+test('student sees a classless matching schedule with normalized academic year', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $data['schedule']->update([
+        'kelas_id' => null,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'tahun_akademik' => ' 2026-2027 ',
+    ]);
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+
+    $response->assertOk()->assertSee('Algoritma Akses KRS');
+    expect($response->viewData('jadwals')->pluck('id'))->toContain($data['schedule']->id);
+});
+
+test('student without a class sees a matching program and semester schedule', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $data['student']->update(['kelas_id' => null]);
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+
+    $response->assertOk()->assertSee('Algoritma Akses KRS');
+    expect($response->viewData('jadwals')->pluck('id'))->toContain($data['schedule']->id);
+});
+
+test('student does not see schedules from another program or study semester', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $otherProgram = Prodi::create([
+        'kode_prodi' => 'PRODI-LAIN',
+        'nama_prodi' => 'Program Studi Lain',
+        'jenjang' => 'S1',
+    ]);
+    $otherProgramCourse = MataKuliah::create([
+        'kode_mk' => 'LAIN101',
+        'nama_mk' => 'Mata Kuliah Prodi Lain',
+        'sks' => 2,
+        'semester' => 1,
+        'prodi_id' => $otherProgram->id,
+    ]);
+    $otherSemesterCourse = MataKuliah::create([
+        'kode_mk' => 'IF301-A',
+        'nama_mk' => 'Mata Kuliah Semester Lain',
+        'sks' => 2,
+        'semester' => 3,
+        'prodi_id' => $data['prodi']->id,
+    ]);
+
+    $otherProgramSchedule = Jadwal::create([
+        'mata_kuliah_id' => $otherProgramCourse->id,
+        'dosen_id' => $data['dosen']->id,
+        'ruangan_id' => $data['room']->id,
+        'kelas_id' => $data['kelas']->id,
+        'hari' => 'Selasa',
+        'jam_mulai' => '08:00:00',
+        'jam_selesai' => '10:00:00',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+    $otherSemesterSchedule = Jadwal::create([
+        'mata_kuliah_id' => $otherSemesterCourse->id,
+        'dosen_id' => $data['dosen']->id,
+        'ruangan_id' => $data['room']->id,
+        'kelas_id' => null,
+        'hari' => 'Rabu',
+        'jam_mulai' => '08:00:00',
+        'jam_selesai' => '10:00:00',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    $scheduleIds = $response->viewData('jadwals')->pluck('id');
+
+    expect($scheduleIds)
+        ->toContain($data['schedule']->id)
+        ->not->toContain($otherProgramSchedule->id)
+        ->not->toContain($otherSemesterSchedule->id);
+});
+
+test('only schedules already taken in the active period are excluded', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+
+    Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+        'status' => 'Disetujui',
+        'tahun_akademik' => '2025/2026',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $oldPeriodResponse = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    expect($oldPeriodResponse->viewData('jadwals')->pluck('id'))->toContain($data['schedule']->id);
+
+    Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+        'status' => 'Menunggu',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $activePeriodResponse = $this->get(route('mahasiswa.krs'));
+    expect($activePeriodResponse->viewData('jadwals')->pluck('id'))->not->toContain($data['schedule']->id);
+});
+
+test('empty KRS schedule list shows an actionable message', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $data['schedule']->update(['tahun_akademik' => '2025/2026']);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('Belum ada mata kuliah tersedia untuk periode KRS ini.')
+        ->assertSee('Hubungi admin akademik.');
+});
+
+test('admin schedule input stores the same academic period format used by KRS', function () {
+    $data = makePerStudentKrsAccessData();
+    $schedule = $data['schedule']->load(['mataKuliah', 'dosen', 'ruangan']);
+
+    $this->actingAs($data['admin'])->post(route('admin.jadwal.store'), [
+        'mata_kuliah_id' => $schedule->mata_kuliah_id,
+        'dosen_id' => $schedule->dosen_id,
+        'ruangan_id' => $schedule->ruangan_id,
+        'hari' => 'Rabu',
+        'jam_mulai' => '13:00',
+        'jam_selesai' => '15:00',
+        'tahun_akademik' => '2027 - 2028',
+        'semester_akademik' => 'Semester 1',
+    ])->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('jadwals', [
+        'mata_kuliah_id' => $schedule->mata_kuliah_id,
+        'kelas_id' => null,
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Ganjil',
+    ]);
+});
+
+test('schedule and student forms no longer require a class', function () {
+    $data = makePerStudentKrsAccessData();
+
+    $this->actingAs($data['admin'])
+        ->get(route('admin.jadwal.create'))
+        ->assertOk()
+        ->assertDontSee('name="kelas_id"', false);
+
+    $this->get(route('admin.mahasiswa.create'))
+        ->assertOk()
+        ->assertSee('Dosen Wali')
+        ->assertSee('name="dosen_wali_id"', false)
+        ->assertDontSee('name="kelas_id"', false);
+
+    $this->get(route('admin.periode-krs.students', $data['period']))
+        ->assertOk()
+        ->assertDontSee('name="kelas_id"', false)
+        ->assertDontSee('Prodi / Kelas');
+});
+
+test('admin stores a direct student advisor without assigning a class', function () {
+    $data = makePerStudentKrsAccessData();
+
+    $this->actingAs($data['admin'])
+        ->post(route('admin.mahasiswa.store'), [
+            'nim' => '260099',
+            'nama' => 'Mahasiswa Tanpa Kelas',
+            'angkatan' => 2026,
+            'semester' => 1,
+            'prodi_id' => $data['prodi']->id,
+            'dosen_wali_id' => $data['dosen']->id,
+            'password' => 'password-aman',
+            'password_confirmation' => 'password-aman',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('mahasiswas', [
+        'nim' => '260099',
+        'kelas_id' => null,
+        'dosen_wali_id' => $data['dosen']->id,
+    ]);
+
+    $otherAdvisorUser = User::factory()->create(['role' => 'dosen']);
+    $otherAdvisor = Dosen::create([
+        'nidn' => 'DOSEN-WALI-EDIT',
+        'nama' => 'Dosen Wali Pengganti',
+        'prodi_id' => $data['prodi']->id,
+        'user_id' => $otherAdvisorUser->id,
+    ]);
+    $student = Mahasiswa::where('nim', '260099')->firstOrFail();
+
+    $this->get(route('admin.mahasiswa.edit', $student))
+        ->assertOk()
+        ->assertSee('name="dosen_wali_id"', false)
+        ->assertDontSee('name="kelas_id"', false);
+    $this->put(route('admin.mahasiswa.update', $student), [
+        'nim' => $student->nim,
+        'nama' => $student->nama,
+        'angkatan' => 2026,
+        'semester' => 1,
+        'prodi_id' => $data['prodi']->id,
+        'dosen_wali_id' => $otherAdvisor->id,
+    ])->assertSessionHasNoErrors();
+
+    expect($student->fresh()->dosen_wali_id)->toBe($otherAdvisor->id);
+});
+
+test('only the direct student advisor can review and approve KRS', function () {
+    $data = makePerStudentKrsAccessData();
+    $courseLecturerUser = User::factory()->create(['role' => 'dosen']);
+    $courseLecturer = Dosen::create([
+        'nidn' => 'DOSEN-PENGAMPU-02',
+        'nama' => 'Dosen Pengampu Bukan Wali',
+        'prodi_id' => $data['prodi']->id,
+        'user_id' => $courseLecturerUser->id,
+    ]);
+    $data['schedule']->update(['dosen_id' => $courseLecturer->id]);
+    $submission = Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+        'status' => 'Menunggu',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $this->actingAs($courseLecturerUser)
+        ->get(route('dosen.krs'))
+        ->assertOk()
+        ->assertDontSee('Mahasiswa Akses A');
+    $this->put(route('dosen.krs.setujui', $submission))->assertNotFound();
+
+    $this->actingAs($data['lecturerUser'])
+        ->get(route('dosen.krs'))
+        ->assertOk()
+        ->assertSee('Mahasiswa Akses A');
+    $this->put(route('dosen.krs.setujui', $submission))
+        ->assertRedirect(route('dosen.krs'));
+
+    expect($submission->fresh()->status)->toBe('Disetujui');
 });
 
 test('legacy string access rows are normalized without losing their owner', function () {

@@ -7,11 +7,11 @@ use App\Models\Jadwal;
 use App\Models\MataKuliah;
 use App\Models\Dosen;
 use App\Models\Ruangan;
-use App\Models\Kelas;
 use App\Models\Fakultas;
 use App\Models\Prodi;
 use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class JadwalController extends Controller
 {
@@ -38,23 +38,12 @@ class JadwalController extends Controller
             ->get();
 
 
-        // ===================== DATA KELAS =====================
-
-        $kelases = Kelas::with([
-            'prodi.fakultas'
-        ])
-        ->orderBy('angkatan', 'desc')
-        ->orderBy('nama_kelas')
-        ->get();
-
-
         // ===================== QUERY JADWAL =====================
 
         $query = Jadwal::with([
             'mataKuliah.prodi.fakultas',
             'dosen',
             'ruangan',
-            'kelas.prodi.fakultas'
         ]);
 
 
@@ -80,14 +69,6 @@ class JadwalController extends Controller
                     $dosen->whereLike('nama', '%' . $search . '%'
                     );
 
-                })
-
-                // Cari Kelas
-                ->orWhereHas('kelas', function ($kelas) use ($search) {
-
-                    $kelas->whereLike('nama_kelas', '%' . $search . '%'
-                    );
-
                 });
 
             });
@@ -98,17 +79,13 @@ class JadwalController extends Controller
 
         if ($request->filled('fakultas_id')) {
 
-            $query->whereHas(
-                'kelas.prodi',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'fakultas_id',
-                        $request->fakultas_id
-                    );
-
-                }
-            );
+            $query->whereHas('mataKuliah', function ($mataKuliah) use ($request) {
+                $mataKuliah
+                    ->whereHas('prodi', fn ($prodi) => $prodi
+                        ->where('fakultas_id', $request->fakultas_id))
+                    ->orWhereHas('kurikulums.prodi', fn ($prodi) => $prodi
+                        ->where('fakultas_id', $request->fakultas_id));
+            });
         }
 
 
@@ -116,17 +93,12 @@ class JadwalController extends Controller
 
         if ($request->filled('prodi_id')) {
 
-            $query->whereHas(
-                'kelas',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'prodi_id',
-                        $request->prodi_id
-                    );
-
-                }
-            );
+            $query->whereHas('mataKuliah', function ($mataKuliah) use ($request) {
+                $mataKuliah
+                    ->where('prodi_id', $request->prodi_id)
+                    ->orWhereHas('kurikulums', fn ($kurikulum) => $kurikulum
+                        ->where('prodi_id', $request->prodi_id));
+            });
         }
 
 
@@ -137,17 +109,6 @@ class JadwalController extends Controller
             $query->where(
                 'dosen_id',
                 $request->dosen_id
-            );
-        }
-
-
-        // ===================== FILTER KELAS =====================
-
-        if ($request->filled('kelas_id')) {
-
-            $query->where(
-                'kelas_id',
-                $request->kelas_id
             );
         }
 
@@ -166,11 +127,11 @@ class JadwalController extends Controller
         // ===================== FILTER SEMESTER =====================
 
         if ($request->filled('semester_akademik')) {
+            $semester = $this->normalizeAcademicSemester($request->semester_akademik);
 
-            $query->where(
-                'semester_akademik',
-                $request->semester_akademik
-            );
+            if ($semester) {
+                $query->whereIn('semester_akademik', $this->semesterAliases($semester));
+            }
         }
 
 
@@ -191,8 +152,7 @@ class JadwalController extends Controller
                 'jadwals',
                 'fakultas',
                 'prodis',
-                'dosens',
-                'kelases'
+                'dosens'
             )
         );
     }
@@ -212,18 +172,12 @@ class JadwalController extends Controller
         $ruangans = Ruangan::orderBy('nama_ruangan')
             ->get();
 
-        $kelases = Kelas::with('prodi')
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
-            ->get();
-
         return view(
             'admin.jadwal.create',
             compact(
                 'mataKuliahs',
                 'dosens',
-                'ruangans',
-                'kelases'
+                'ruangans'
             )
         );
     }
@@ -233,30 +187,20 @@ class JadwalController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'mata_kuliah_id'    => 'required|exists:mata_kuliahs,id',
-            'dosen_id'          => 'required|exists:dosens,id',
-            'ruangan_id'        => 'required|exists:ruangans,id',
-            'kelas_id'          => 'required|exists:kelas,id',
-            'hari'              => 'required',
-            'jam_mulai'         => 'required',
-            'jam_selesai'       => 'required|after:jam_mulai',
-            'tahun_akademik'    => 'nullable',
-            'semester_akademik' => 'nullable|integer|min:1|max:14',
+        $request->merge($this->normalizedPeriodInput($request));
+
+        $validated = $request->validate([
+            'mata_kuliah_id'    => ['required', 'exists:mata_kuliahs,id'],
+            'dosen_id'          => ['required', 'exists:dosens,id'],
+            'ruangan_id'        => ['required', 'exists:ruangans,id'],
+            'hari'              => ['required', Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'])],
+            'jam_mulai'         => ['required'],
+            'jam_selesai'       => ['required', 'after:jam_mulai'],
+            'tahun_akademik'    => ['required', 'regex:/^\d{4}\/\d{4}$/'],
+            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
         ]);
 
-
-        Jadwal::create([
-            'mata_kuliah_id'    => $request->mata_kuliah_id,
-            'dosen_id'          => $request->dosen_id,
-            'ruangan_id'        => $request->ruangan_id,
-            'kelas_id'          => $request->kelas_id,
-            'hari'              => $request->hari,
-            'jam_mulai'         => $request->jam_mulai,
-            'jam_selesai'       => $request->jam_selesai,
-            'tahun_akademik'    => $request->tahun_akademik,
-            'semester_akademik' => $request->semester_akademik,
-        ]);
+        Jadwal::create($validated);
 
 
         return redirect()
@@ -282,19 +226,13 @@ class JadwalController extends Controller
         $ruangans = Ruangan::orderBy('nama_ruangan')
             ->get();
 
-        $kelases = Kelas::with('prodi')
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
-            ->get();
-
         return view(
             'admin.jadwal.edit',
             compact(
                 'jadwal',
                 'mataKuliahs',
                 'dosens',
-                'ruangans',
-                'kelases'
+                'ruangans'
             )
         );
     }
@@ -306,30 +244,20 @@ class JadwalController extends Controller
         Request $request,
         Jadwal $jadwal
     ) {
-        $request->validate([
-            'mata_kuliah_id'    => 'required|exists:mata_kuliahs,id',
-            'dosen_id'          => 'required|exists:dosens,id',
-            'ruangan_id'        => 'required|exists:ruangans,id',
-            'kelas_id'          => 'required|exists:kelas,id',
-            'hari'              => 'required',
-            'jam_mulai'         => 'required',
-            'jam_selesai'       => 'required|after:jam_mulai',
-            'tahun_akademik'    => 'nullable',
-            'semester_akademik' => 'nullable|integer|min:1|max:14',
+        $request->merge($this->normalizedPeriodInput($request));
+
+        $validated = $request->validate([
+            'mata_kuliah_id'    => ['required', 'exists:mata_kuliahs,id'],
+            'dosen_id'          => ['required', 'exists:dosens,id'],
+            'ruangan_id'        => ['required', 'exists:ruangans,id'],
+            'hari'              => ['required', Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'])],
+            'jam_mulai'         => ['required'],
+            'jam_selesai'       => ['required', 'after:jam_mulai'],
+            'tahun_akademik'    => ['required', 'regex:/^\d{4}\/\d{4}$/'],
+            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
         ]);
 
-
-        $jadwal->update([
-            'mata_kuliah_id'    => $request->mata_kuliah_id,
-            'dosen_id'          => $request->dosen_id,
-            'ruangan_id'        => $request->ruangan_id,
-            'kelas_id'          => $request->kelas_id,
-            'hari'              => $request->hari,
-            'jam_mulai'         => $request->jam_mulai,
-            'jam_selesai'       => $request->jam_selesai,
-            'tahun_akademik'    => $request->tahun_akademik,
-            'semester_akademik' => $request->semester_akademik,
-        ]);
+        $jadwal->update($validated);
 
 
         return redirect()
@@ -353,5 +281,35 @@ class JadwalController extends Controller
                 'success',
                 'Data jadwal berhasil dihapus.'
             );
+    }
+
+    private function normalizedPeriodInput(Request $request): array
+    {
+        $year = preg_replace('/\s+/', '', trim((string) $request->input('tahun_akademik')));
+
+        return [
+            'tahun_akademik' => str_replace('-', '/', $year ?? ''),
+            'semester_akademik' => $this->normalizeAcademicSemester(
+                $request->input('semester_akademik')
+            ),
+        ];
+    }
+
+    private function normalizeAcademicSemester(string|int|null $semester): ?string
+    {
+        $value = strtolower(preg_replace('/\s+/', '', trim((string) $semester)) ?? '');
+
+        return match ($value) {
+            'ganjil', 'semesterganjil', '1', 'semester1' => 'Ganjil',
+            'genap', 'semestergenap', '2', 'semester2' => 'Genap',
+            default => null,
+        };
+    }
+
+    private function semesterAliases(string $semester): array
+    {
+        return $semester === 'Ganjil'
+            ? ['Ganjil', 'ganjil', 'GANJIL', '1', 'Semester 1', 'semester 1', 'Semester Ganjil', 'semester ganjil']
+            : ['Genap', 'genap', 'GENAP', '2', 'Semester 2', 'semester 2', 'Semester Genap', 'semester genap'];
     }
 }

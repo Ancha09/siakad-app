@@ -206,45 +206,27 @@
                 </div>
 
 
-                {{-- ================= KELAS ================= --}}
+                {{-- ================= DOSEN WALI ================= --}}
                 <div class="form-group">
 
-                    <label>Kelas</label>
+                    <label>Dosen Wali</label>
 
                     <select
-                        name="kelas_id"
+                        name="dosen_wali_id"
                         class="form-control"
                     >
 
                         <option value="">
-                            -- Tidak Ada Kelas --
+                            -- Belum Ditentukan --
                         </option>
 
-                        @foreach($kelases as $kelas)
+                        @foreach($dosens as $dosen)
 
                             <option
-                                value="{{ $kelas->id }}"
-                                {{ old('kelas_id') == $kelas->id ? 'selected' : '' }}
+                                value="{{ $dosen->id }}"
+                                {{ old('dosen_wali_id') == $dosen->id ? 'selected' : '' }}
                             >
-
-                                {{ $kelas->nama_kelas }}
-
-                                -
-                                {{ $kelas->prodi->nama_prodi ?? '-' }}
-
-                                ({{ $kelas->angkatan }})
-
-                                @if($kelas->dosenWali)
-
-                                    | Wali:
-                                    {{ $kelas->dosenWali->nama }}
-
-                                @else
-
-                                    | Wali: Belum ditentukan
-
-                                @endif
-
+                                {{ $dosen->nama }}{{ $dosen->nidn ? ' - '.$dosen->nidn : '' }}
                             </option>
 
                         @endforeach
@@ -252,7 +234,7 @@
                     </select>
 
                     <small style="color:#64748b;">
-                        Dosen Wali mengikuti kelas yang dipilih.
+                        Opsional. Dosen ini yang akan memproses persetujuan KRS mahasiswa.
                     </small>
 
                 </div>

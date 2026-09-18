@@ -54,6 +54,16 @@ class Jadwal extends Model
         );
     }
 
+    // Alias aman karena tabel jadwals lama juga memiliki kolom string `kelas`.
+    // Mengakses $jadwal->kelas dapat membaca atribut lama tersebut, bukan relasi.
+    public function kelasRelasi()
+    {
+        return $this->belongsTo(
+            Kelas::class,
+            'kelas_id'
+        );
+    }
+
     public function krs()
     {
         return $this->hasMany(Krs::class, 'jadwal_id');

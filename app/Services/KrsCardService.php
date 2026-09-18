@@ -33,11 +33,10 @@ class KrsCardService
 
     public function data(Mahasiswa $mahasiswa, string $tahunAkademik, string $semesterAkademik): array
     {
-        $mahasiswa->loadMissing(['prodi.fakultas', 'kelas.dosenWali', 'dosenWali']);
+        $mahasiswa->loadMissing(['prodi.fakultas', 'dosenWali']);
         $records = $this->records($mahasiswa, $tahunAkademik, $semesterAkademik);
         $printableRecords = $records->where('status', '!=', 'Ditolak')->values();
         $semesterStudi = $mahasiswa->semester
-            ?? $mahasiswa->kelas?->semester
             ?? $printableRecords->map(fn (Krs $item) => $item->mata_kuliah_efektif?->semester)->filter()->max();
         $ketuaProdi = $mahasiswa->prodi_id
             ? Dosen::query()
@@ -60,7 +59,7 @@ class KrsCardService
             'totalSks' => $printableRecords->sum(
                 fn (Krs $item) => (int) ($item->mata_kuliah_efektif?->sks ?? 0)
             ),
-            'dosenWali' => $mahasiswa->dosenWali ?? $mahasiswa->kelas?->dosenWali,
+            'dosenWali' => $mahasiswa->dosenWali,
             'ketuaProdi' => $ketuaProdi,
         ];
     }

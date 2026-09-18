@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Kelas;
 use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
 use App\Models\PeriodeKrsMahasiswa;
@@ -52,7 +51,6 @@ class PeriodeKrsController extends Controller
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'prodi_id' => ['nullable', 'integer', 'exists:prodis,id'],
-            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
             'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
             'semester' => ['nullable', 'integer', 'between:1,14'],
             'status_akses' => ['nullable', Rule::in(['belum_dibuka', 'dibuka', 'ditutup'])],
@@ -62,7 +60,6 @@ class PeriodeKrsController extends Controller
         $students = Mahasiswa::query()
             ->with([
                 'prodi',
-                'kelas',
                 'aksesPeriodeKrs' => fn ($query) => $query->where('periode_krs_id', $periodeKrs->id),
             ])
             ->where('is_active', true)
@@ -74,20 +71,10 @@ class PeriodeKrsController extends Controller
             })
             ->when($filters['prodi_id'] ?? null, fn (Builder $query, $prodiId) => $query
                 ->where('prodi_id', $prodiId))
-            ->when($filters['kelas_id'] ?? null, fn (Builder $query, $kelasId) => $query
-                ->where('kelas_id', $kelasId))
-            ->when($filters['angkatan'] ?? null, function (Builder $query, $angkatan) {
-                $query->where(function (Builder $student) use ($angkatan) {
-                    $student->where('angkatan', $angkatan)
-                        ->orWhereHas('kelas', fn (Builder $kelas) => $kelas->where('angkatan', $angkatan));
-                });
-            })
-            ->when($filters['semester'] ?? null, function (Builder $query, $semester) {
-                $query->where(function (Builder $student) use ($semester) {
-                    $student->where('semester', $semester)
-                        ->orWhereHas('kelas', fn (Builder $kelas) => $kelas->where('semester', $semester));
-                });
-            });
+            ->when($filters['angkatan'] ?? null, fn (Builder $query, $angkatan) => $query
+                ->where('angkatan', $angkatan))
+            ->when($filters['semester'] ?? null, fn (Builder $query, $semester) => $query
+                ->where('semester', $semester));
 
         if (! empty($filters['status_akses'])) {
             $this->applyAccessFilter($students, $periodeKrs, $filters['status_akses']);
@@ -97,7 +84,6 @@ class PeriodeKrsController extends Controller
             'periodeKrs' => $periodeKrs,
             'mahasiswas' => $students->orderBy('nama')->paginate(10)->withQueryString(),
             'prodis' => Prodi::orderBy('nama_prodi')->get(),
-            'kelases' => Kelas::orderBy('nama_kelas')->get(),
             'angkatans' => Mahasiswa::whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan'),
             'studentSuggestions' => Mahasiswa::where('is_active', true)
                 ->orderBy('nama')
@@ -351,12 +337,11 @@ class PeriodeKrsController extends Controller
     private function studentAccessFormData(): array
     {
         return [
-            'mahasiswas' => Mahasiswa::with(['prodi', 'kelas'])
+            'mahasiswas' => Mahasiswa::with('prodi')
                 ->where('is_active', true)
                 ->orderBy('nama')
                 ->get(),
             'prodis' => Prodi::orderBy('nama_prodi')->get(),
-            'kelases' => Kelas::orderBy('nama_kelas')->get(),
             'angkatans' => Mahasiswa::where('is_active', true)
                 ->whereNotNull('angkatan')
                 ->distinct()

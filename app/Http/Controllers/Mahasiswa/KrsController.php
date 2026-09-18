@@ -7,11 +7,13 @@ use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
+use App\Services\AvailableKrsScheduleService;
 use App\Services\KrsCardService;
 use App\Services\MahasiswaNilaiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class KrsController extends Controller
@@ -20,7 +22,10 @@ class KrsController extends Controller
     // HALAMAN KRS
     // =========================================================
 
-    public function index(MahasiswaNilaiService $nilaiService)
+    public function index(
+        MahasiswaNilaiService $nilaiService,
+        AvailableKrsScheduleService $scheduleService
+    )
     {
         // ===================== DATA MAHASISWA =====================
 
@@ -75,7 +80,6 @@ class KrsController extends Controller
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
-            'jadwal.kelas.prodi',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('is_manual', false)
@@ -98,8 +102,9 @@ class KrsController extends Controller
         // ===================== KRS PADA PERIODE AKTIF =====================
 
         $krsPeriodeAktif = $periodeKrs
-            ? $krs->where('tahun_akademik', $periodeKrs->tahun_akademik)
-                ->where('semester_akademik', $periodeKrs->semester)
+            ? $krs->filter(
+                fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
+            )
             : collect();
 
         // ===================== JADWAL YANG SUDAH DIAMBIL =====================
@@ -131,42 +136,21 @@ class KrsController extends Controller
 
         if ($periodeKrs && $aksesKrsDibuka) {
 
-            $jadwals = Jadwal::with([
-                'mataKuliah',
-                'dosen',
-                'ruangan',
-                'kelas.prodi',
-            ])
+            $jadwals = $scheduleService->forStudent(
+                $mahasiswa,
+                $periodeKrs,
+                $jadwalDiambil
+            );
 
-            // Jangan tampilkan jadwal yang sudah ada di KRS
-                ->whereNotIn('id', $jadwalDiambil)
-
-            // ===================== SESUAI PRODI =====================
-                ->whereHas('mataKuliah', function ($query) use ($mahasiswa) {
-
-                    $query->where(
-                        'prodi_id',
-                        $mahasiswa->prodi_id
-                    );
-
-                })
-
-            // ===================== SESUAI TAHUN AKADEMIK =====================
-                ->where(
-                    'tahun_akademik',
-                    $periodeKrs->tahun_akademik
-                )
-
-            // ===================== SESUAI SEMESTER AKADEMIK =====================
-                ->where(
-                    'semester_akademik',
-                    $periodeKrs->semester
-                )
-                ->orderByRaw("
-                CASE hari WHEN 'Senin' THEN 1 WHEN 'Selasa' THEN 2 WHEN 'Rabu' THEN 3 WHEN 'Kamis' THEN 4 WHEN 'Jumat' THEN 5 WHEN 'Sabtu' THEN 6 ELSE 0 END
-            ")
-                ->orderBy('jam_mulai')
-                ->get();
+            Log::debug('KRS available schedule lookup', [
+                'periode_krs_id' => $periodeKrs->id,
+                'mahasiswa_id' => $mahasiswa->id,
+                'prodi_id' => $mahasiswa->prodi_id,
+                'semester_mahasiswa' => $mahasiswa->semester,
+                'tahun_akademik' => $periodeKrs->tahun_akademik,
+                'semester_akademik' => $periodeKrs->semester,
+                'jumlah_jadwal' => $jadwals->count(),
+            ]);
         }
 
         // =========================================================
@@ -212,7 +196,11 @@ class KrsController extends Controller
     // AMBIL MATA KULIAH
     // =========================================================
 
-    public function store(Request $request, MahasiswaNilaiService $nilaiService)
+    public function store(
+        Request $request,
+        MahasiswaNilaiService $nilaiService,
+        AvailableKrsScheduleService $scheduleService
+    )
     {
         $mahasiswa = Mahasiswa::where(
             'user_id',
@@ -264,64 +252,23 @@ class KrsController extends Controller
 
         // ===================== AMBIL JADWAL =====================
 
-        $jadwal = Jadwal::with([
-            'mataKuliah',
-            'kelas.prodi',
-        ])
+        $jadwal = Jadwal::with('mataKuliah')
             ->findOrFail(
                 $request->jadwal_id
             );
 
-        // ===================== CEK PRODI =====================
-
-        if (
-            ! $jadwal->mataKuliah ||
-            $jadwal->mataKuliah->prodi_id != $mahasiswa->prodi_id
-        ) {
-
-            return back()->with(
-                'error',
-                'Mata kuliah tidak sesuai dengan Program Studi Anda.'
+        $krsPeriodeAktif = Krs::with('jadwal.mataKuliah')
+            ->where('mahasiswa_id', $mahasiswa->id)
+            ->where('is_manual', false)
+            ->get()
+            ->filter(
+                fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
             );
-        }
 
-        // ===================== CEK TAHUN AKADEMIK =====================
-
-        if (
-            $jadwal->tahun_akademik !=
-            $periodeKrs->tahun_akademik
-        ) {
-
-            return back()->with(
-                'error',
-                'Jadwal tidak termasuk dalam periode akademik KRS saat ini.'
-            );
-        }
-
-        // ===================== CEK SEMESTER AKADEMIK =====================
-
-        if (
-            $jadwal->semester_akademik !=
-            $periodeKrs->semester
-        ) {
-
-            return back()->with(
-                'error',
-                'Jadwal tidak sesuai dengan semester akademik KRS saat ini.'
-            );
-        }
-
-        // ===================== CEK DUPLIKAT =====================
-
-        $sudahAda = Krs::where(
-            'mahasiswa_id',
-            $mahasiswa->id
-        )
-            ->where(
-                'jadwal_id',
-                $jadwal->id
-            )
-            ->exists();
+        // Duplikasi hanya diperiksa pada periode aktif, bukan seluruh riwayat KRS.
+        $sudahAda = $krsPeriodeAktif->contains(
+            fn (Krs $item) => (int) $item->jadwal_id === (int) $jadwal->id
+        );
 
         if ($sudahAda) {
 
@@ -331,17 +278,23 @@ class KrsController extends Controller
             );
         }
 
+        // Gunakan aturan yang sama dengan daftar di halaman agar request buatan
+        // tidak dapat memilih jadwal di luar prodi/semester/periode mahasiswa.
+        $jadwalBolehDiambil = $scheduleService
+            ->forStudent($mahasiswa, $periodeKrs)
+            ->contains(fn (Jadwal $item) => (int) $item->id === (int) $jadwal->id);
+
+        if (! $jadwalBolehDiambil) {
+            return back()->with(
+                'error',
+                'Jadwal mata kuliah tidak tersedia untuk prodi, semester, dan periode KRS Anda.'
+            );
+        }
+
         // ===================== HITUNG TOTAL SKS =====================
 
-        $totalSks = Krs::where(
-            'mahasiswa_id',
-            $mahasiswa->id
-        )
-            ->where('tahun_akademik', $periodeKrs->tahun_akademik)
-            ->where('semester_akademik', $periodeKrs->semester)
+        $totalSks = $krsPeriodeAktif
             ->where('status', '!=', 'Ditolak')
-            ->with('jadwal.mataKuliah')
-            ->get()
             ->sum(function ($item) {
 
                 return $item->jadwal->mataKuliah->sks ?? 0;

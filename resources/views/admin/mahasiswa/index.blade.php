@@ -190,41 +190,6 @@
                     "
                 >
 
-                    {{-- KELAS --}}
-                    <div class="form-group">
-
-                        <label>Kelas</label>
-
-                        <select
-                            name="kelas_id"
-                            class="form-control"
-                        >
-
-                            <option value="">
-                                Semua Kelas
-                            </option>
-
-                            @foreach($kelases as $kelas)
-
-                                <option
-                                    value="{{ $kelas->id }}"
-                                    {{ request('kelas_id') == $kelas->id ? 'selected' : '' }}
-                                >
-                                    {{ $kelas->nama_kelas }}
-
-                                    @if($kelas->prodi)
-                                        - {{ $kelas->prodi->nama_prodi }}
-                                    @endif
-
-                                </option>
-
-                            @endforeach
-
-                        </select>
-
-                    </div>
-
-
                     {{-- ANGKATAN --}}
                     <div class="form-group">
 
@@ -344,7 +309,6 @@
                     request('search') ||
                     request('fakultas_id') ||
                     request('prodi_id') ||
-                    request('kelas_id') ||
                     request('angkatan') ||
                     request('semester')
                 )
@@ -378,7 +342,6 @@
                         <th>FAKULTAS</th>
 
                         <th>PROGRAM STUDI</th>
-                        <th>KELAS</th>
                         <th>DOSEN WALI</th>
                         <th>ANGKATAN</th>
                         <th>SEMESTER</th>
@@ -501,52 +464,10 @@
                             </td>
 
 
-                            {{-- ================= KELAS ================= --}}
-                            <td>
-
-                                @if($mahasiswa->kelas)
-
-                                    <span
-                                        style="
-                                            display:inline-block;
-                                            padding:5px 10px;
-                                            border-radius:20px;
-                                            background:#dbeafe;
-                                            color:#1d4ed8;
-                                            font-weight:600;
-                                            font-size:12px;
-                                        "
-                                    >
-                                        {{ $mahasiswa->kelas->nama_kelas }}
-                                    </span>
-
-                                @else
-
-                                    <span
-                                        style="
-                                            display:inline-block;
-                                            padding:5px 10px;
-                                            border-radius:20px;
-                                            background:#f1f5f9;
-                                            color:#64748b;
-                                            font-size:12px;
-                                        "
-                                    >
-                                        Belum Ditentukan
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-
                             {{-- ================= DOSEN WALI ================= --}}
                             <td>
 
-                                @if(
-                                    $mahasiswa->kelas &&
-                                    $mahasiswa->kelas->dosenWali
-                                )
+                                @if($mahasiswa->dosenWali)
 
                                     <span
                                         style="
@@ -559,7 +480,7 @@
                                             font-size:12px;
                                         "
                                     >
-                                        {{ $mahasiswa->kelas->dosenWali->nama }}
+                                        {{ $mahasiswa->dosenWali->nama }}
                                     </span>
 
                                 @else
@@ -659,7 +580,7 @@
                         <tr>
 
                             <td
-                                colspan="11"
+                                colspan="10"
                                 style="
                                     text-align:center;
                                     padding:50px 20px;

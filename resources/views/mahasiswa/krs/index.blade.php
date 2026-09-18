@@ -499,10 +499,6 @@
                                 </th>
 
                                 <th>
-                                    Kelas
-                                </th>
-
-                                <th>
                                     Dosen
                                 </th>
 
@@ -565,13 +561,6 @@
 
                                     <td>
                                         {{ $item->jadwal->mataKuliah->sks ?? 0 }}
-                                    </td>
-
-
-                                    {{-- KELAS --}}
-
-                                    <td>
-                                        {{ $item->jadwal->kelas->nama_kelas ?? '-' }}
                                     </td>
 
 
@@ -808,7 +797,7 @@
                                 <tr>
 
                                     <td
-                                        colspan="9"
+                                        colspan="8"
                                         style="
                                             text-align:center;
                                             padding:40px;
@@ -976,9 +965,8 @@
                                 font-size:13px;
                             "
                         >
-                            Belum terdapat jadwal mata kuliah yang
-                            sesuai dengan Program Studi dan periode
-                            akademik Anda.
+                            Belum ada mata kuliah tersedia untuk periode KRS ini.
+                            Hubungi admin akademik.
                         </p>
 
                     </div>
@@ -1016,10 +1004,6 @@
 
                                     <th>
                                         SKS
-                                    </th>
-
-                                    <th>
-                                        Kelas
                                     </th>
 
                                     <th>
@@ -1075,11 +1059,6 @@
                                                 SKS
                                             </span>
 
-                                        </td>
-
-
-                                        <td>
-                                            {{ $jadwal->kelas->nama_kelas ?? '-' }}
                                         </td>
 
 

@@ -117,8 +117,6 @@
 
                             <th>SKS</th>
 
-                            <th>Kelas</th>
-
                             <th>Semester</th>
 
                             <th>Status</th>
@@ -168,13 +166,6 @@
 
                                 <td>
                                     {{ $item->jadwal->mataKuliah->sks ?? 0 }}
-                                </td>
-
-
-                                {{-- ===================== KELAS ===================== --}}
-
-                                <td>
-                                    {{ $item->mahasiswa->kelas->nama_kelas ?? '-' }}
                                 </td>
 
 
@@ -428,7 +419,7 @@
                             <tr>
 
                                 <td
-                                    colspan="9"
+                                    colspan="8"
                                     style="
                                         text-align:center;
                                         padding:40px;

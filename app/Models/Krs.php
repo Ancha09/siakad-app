@@ -87,7 +87,7 @@ class Krs extends Model
 
     public function getKelasEfektifAttribute()
     {
-        return $this->jadwal?->kelas ?? $this->kelasManual ?? $this->mahasiswa?->kelas;
+        return $this->jadwal?->kelasRelasi ?? $this->kelasManual ?? $this->mahasiswa?->kelas;
     }
 
     public function getProdiEfektifAttribute()

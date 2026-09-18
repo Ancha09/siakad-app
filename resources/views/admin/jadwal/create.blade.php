@@ -91,33 +91,6 @@
                 </div>
 
 
-                {{-- KELAS --}}
-                <div class="form-group">
-                    <label>Kelas</label>
-
-                    <select name="kelas_id" class="form-control" required>
-                        <option value="">-- Pilih Kelas --</option>
-
-                        @foreach($kelases as $kelas)
-                            <option
-                                value="{{ $kelas->id }}"
-                                {{ old('kelas_id') == $kelas->id ? 'selected' : '' }}
-                            >
-                                {{ $kelas->nama_kelas }}
-                                -
-                                {{ $kelas->prodi->nama_prodi ?? '-' }}
-                                (Angkatan {{ $kelas->angkatan }})
-                            </option>
-                        @endforeach
-
-                    </select>
-
-                    <small style="color:#64748b;">
-                        Kelas terhubung dengan Program Studi dan angkatan.
-                    </small>
-                </div>
-
-
                 {{-- HARI --}}
                 <div class="form-group">
                     <label>Hari</label>
@@ -179,6 +152,7 @@
                         class="form-control"
                         value="{{ old('tahun_akademik') }}"
                         placeholder="Contoh: 2026/2027"
+                        required
                     >
                 </div>
 
@@ -190,22 +164,19 @@
                     <select
                         name="semester_akademik"
                         class="form-control"
+                        required
                     >
 
                         <option value="">
                             -- Pilih Semester --
                         </option>
 
-                        @for($i = 1; $i <= 14; $i++)
-
-                            <option
-                                value="{{ $i }}"
-                                {{ old('semester_akademik') == $i ? 'selected' : '' }}
-                            >
-                                Semester {{ $i }}
-                            </option>
-
-                        @endfor
+                        <option value="Ganjil" {{ in_array(strtolower((string) old('semester_akademik')), ['ganjil', '1', 'semester 1'], true) ? 'selected' : '' }}>
+                            Ganjil
+                        </option>
+                        <option value="Genap" {{ in_array(strtolower((string) old('semester_akademik')), ['genap', '2', 'semester 2'], true) ? 'selected' : '' }}>
+                            Genap
+                        </option>
 
                     </select>
                 </div>

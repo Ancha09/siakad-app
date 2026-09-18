@@ -13,13 +13,12 @@ class ProfileController extends Controller
         $mahasiswa = Mahasiswa::with([
             'user',
             'prodi.fakultas',
-            'kelas.dosenWali',
             'dosenWali',
         ])
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $dosenWali = $mahasiswa->kelas?->dosenWali ?? $mahasiswa->dosenWali;
+        $dosenWali = $mahasiswa->dosenWali;
 
         return view('mahasiswa.profil', compact('mahasiswa', 'dosenWali'));
     }
