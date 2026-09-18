@@ -17,13 +17,13 @@
                 <h2 id="filter-evaluasi-title">Filter Evaluasi Dosen</h2>
                 <p>Filter periode hanya memengaruhi jawaban evaluasi. Dosen tanpa jawaban pada periode tersebut tetap dapat ditampilkan.</p>
             </div>
-            <a href="{{ route('admin.kuesioner.pdf', request()->except('page')) }}" class="evaluation-button primary">Download PDF Full</a>
+            <a href="{{ route('admin.kuesioner.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary">Download PDF Full</a>
         </div>
 
         <form method="GET" action="{{ route('admin.kuesioner') }}" class="evaluation-filter-form">
             <label>
                 <span>Nama / NIDN</span>
-                <input type="search" name="search" value="{{ request('search') }}" placeholder="Cari nama atau NIDN dosen">
+                <input type="search" name="search" value="{{ request('search') }}" placeholder="Ketik huruf awal nama atau NIDN" autocomplete="off">
             </label>
 
             <label>
@@ -53,18 +53,18 @@
             <label>
                 <span>Semester</span>
                 <select name="semester_akademik">
-                    <option value="">Semua semester</option>
-                    <option value="Ganjil" @selected(request('semester_akademik') === 'Ganjil')>Ganjil</option>
-                    <option value="Genap" @selected(request('semester_akademik') === 'Genap')>Genap</option>
+                    <option value="" disabled @selected(empty($activeFilters['semester_akademik']))>Pilih semester</option>
+                    <option value="Ganjil" @selected(($activeFilters['semester_akademik'] ?? null) === 'Ganjil')>Ganjil</option>
+                    <option value="Genap" @selected(($activeFilters['semester_akademik'] ?? null) === 'Genap')>Genap</option>
                 </select>
             </label>
 
             <label>
                 <span>Tahun Akademik</span>
                 <select name="tahun_akademik">
-                    <option value="">Semua tahun</option>
+                    <option value="" disabled @selected(empty($activeFilters['tahun_akademik']))>Pilih tahun akademik</option>
                     @foreach($tahunAkademik as $tahun)
-                        <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                        <option value="{{ $tahun }}" @selected(($activeFilters['tahun_akademik'] ?? null) === $tahun)>{{ $tahun }}</option>
                     @endforeach
                 </select>
             </label>
@@ -177,14 +177,14 @@
                             </td>
                             <td class="column-action">
                                 @php
-                                    $detailQuery = array_merge(request()->except('page'), [
+                                    $detailQuery = array_merge($activeFilters, request()->except('page'), [
                                         'dosen' => $rekap->dosen->id,
                                         'return_url' => request()->fullUrl(),
                                     ]);
                                 @endphp
                                 <div class="evaluation-row-actions">
                                     <a href="{{ route('admin.kuesioner.dosen', $detailQuery) }}" class="evaluation-detail-button">Detail</a>
-                                    <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge(request()->except(['page', 'return_url']), ['dosen' => $rekap->dosen->id])) }}" class="evaluation-detail-button secondary">PDF</a>
+                                    <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge($activeFilters, request()->except(['page', 'return_url']), ['dosen' => $rekap->dosen->id])) }}" class="evaluation-detail-button secondary">PDF</a>
                                 </div>
                             </td>
                         </tr>

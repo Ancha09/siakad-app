@@ -100,6 +100,9 @@ class KrsController extends Controller
             'kelases' => Kelas::orderBy('nama_kelas')->get(),
             'angkatans' => Mahasiswa::whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan'),
             'tahunAkademiks' => Krs::where('is_manual', false)->whereNotNull('tahun_akademik')->distinct()->orderByDesc('tahun_akademik')->pluck('tahun_akademik'),
+            'studentSuggestions' => Mahasiswa::where('is_active', true)
+                ->orderBy('nama')
+                ->get(['id', 'nim', 'nama']),
         ]);
     }
 

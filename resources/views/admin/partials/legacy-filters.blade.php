@@ -3,7 +3,18 @@
 @endif
 <form method="GET" action="{{ route($resetRoute) }}" style="margin-bottom:20px">
     <div class="krs-form-grid">
-        <div class="form-group"><label for="filter-search">NIM / Nama mahasiswa</label><input id="filter-search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Cari mahasiswa"></div>
+        <div class="form-group">
+            <label for="filter-search">NIM / Nama mahasiswa</label>
+            <input id="filter-search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Ketik huruf awal nama atau NIM" list="legacy-student-suggestions" autocomplete="off">
+            <datalist id="legacy-student-suggestions">
+                @unless(request()->filled('search'))
+                    @foreach($mahasiswas as $mahasiswa)
+                        <option value="{{ $mahasiswa->nama }}">{{ $mahasiswa->nim }}</option>
+                        <option value="{{ $mahasiswa->nim }}">{{ $mahasiswa->nama }}</option>
+                    @endforeach
+                @endunless
+            </datalist>
+        </div>
         <div class="form-group"><label for="filter-class">Kelas</label><select id="filter-class" name="kelas_id" class="form-control"><option value="">Semua kelas</option>@foreach($kelases as $kelas)<option value="{{ $kelas->id }}" @selected(request('kelas_id') == $kelas->id)>{{ $kelas->nama_kelas }}</option>@endforeach</select></div>
         <div class="form-group"><label for="filter-prodi">Program Studi</label><select id="filter-prodi" name="prodi_id" class="form-control"><option value="">Semua prodi</option>@foreach($prodis as $prodi)<option value="{{ $prodi->id }}" @selected(request('prodi_id') == $prodi->id)>{{ $prodi->nama_prodi }}</option>@endforeach</select></div>
         <div class="form-group"><label for="filter-course">Mata Kuliah</label><select id="filter-course" name="mata_kuliah_id" class="form-control"><option value="">Semua mata kuliah</option>@foreach($mataKuliahs as $mk)<option value="{{ $mk->id }}" @selected(request('mata_kuliah_id') == $mk->id)>{{ $mk->kode_mk }} — {{ $mk->nama_mk }}</option>@endforeach</select></div>

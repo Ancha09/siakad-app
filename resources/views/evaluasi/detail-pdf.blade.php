@@ -59,7 +59,7 @@
 
         <h2>Komentar Mahasiswa (Anonim)</h2>
         <table class="data">
-            <thead><tr><th style="width:28px;">No</th><th>Konteks</th><th style="width:55px;">Skor</th><th>Komentar</th><th style="width:68px;">Tanggal</th></tr></thead>
+            <thead><tr><th style="width:28px;">No</th><th>Konteks</th><th style="width:55px;">Skor</th><th>Komentar</th></tr></thead>
             <tbody>
                 @forelse($komentar as $item)
                     <tr>
@@ -70,10 +70,9 @@
                         </td>
                         <td class="center">{{ number_format($item->rata_rata, 2) }}</td>
                         <td class="comment">{{ $item->komentar }}</td>
-                        <td>{{ $item->submitted_at?->format('d-m-Y') }}</td>
                     </tr>
                 @empty
-                    <tr><td colspan="5" class="center muted">Belum ada komentar tertulis.</td></tr>
+                    <tr><td colspan="4" class="center muted">Belum ada komentar tertulis.</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -88,27 +88,6 @@
 
 </a>
 
-              <!-- Absensi -->
-             <a href="{{ route('dosen.absensi') }}" class="hero-menu-card">
-
-    <div class="hero-card-icon">
-        <svg viewBox="0 0 24 24">
-            <path d="M9 11l3 3L22 4"/>
-            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-            <circle cx="18" cy="18" r="3"/>
-            <path d="M18 16v2l1 1"/>
-        </svg>
-    </div>
-
-    <div class="hero-card-title">
-        Absensi Mahasiswa
-    </div>
-
-    <div class="hero-card-desc">
-        Kelola kehadiran kelas
-    </div>
-
-</a>
             </div><!-- / row 1 -->
 
             <!-- Baris 2 -->

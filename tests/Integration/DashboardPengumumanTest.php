@@ -29,14 +29,20 @@ class DashboardPengumumanTest extends TestCase
             Schema::create($table, function (Blueprint $t) use ($table) {
                 $t->id();
                 $t->timestamps();
-                if ($table === 'prodis') $t->string('nama_prodi');
+                if ($table === 'prodis') {
+                    $t->string('nama_prodi');
+                }
                 if (in_array($table, ['dosens', 'mahasiswas'])) {
                     $t->unsignedBigInteger('prodi_id')->nullable();
                     $t->unsignedBigInteger('user_id')->nullable();
                     $t->string('nama')->default('Test');
                 }
-                if ($table === 'mahasiswas') $t->unsignedBigInteger('kelas_id')->nullable();
-                if ($table === 'mata_kuliahs') $t->integer('sks');
+                if ($table === 'mahasiswas') {
+                    $t->unsignedBigInteger('kelas_id')->nullable();
+                }
+                if ($table === 'mata_kuliahs') {
+                    $t->integer('sks');
+                }
                 if ($table === 'jadwals') {
                     $t->unsignedBigInteger('dosen_id');
                     $t->unsignedBigInteger('mata_kuliah_id');
@@ -46,12 +52,24 @@ class DashboardPengumumanTest extends TestCase
                     $t->unsignedBigInteger('jadwal_id');
                     $t->string('status');
                 }
-                if (in_array($table, ['jadwals', 'krs', 'khs', 'periode_krs'])) $t->string('tahun_akademik');
-                if (in_array($table, ['khs', 'presensis'])) $t->unsignedBigInteger('krs_id');
-                if ($table === 'khs') $t->decimal('bobot')->nullable();
-                if ($table === 'presensis') $t->string('status');
-                if (in_array($table, ['presensis', 'presensi_pertemuans'])) $t->date('tanggal');
-                if ($table === 'presensi_pertemuans') $t->unsignedBigInteger('jadwal_id');
+                if (in_array($table, ['jadwals', 'krs', 'khs', 'periode_krs'])) {
+                    $t->string('tahun_akademik');
+                }
+                if (in_array($table, ['khs', 'presensis'])) {
+                    $t->unsignedBigInteger('krs_id');
+                }
+                if ($table === 'khs') {
+                    $t->decimal('bobot')->nullable();
+                }
+                if ($table === 'presensis') {
+                    $t->string('status');
+                }
+                if (in_array($table, ['presensis', 'presensi_pertemuans'])) {
+                    $t->date('tanggal');
+                }
+                if ($table === 'presensi_pertemuans') {
+                    $t->unsignedBigInteger('jadwal_id');
+                }
             });
         }
         (require database_path('migrations/2026_09_13_000000_create_template_bimbingans_table.php'))->up();
@@ -80,7 +98,9 @@ class DashboardPengumumanTest extends TestCase
         ];
         $this->assertSame([$visible->id], Pengumuman::terlihat($student)->pluck('id')->all());
         $this->actingAs($student)->get(route('mahasiswa.pemberitahuan'))->assertOk()->assertSee($visible->judul)->assertDontSee('Rahasia dosen');
-        foreach ($hidden as $item) $this->post(route('mahasiswa.pemberitahuan.baca', $item))->assertNotFound();
+        foreach ($hidden as $item) {
+            $this->post(route('mahasiswa.pemberitahuan.baca', $item))->assertNotFound();
+        }
         $this->get(route('admin.pengumuman.index'))->assertForbidden();
         $this->get(route('admin.dashboard'))->assertForbidden();
         $this->get(route('dosen.pemberitahuan'))->assertForbidden();
@@ -165,13 +185,22 @@ class DashboardPengumumanTest extends TestCase
         $this->assertSame(2, $s['totalStudents']);
         $this->assertEquals(50, $s['attendance']);
         $this->assertEquals(6.3, $s['progress']);
-        $this->actingAs($this->account('admin'))->get(route('admin.dashboard', ['tahun' => '2026/2027']))->assertOk()->assertSee('3,50')->assertSee('Turun');
+        $this->actingAs($this->account('admin'))
+            ->get(route('admin.dashboard', ['tahun' => '2026/2027']))
+            ->assertOk()
+            ->assertSee('3,50')
+            ->assertSee('Turun')
+            ->assertDontSee('Kehadiran kuliah')
+            ->assertDontSee('Progres perkuliahan');
+        $this->assertSame(4, DB::table('presensis')->count());
     }
 
     public function test_empty_summary_does_not_invent_percentages_or_ipk_changes(): void
     {
         $s = app(AkademikDashboard::class)->summary('2026/2027');
-        foreach (['ipk', 'previousIpk', 'delta', 'progress', 'attendance'] as $key) $this->assertNull($s[$key]);
+        foreach (['ipk', 'previousIpk', 'delta', 'progress', 'attendance'] as $key) {
+            $this->assertNull($s[$key]);
+        }
         $this->actingAs($this->account('admin'))->get(route('admin.dashboard'))->assertOk()->assertSee('Belum cukup data');
         $this->get(route('admin.dashboard', ['tahun' => 'invalid']))->assertSessionHasErrors('tahun');
         $this->actingAs($this->account('dosen'))->get(route('dosen.dashboard'))->assertOk()->assertSee('Belum ada pengumuman');
@@ -183,8 +212,18 @@ class DashboardPengumumanTest extends TestCase
         DB::table('mahasiswas')->insert(['user_id' => $student->id]);
         $this->announcement(['judul' => 'Khusus mahasiswa']);
         $this->announcement(['judul' => 'Khusus dosen', 'penerima' => 'dosen']);
-        $this->actingAs($student)->get(route('mahasiswa.dashboard'))->assertOk()->assertSee('Khusus mahasiswa')->assertDontSee('Khusus dosen');
-        $this->actingAs($this->account('dosen'))->get(route('dosen.dashboard'))->assertOk()->assertSee('Khusus dosen')->assertDontSee('Khusus mahasiswa');
+        $this->actingAs($student)
+            ->get(route('mahasiswa.dashboard'))
+            ->assertOk()
+            ->assertSee('Khusus mahasiswa')
+            ->assertDontSee('Khusus dosen')
+            ->assertDontSee('Presensi &amp; Agenda', false);
+        $this->actingAs($this->account('dosen'))
+            ->get(route('dosen.dashboard'))
+            ->assertOk()
+            ->assertSee('Khusus dosen')
+            ->assertDontSee('Khusus mahasiswa')
+            ->assertDontSee('Absensi Mahasiswa');
     }
 
     public function test_schedule_uses_jakarta_time_and_becomes_visible_without_a_job(): void

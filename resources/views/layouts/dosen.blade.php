@@ -84,7 +84,6 @@
             <div class="nav-section-label">Perkuliahan</div>
             <x-sidebar-item route="dosen.matakuliah" :active="request()->routeIs('dosen.matakuliah', 'dosen.matakuliah.*')" icon="book" badge="Baru">Mata Kuliah Ampu</x-sidebar-item>
             <x-sidebar-item route="dosen.jadwal" :active="request()->routeIs('dosen.jadwal', 'dosen.jadwal.*')" icon="calendar">Jadwal Mengajar</x-sidebar-item>
-            <x-sidebar-item route="dosen.absensi" :active="request()->routeIs('dosen.absensi', 'dosen.presensi', 'dosen.presensi.*')" icon="attendance">Absensi Mahasiswa</x-sidebar-item>
             <x-sidebar-item route="dosen.nilai" :active="request()->routeIs('dosen.nilai', 'dosen.nilai.*') && ! request()->routeIs('dosen.nilai.rekap')" icon="file-check">Input Nilai</x-sidebar-item>
             <x-sidebar-item route="dosen.nilai.rekap" :active="request()->routeIs('dosen.nilai.rekap', 'dosen.nilai.rekap.*')" icon="chart">Rekap Nilai</x-sidebar-item>
             <x-sidebar-item route="dosen.evaluasi" :active="request()->routeIs('dosen.evaluasi', 'dosen.evaluasi.*')" icon="clipboard">Evaluasi Saya</x-sidebar-item>
@@ -245,10 +244,6 @@
     <a href="{{ route('dosen.nilai') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('dosen.nilai', 'dosen.nilai.*')]) @if(request()->routeIs('dosen.nilai', 'dosen.nilai.*')) aria-current="page" @endif>
         <x-layout-icon name="file-check" />
         <span>Nilai</span>
-    </a>
-    <a href="{{ route('dosen.absensi') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('dosen.absensi', 'dosen.presensi', 'dosen.presensi.*')]) @if(request()->routeIs('dosen.absensi', 'dosen.presensi', 'dosen.presensi.*')) aria-current="page" @endif>
-        <x-layout-icon name="attendance" />
-        <span>Absensi</span>
     </a>
     <a href="{{ route('dosen.profil') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('dosen.profil', 'dosen.profil.*')]) @if(request()->routeIs('dosen.profil', 'dosen.profil.*')) aria-current="page" @endif>
         <x-layout-icon name="user" />

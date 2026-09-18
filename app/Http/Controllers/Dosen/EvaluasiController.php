@@ -18,7 +18,7 @@ class EvaluasiController extends Controller
     public function index(Request $request)
     {
         $dosen = $this->authenticatedLecturer($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request), $dosen);
         $report = $this->evaluations->report($dosen, $filters);
 
         return view('dosen.evaluasi.index', array_merge(
@@ -26,6 +26,7 @@ class EvaluasiController extends Controller
             $this->evaluations->filterOptions($dosen),
             [
                 'dosen' => $dosen,
+                'activeFilters' => $filters,
                 'komentar' => $this->evaluations->comments($report['krsIds'])
                     ->paginate(10)
                     ->withQueryString(),
@@ -36,7 +37,7 @@ class EvaluasiController extends Controller
     public function pdf(Request $request)
     {
         $dosen = $this->authenticatedLecturer($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request), $dosen);
         $report = $this->evaluations->report($dosen, $filters);
 
         return Pdf::loadView('evaluasi.detail-pdf', array_merge($report, [

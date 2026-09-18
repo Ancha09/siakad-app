@@ -71,7 +71,7 @@ function buatDataEvaluasiAdmin(): array
     $kuesioner = $krs->kuesioner()->create([
         ...$jawaban,
         'komentar' => 'Penyampaian materi sangat terstruktur.',
-        'submitted_at' => now(),
+        'submitted_at' => '2020-01-02 12:34:00',
     ]);
 
     return compact('admin', 'prodi', 'dosenDinilai', 'dosenBelum', 'mataKuliah', 'kelas', 'mahasiswa', 'kuesioner');
@@ -121,6 +121,7 @@ test('evaluation detail shows aggregates and anonymous comments without student 
     [
         'admin' => $admin,
         'dosenDinilai' => $dosen,
+        'kuesioner' => $kuesioner,
     ] = buatDataEvaluasiAdmin();
 
     $this->actingAs($admin)
@@ -135,8 +136,61 @@ test('evaluation detail shows aggregates and anonymous comments without student 
         ->assertSee('Penyampaian materi sangat terstruktur.')
         ->assertSee('Mata Kuliah Evaluasi')
         ->assertSee('TI Reguler A')
+        ->assertDontSee($kuesioner->submitted_at->format('d M Y'))
         ->assertDontSee('Identitas Mahasiswa Rahasia')
         ->assertDontSee('EVAL-MHS-001');
+});
+
+test('evaluation overview defaults to one latest academic semester', function () {
+    $data = buatDataEvaluasiAdmin();
+    $mahasiswa = Mahasiswa::create([
+        'nim' => 'EVAL-MHS-LATEST',
+        'nama' => 'Responden Semester Terbaru',
+        'prodi_id' => $data['prodi']->id,
+        'kelas_id' => $data['kelas']->id,
+    ]);
+    $jadwal = Jadwal::where('mata_kuliah_id', $data['mataKuliah']->id)->firstOrFail();
+    $krs = Krs::create([
+        'mahasiswa_id' => $mahasiswa->id,
+        'jadwal_id' => $jadwal->id,
+        'status' => 'Disetujui',
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Genap',
+    ]);
+    $answers = collect(array_keys(Kuesioner::PERTANYAAN))
+        ->mapWithKeys(fn (string $column) => [$column => 2])
+        ->all();
+    $krs->kuesioner()->create([
+        ...$answers,
+        'dosen_id' => $data['dosenDinilai']->id,
+        'mata_kuliah_id' => $data['mataKuliah']->id,
+        'kelas_id' => $data['kelas']->id,
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Genap',
+        'komentar' => 'Komentar khusus semester terbaru.',
+        'submitted_at' => now(),
+    ]);
+
+    $latest = $this->actingAs($data['admin'])->get(route('admin.kuesioner'));
+    $latest->assertOk()
+        ->assertSee('2027/2028')
+        ->assertSee('Genap')
+        ->assertDontSee('Penyampaian materi sangat terstruktur.');
+    $latestRow = $latest->viewData('evaluasiDosen')->getCollection()
+        ->first(fn ($item) => $item->dosen->is($data['dosenDinilai']));
+    expect($latestRow->jumlah_responden)->toBe(1)
+        ->and($latestRow->rata_rata)->toBe(2.0)
+        ->and($latest->viewData('activeFilters')['tahun_akademik'])->toBe('2027/2028')
+        ->and($latest->viewData('activeFilters')['semester_akademik'])->toBe('Genap');
+
+    $older = $this->get(route('admin.kuesioner', [
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]));
+    $olderRow = $older->viewData('evaluasiDosen')->getCollection()
+        ->first(fn ($item) => $item->dosen->is($data['dosenDinilai']));
+    expect($olderRow->jumlah_responden)->toBe(1)
+        ->and($olderRow->rata_rata)->toBe(4.0);
 });
 
 test('unevaluated lecturer detail has a clear empty state', function () {

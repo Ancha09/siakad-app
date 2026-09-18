@@ -111,7 +111,6 @@
             <x-sidebar-item route="mahasiswa.kurikulum" :active="request()->routeIs('mahasiswa.kurikulum', 'mahasiswa.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.krs" :active="request()->routeIs('mahasiswa.krs', 'mahasiswa.krs.*')" icon="file-check">KRS</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.jadwal" :active="request()->routeIs('mahasiswa.jadwal', 'mahasiswa.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
-            <x-sidebar-item route="mahasiswa.presensi" :active="request()->routeIs('mahasiswa.presensi', 'mahasiswa.presensi.*')" icon="attendance">Presensi</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.khs" :active="request()->routeIs('mahasiswa.khs', 'mahasiswa.khs.*')" icon="file-chart">KHS &amp; Transkrip</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.kuesioner" :active="request()->routeIs('mahasiswa.kuesioner', 'mahasiswa.kuesioner.*')" icon="clipboard">Kuesioner Dosen</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.skripsi" :active="request()->routeIs('mahasiswa.skripsi', 'mahasiswa.skripsi.*')" icon="graduation">Pengajuan Skripsi</x-sidebar-item>
@@ -390,10 +389,6 @@
     <a href="{{ route('mahasiswa.jadwal') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('mahasiswa.jadwal', 'mahasiswa.jadwal.*')]) @if(request()->routeIs('mahasiswa.jadwal', 'mahasiswa.jadwal.*')) aria-current="page" @endif>
         <x-layout-icon name="calendar" />
         <span>Jadwal</span>
-    </a>
-    <a href="{{ route('mahasiswa.presensi') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('mahasiswa.presensi', 'mahasiswa.presensi.*')]) @if(request()->routeIs('mahasiswa.presensi', 'mahasiswa.presensi.*')) aria-current="page" @endif>
-        <x-layout-icon name="attendance" />
-        <span>Presensi</span>
     </a>
     <a href="{{ route('mahasiswa.profil') }}" @class(['app-mobile-nav-item', 'active' => request()->routeIs('mahasiswa.profil', 'mahasiswa.profil.*')]) @if(request()->routeIs('mahasiswa.profil', 'mahasiswa.profil.*')) aria-current="page" @endif>
         <x-layout-icon name="user" />

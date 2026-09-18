@@ -14,11 +14,10 @@
     <div class="academic-stats">
         <a class="academic-stat" href="{{ route('admin.dosen') }}"><span class="academic-stat-icon"><x-layout-icon name="graduation" /></span><p>Dosen aktif mengajar</p><strong>{{ $number($stats['activeLecturers']) }}</strong><small>Dari {{ $number($stats['totalLecturers']) }} dosen; memiliki jadwal {{ $stats['year'] }}.</small></a>
         <a class="academic-stat" href="{{ route('admin.mahasiswa') }}"><span class="academic-stat-icon gold"><x-layout-icon name="users" /></span><p>Total mahasiswa</p><strong>{{ $number($stats['totalStudents']) }}</strong><small>Seluruh mahasiswa yang tercatat saat ini.</small></a>
-        <a class="academic-stat" href="{{ route('admin.presensi') }}"><span class="academic-stat-icon green"><x-layout-icon name="attendance" /></span><p>Kehadiran kuliah</p><strong>{{ $number($stats['attendance'], 1) }}{{ $stats['attendance'] === null ? '' : '%' }}</strong><small>{{ $number($stats['attendanceTotal']) }} catatan presensi pada tahun terpilih.</small></a>
         <div class="academic-stat"><span class="academic-stat-icon violet"><x-layout-icon name="chart" /></span><p>Rata-rata IPK kampus</p><strong>{{ $number($stats['ipk'], 2) }}</strong><small>{{ $number($stats['gradedStudents']) }} mahasiswa memiliki nilai sampai {{ $stats['year'] }}.</small></div>
     </div>
     <div class="academic-grid">
-        <section class="academic-panel">
+        <section class="academic-panel" style="grid-column:1 / -1;">
             <div class="announcement-heading"><div><h3>Perubahan IPK</h3><p class="announcement-muted">Tahun akademik sebelumnya dan tahun terpilih</p></div>
             @if($stats['delta'] !== null)<span class="badge {{ $stats['delta'] < 0 ? 'badge-red' : 'badge-green' }}">{{ $stats['delta'] > 0 ? 'Naik' : ($stats['delta'] < 0 ? 'Turun' : 'Tetap') }} {{ $number(abs($stats['delta']), 2) }}</span>@endif</div>
             @foreach([[$stats['previousYear'], $stats['previousIpk'], $stats['previousGradedStudents']], [$stats['year'], $stats['ipk'], $stats['gradedStudents']]] as [$year, $ipk, $count])
@@ -36,16 +35,6 @@
                 <p class="academic-note">Rata-rata IPK {{ $stats['delta'] < 0 ? 'menurun' : ($stats['delta'] > 0 ? 'meningkat' : 'tetap') }} {{ $number(abs($stats['delta']), 2) }} poin dibanding {{ $stats['previousYear'] }}.</p>
             @endif
             <details class="academic-method"><summary>Cara menghitung IPK</summary><p>IPK setiap mahasiswa = jumlah (bobot nilai × SKS) ÷ jumlah SKS dari seluruh KHS bernilai pada KRS yang disetujui, sampai tahun terpilih. Semua pengambilan mata kuliah dihitung sesuai perhitungan KHS saat ini. Rata-rata kampus adalah rata-rata IPK mahasiswa tersebut; jumlah mahasiswa pada kedua tahun dapat berbeda. Nilai kosong tidak dianggap nol.</p></details>
-        </section>
-        <section class="academic-panel">
-            <h3>Progres perkuliahan</h3><p class="announcement-muted">Pertemuan yang sudah dicatat sampai hari ini</p>
-            <div class="academic-progress-number">{{ $number($stats['progress'], 1) }}<span>{{ $stats['progress'] === null ? '' : '%' }}</span></div>
-            <progress class="academic-track green" max="100" value="{{ $stats['progress'] ?? 0 }}" aria-label="Progres perkuliahan">
-                {{ $number($stats['progress'], 1) }}%
-            </progress>
-            <div class="academic-progress-meta"><div><strong>{{ $number($stats['completed']) }}</strong><span>Pertemuan tercatat</span></div><div><strong>{{ $number($stats['planned']) }}</strong><span>Target pertemuan</span></div><div><strong>{{ $stats['totalClasses'] }}</strong><span>Kelas terjadwal</span></div></div>
-            <p class="academic-note">Target 16 pertemuan per kelas, mengikuti batas input presensi. Kelas pada semester ganjil dan genap tahun {{ $stats['year'] }} ikut dihitung.</p>
-            <p class="announcement-muted">Kehadiran = status Hadir ÷ seluruh catatan Hadir, Izin, Sakit, dan Alpha pada KRS yang disetujui. Presensi yang belum diisi tidak dianggap Alpha.</p>
         </section>
     </div>
     <section class="academic-panel">

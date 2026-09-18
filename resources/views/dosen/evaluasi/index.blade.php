@@ -17,7 +17,7 @@
                 <h2 id="filter-evaluasi-saya">Evaluasi Saya</h2>
                 <p>Identitas mahasiswa, NIM, user ID, dan mahasiswa ID tidak ditampilkan pada halaman maupun dokumen PDF.</p>
             </div>
-            <a href="{{ route('dosen.evaluasi.pdf', request()->except('page')) }}" class="evaluation-button primary">Download PDF</a>
+            <a href="{{ route('dosen.evaluasi.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary">Download PDF</a>
         </div>
 
         <form method="GET" action="{{ route('dosen.evaluasi') }}" class="evaluation-filter-form lecturer-filter-form">
@@ -36,18 +36,18 @@
             <label>
                 <span>Semester</span>
                 <select name="semester_akademik">
-                    <option value="">Semua semester</option>
-                    <option value="Ganjil" @selected(request('semester_akademik') === 'Ganjil')>Ganjil</option>
-                    <option value="Genap" @selected(request('semester_akademik') === 'Genap')>Genap</option>
+                    <option value="" disabled @selected(empty($activeFilters['semester_akademik']))>Pilih semester</option>
+                    <option value="Ganjil" @selected(($activeFilters['semester_akademik'] ?? null) === 'Ganjil')>Ganjil</option>
+                    <option value="Genap" @selected(($activeFilters['semester_akademik'] ?? null) === 'Genap')>Genap</option>
                 </select>
             </label>
 
             <label>
                 <span>Tahun Akademik</span>
                 <select name="tahun_akademik">
-                    <option value="">Semua tahun</option>
+                    <option value="" disabled @selected(empty($activeFilters['tahun_akademik']))>Pilih tahun akademik</option>
                     @foreach($filterTahunAkademik as $tahun)
-                        <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                        <option value="{{ $tahun }}" @selected(($activeFilters['tahun_akademik'] ?? null) === $tahun)>{{ $tahun }}</option>
                     @endforeach
                 </select>
             </label>
@@ -171,7 +171,6 @@
                                 <strong>Responden anonim</strong>
                                 <span>{{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? 'Mata kuliah tidak tersedia' }}</span>
                             </div>
-                            <time datetime="{{ $item->submitted_at?->toIso8601String() }}">{{ $item->submitted_at?->format('d M Y') }}</time>
                         </div>
                         <p>{{ $item->komentar }}</p>
                         <small>

@@ -103,20 +103,6 @@
                 <div class="hero-card-desc">Informasi &amp; riwayat bayar</div>
               </a>
 
-              <!-- Presensi -->
-              <a href="{{ route('mahasiswa.presensi') }}" class="hero-menu-card">
-                <div class="hero-card-icon">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M9 11l3 3L22 4"/>
-                    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-                    <circle cx="18" cy="18" r="3"/>
-                    <path d="M18 16v2l1 1"/>
-                  </svg>
-                </div>
-                <div class="hero-card-title">Presensi &amp; Agenda</div>
-                <div class="hero-card-desc">Rekap kehadiran kuliah</div>
-              </a>
-
               <a href="{{ route('mahasiswa.kuesioner') }}" class="hero-menu-card" @if($kuesionerTertunda > 0) style="box-shadow:0 0 0 2px #fbbf24,0 12px 28px rgba(15,23,42,.18);" @endif>
                 <div class="hero-card-icon">
                   <svg viewBox="0 0 24 24"><path d="M9 4H5v18h14V4h-4"/><path d="M9 2h6v4H9zM8 12l2 2 4-4M8 18h8"/></svg>

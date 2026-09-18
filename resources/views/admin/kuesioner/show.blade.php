@@ -12,7 +12,7 @@
 <div class="evaluation-page">
     <div class="evaluation-back-row">
         <a href="{{ $returnUrl }}" class="evaluation-button secondary">&larr; Kembali ke Daftar</a>
-        <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge(request()->except(['page', 'return_url']), ['dosen' => $dosen->id])) }}" class="evaluation-button primary">Download PDF</a>
+        <a href="{{ route('admin.kuesioner.dosen.pdf', array_merge($activeFilters, request()->except(['page', 'return_url']), ['dosen' => $dosen->id])) }}" class="evaluation-button primary">Download PDF</a>
     </div>
 
     <section class="evaluation-profile-card">
@@ -115,7 +115,6 @@
                                 <strong>{{ $item->kode_responden }}</strong>
                                 <span>{{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? 'Mata kuliah tidak tersedia' }}</span>
                             </div>
-                            <time datetime="{{ $item->submitted_at?->toIso8601String() }}">{{ $item->submitted_at?->format('d M Y, H:i') }}</time>
                         </div>
                         <p>{{ $item->komentar }}</p>
                         <small>

@@ -99,6 +99,9 @@ class PeriodeKrsController extends Controller
             'prodis' => Prodi::orderBy('nama_prodi')->get(),
             'kelases' => Kelas::orderBy('nama_kelas')->get(),
             'angkatans' => Mahasiswa::whereNotNull('angkatan')->distinct()->orderByDesc('angkatan')->pluck('angkatan'),
+            'studentSuggestions' => Mahasiswa::where('is_active', true)
+                ->orderBy('nama')
+                ->get(['id', 'nim', 'nama']),
         ]);
     }
 

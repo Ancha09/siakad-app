@@ -17,7 +17,15 @@
                   style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end;">
                 <div class="form-group" style="margin:0;">
                     <label for="search">Nama atau NIM</label>
-                    <input id="search" class="form-control" type="search" name="search" value="{{ request('search') }}" placeholder="Cari mahasiswa...">
+                    <input id="search" class="form-control" type="search" name="search" value="{{ request('search') }}" placeholder="Ketik huruf awal nama atau NIM" list="krs-student-suggestions" autocomplete="off">
+                    <datalist id="krs-student-suggestions">
+                        @unless(request()->filled('search'))
+                            @foreach($studentSuggestions as $studentSuggestion)
+                                <option value="{{ $studentSuggestion->nama }}">{{ $studentSuggestion->nim }}</option>
+                                <option value="{{ $studentSuggestion->nim }}">{{ $studentSuggestion->nama }}</option>
+                            @endforeach
+                        @endunless
+                    </datalist>
                 </div>
                 <div class="form-group" style="margin:0;">
                     <label for="angkatan">Angkatan</label>

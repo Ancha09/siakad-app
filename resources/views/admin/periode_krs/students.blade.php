@@ -46,7 +46,15 @@
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;align-items:end;">
                 <div>
                     <label for="search">Nama / NIM</label>
-                    <input id="search" class="form-control" type="text" name="search" value="{{ request('search') }}" placeholder="Cari mahasiswa">
+                    <input id="search" class="form-control" type="search" name="search" value="{{ request('search') }}" placeholder="Ketik huruf awal nama atau NIM" list="access-student-suggestions" autocomplete="off">
+                    <datalist id="access-student-suggestions">
+                        @unless(request()->filled('search'))
+                            @foreach($studentSuggestions as $studentSuggestion)
+                                <option value="{{ $studentSuggestion->nama }}">{{ $studentSuggestion->nim }}</option>
+                                <option value="{{ $studentSuggestion->nim }}">{{ $studentSuggestion->nama }}</option>
+                            @endforeach
+                        @endunless
+                    </datalist>
                 </div>
 
                 <div>

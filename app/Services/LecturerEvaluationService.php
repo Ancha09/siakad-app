@@ -69,6 +69,39 @@ class LecturerEvaluationService
             ->values();
     }
 
+    public function withDefaultPeriod(array $filters, ?Dosen $dosen = null): array
+    {
+        if (filled($filters['tahun_akademik'] ?? null)
+            && filled($filters['semester_akademik'] ?? null)) {
+            return $filters;
+        }
+
+        $periodQuery = $this->rows($filters);
+        if ($dosen) {
+            $periodQuery->whereRaw(self::EFFECTIVE_DOSEN_SQL.' = ?', [$dosen->id]);
+        }
+
+        $period = $periodQuery
+            ->selectRaw(self::EFFECTIVE_TAHUN_SQL.' AS periode_tahun')
+            ->selectRaw(self::EFFECTIVE_SEMESTER_SQL.' AS periode_semester')
+            ->whereNotNull(DB::raw(self::EFFECTIVE_TAHUN_SQL))
+            ->whereNotNull(DB::raw(self::EFFECTIVE_SEMESTER_SQL))
+            ->orderByRaw(self::EFFECTIVE_TAHUN_SQL.' DESC')
+            ->orderByRaw('CASE '.self::EFFECTIVE_SEMESTER_SQL." WHEN 'Genap' THEN 2 WHEN 'Ganjil' THEN 1 ELSE 0 END DESC")
+            ->first();
+
+        if ($period) {
+            if (! filled($filters['tahun_akademik'] ?? null)) {
+                $filters['tahun_akademik'] = $period->periode_tahun;
+            }
+            if (! filled($filters['semester_akademik'] ?? null)) {
+                $filters['semester_akademik'] = $period->periode_semester;
+            }
+        }
+
+        return $filters;
+    }
+
     /** @return EloquentCollection<int, Kuesioner> */
     public function answers(Collection $krsIds): EloquentCollection
     {

@@ -23,18 +23,19 @@ class KuesionerController extends Controller
     public function index(Request $request)
     {
         $this->ensureAdmin($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request));
 
         return view('admin.kuesioner.index', array_merge(
             $this->overviewData($filters, true),
-            $this->filterOptions()
+            $this->filterOptions(),
+            ['activeFilters' => $filters]
         ));
     }
 
     public function show(Request $request, Dosen $dosen, LegacyListNavigation $navigation)
     {
         $this->ensureAdmin($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request), $dosen);
         $report = $this->evaluations->report($dosen, $filters);
 
         return view('admin.kuesioner.show', array_merge($report, [
@@ -43,13 +44,14 @@ class KuesionerController extends Controller
                 ->paginate(10)
                 ->withQueryString(),
             'returnUrl' => $navigation->returnUrl($request, 'admin.kuesioner'),
+            'activeFilters' => $filters,
         ]));
     }
 
     public function pdfDetail(Request $request, Dosen $dosen)
     {
         $this->ensureAdmin($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request), $dosen);
         $report = $this->evaluations->report($dosen, $filters);
 
         return Pdf::loadView('evaluasi.detail-pdf', array_merge($report, [
@@ -65,7 +67,7 @@ class KuesionerController extends Controller
     public function pdf(Request $request)
     {
         $this->ensureAdmin($request);
-        $filters = $this->validatedFilters($request);
+        $filters = $this->evaluations->withDefaultPeriod($this->validatedFilters($request));
 
         return Pdf::loadView('admin.kuesioner.pdf-full', array_merge(
             $this->overviewData($filters, false),

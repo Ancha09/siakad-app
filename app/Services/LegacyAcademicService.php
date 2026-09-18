@@ -6,6 +6,7 @@ use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\Krs;
+use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
 use Illuminate\Database\Eloquent\Builder;
@@ -168,6 +169,9 @@ class LegacyAcademicService
     public function filterOptions(): array
     {
         return [
+            'mahasiswas' => Mahasiswa::where('is_active', true)
+                ->orderBy('nama')
+                ->get(['id', 'nim', 'nama']),
             'prodis' => Prodi::orderBy('nama_prodi')->get(),
             'kelases' => Kelas::orderBy('nama_kelas')->get(),
             'mataKuliahs' => MataKuliah::orderBy('kode_mk')->get(),
