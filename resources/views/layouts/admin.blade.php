@@ -81,7 +81,7 @@
             >
 
                 <span class="lb-star">
-                    ⭐
+                    <x-layout-icon name="star" />
                 </span>
 
                 <span class="lb-text">

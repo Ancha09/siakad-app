@@ -8,7 +8,7 @@
 
     <div class="info-alert">
 
-        <span>📅</span>
+        <span class="icon-inline"><x-layout-icon name="calendar" /></span>
 
         <div>
             <strong>Jadwal Kuliah</strong>
@@ -23,7 +23,7 @@
 
         <div class="page-card-head">
 
-            <h2>📚 Jadwal Kuliah Saya</h2>
+            <h2 class="icon-heading"><x-layout-icon name="calendar" /> Jadwal Kuliah Saya</h2>
 
             <span class="badge badge-green">
                 Semester Aktif
@@ -117,7 +117,7 @@
                                 >
 
                                     <div style="font-size:36px;margin-bottom:10px;">
-                                        📅
+                                        <span class="empty-state-icon"><x-layout-icon name="calendar" /></span>
                                     </div>
 
                                     <strong>

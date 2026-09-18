@@ -7,7 +7,7 @@
 @if(session('success'))
 
     <div class="alert-success">
-        ✅ {{ session('success') }}
+        <span class="icon-inline"><x-layout-icon name="check" /> {{ session('success') }}</span>
     </div>
 
 @endif
@@ -19,13 +19,13 @@
 
     <div class="page-card-head">
 
-        <h2>🗓️ Data Jadwal Kuliah</h2>
+        <h2 class="icon-heading"><x-layout-icon name="calendar" /> Data Jadwal Kuliah</h2>
 
         <a
             href="{{ route('admin.jadwal.create', ['return_url' => request()->fullUrl()]) }}"
-            class="btn-primary"
+            class="btn-primary icon-button"
         >
-            ➕ Tambah Jadwal
+            <x-layout-icon name="plus" /> Tambah Jadwal
         </a>
 
     </div>
@@ -241,9 +241,9 @@
 
                     <button
                         type="submit"
-                        class="btn-primary"
+                        class="btn-primary icon-button"
                     >
-                        🔍 Filter
+                        <x-layout-icon name="search" /> Filter
                     </button>
 
                     <a
@@ -382,7 +382,7 @@
                                         class="btn-edit"
                                     >
 
-                                        ✏ Edit
+                                        <span class="icon-inline"><x-layout-icon name="edit" /> Edit</span>
 
                                     </a>
 
@@ -404,7 +404,7 @@
                                             onclick="return confirm('Yakin ingin menghapus jadwal ini?')"
                                         >
 
-                                            🗑 Hapus
+                                            <span class="icon-inline"><x-layout-icon name="trash" /> Hapus</span>
 
                                         </button>
 
@@ -431,7 +431,7 @@
                                 "
                             >
 
-                                📅
+                                <span class="empty-state-icon"><x-layout-icon name="calendar" /></span>
 
                                 <br>
 

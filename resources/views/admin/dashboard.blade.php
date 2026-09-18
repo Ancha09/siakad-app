@@ -46,7 +46,7 @@
         </tbody></table></div>
     </section>
     <section class="academic-panel">
-        <div class="announcement-heading"><div><h3>Pengumuman kampus</h3><p class="announcement-muted">Kelola informasi untuk setiap kelompok penerima.</p></div><div class="action-buttons"><a class="announcement-button" href="{{ route('admin.pengumuman.create', ['penerima' => 'dosen']) }}">+ Untuk dosen</a><a class="announcement-button secondary" href="{{ route('admin.pengumuman.create', ['penerima' => 'mahasiswa']) }}">+ Untuk mahasiswa</a></div></div>
+        <div class="announcement-heading"><div><h3 class="icon-heading"><x-layout-icon name="megaphone" /> Pengumuman kampus</h3><p class="announcement-muted">Kelola informasi untuk setiap kelompok penerima.</p></div><div class="action-buttons"><a class="announcement-button icon-button" href="{{ route('admin.pengumuman.create', ['penerima' => 'dosen']) }}"><x-layout-icon name="plus" /> Untuk dosen</a><a class="announcement-button secondary icon-button" href="{{ route('admin.pengumuman.create', ['penerima' => 'mahasiswa']) }}"><x-layout-icon name="plus" /> Untuk mahasiswa</a></div></div>
         @forelse($announcements as $item)
             <a class="academic-announcement" href="{{ route('admin.pengumuman.edit', $item) }}"><div><strong>{{ $item->judul }}</strong><p class="announcement-muted">{{ ucfirst($item->penerima) }} &middot; {{ $item->terbit_pada?->timezone('Asia/Jakarta')->format('d M Y H:i') ?? 'Waktu terbit belum ditentukan' }}</p></div><span class="badge badge-blue">{{ $item->label_status }}</span></a>
         @empty<p class="announcement-empty">Belum ada pengumuman. Buat informasi pertama untuk dosen atau mahasiswa.</p>@endforelse

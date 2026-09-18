@@ -7,7 +7,7 @@
 @if(session('success'))
 
     <div class="alert-success" style="margin-bottom:20px;">
-        ✅ {{ session('success') }}
+        <span class="icon-inline"><x-layout-icon name="check" /> {{ session('success') }}</span>
     </div>
 
 @endif
@@ -22,7 +22,7 @@
         border-radius:8px;
         margin-bottom:20px;
     ">
-        ❌ {{ session('error') }}
+        <span class="icon-inline"><x-layout-icon name="x" /> {{ session('error') }}</span>
     </div>
 
 @endif
@@ -50,7 +50,7 @@
 
         <div class="search-box">
 
-            <span class="search-icon">🔍</span>
+            <span class="search-icon"><x-layout-icon name="search" /></span>
 
             <input
                 type="text"
@@ -287,9 +287,9 @@
 
         <button
             type="submit"
-            class="btn-primary"
+            class="btn-primary icon-button"
         >
-            🔎 Filter
+            <x-layout-icon name="search" /> Filter
         </button>
 
 
@@ -316,8 +316,8 @@
 
     <div class="page-card-head">
 
-        <h2>
-            📝 Data KRS Mahasiswa
+        <h2 class="icon-heading">
+            <x-layout-icon name="file-check" /> Data KRS Mahasiswa
         </h2>
 
         <a href="{{ route('admin.krs-mahasiswa.index') }}" class="btn-primary" style="display:inline-block;">
@@ -596,7 +596,7 @@
                                             'Yakin ingin menghapus KRS ini?'
                                         )"
                                     >
-                                        🗑 Hapus
+                                        <span class="icon-inline"><x-layout-icon name="trash" /> Hapus</span>
                                     </button>
 
                                 </form>
@@ -626,7 +626,7 @@
                                     margin-bottom:10px;
                                 "
                             >
-                                📝
+                                <span class="empty-state-icon"><x-layout-icon name="file-check" /></span>
                             </div>
 
                             <strong>

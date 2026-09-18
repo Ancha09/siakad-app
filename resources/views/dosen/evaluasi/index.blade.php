@@ -14,10 +14,10 @@
         <div class="evaluation-section-heading">
             <div>
                 <span class="evaluation-eyebrow">HASIL EVALUASI ANONIM</span>
-                <h2 id="filter-evaluasi-saya">Evaluasi Saya</h2>
+                <h2 id="filter-evaluasi-saya" class="icon-heading"><x-layout-icon name="chart" /> Evaluasi Saya</h2>
                 <p>Identitas mahasiswa, NIM, user ID, dan mahasiswa ID tidak ditampilkan pada halaman maupun dokumen PDF.</p>
             </div>
-            <a href="{{ route('dosen.evaluasi.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary">Download PDF</a>
+            <a href="{{ route('dosen.evaluasi.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary icon-button"><x-layout-icon name="download" /> Download PDF</a>
         </div>
 
         <form method="GET" action="{{ route('dosen.evaluasi') }}" class="evaluation-filter-form lecturer-filter-form">
@@ -63,7 +63,7 @@
             </label>
 
             <div class="evaluation-filter-actions">
-                <button type="submit" class="evaluation-button primary">Terapkan Filter</button>
+                <button type="submit" class="evaluation-button primary icon-button"><x-layout-icon name="search" /> Terapkan Filter</button>
                 <a href="{{ route('dosen.evaluasi') }}" class="evaluation-button secondary">Reset</a>
             </div>
         </form>

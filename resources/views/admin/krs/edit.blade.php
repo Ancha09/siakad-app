@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>✏️ Edit Data KRS</h2>
+        <h2 class="icon-heading"><x-layout-icon name="edit" /> Edit Data KRS</h2>
     </div>
 
     <div class="page-card-body">
@@ -51,7 +51,7 @@
                 margin-bottom:20px;
             ">
 
-                ❌ {{ session('error') }}
+                <span class="icon-inline"><x-layout-icon name="x" /> {{ session('error') }}</span>
 
             </div>
 
@@ -331,7 +331,7 @@
                     class="btn-primary"
                 >
 
-                    💾 Simpan Perubahan
+                    <span class="icon-inline"><x-layout-icon name="save" /> Simpan Perubahan</span>
 
                 </button>
 

@@ -5,8 +5,8 @@
 @section('content')
 <div class="inner-page">
     <div class="announcement-heading">
-        <div><h2>Pengumuman kampus</h2><p class="announcement-muted">Pilih penerima, lalu buat pengumuman untuk kelompok tersebut.</p></div>
-        <a class="announcement-button" href="{{ route('admin.pengumuman.create', compact('penerima')) }}">+ Buat untuk {{ ucfirst($penerima) }}</a>
+        <div><h2 class="icon-heading"><x-layout-icon name="megaphone" /> Pengumuman kampus</h2><p class="announcement-muted">Pilih penerima, lalu buat pengumuman untuk kelompok tersebut.</p></div>
+        <a class="announcement-button icon-button" href="{{ route('admin.pengumuman.create', compact('penerima')) }}"><x-layout-icon name="plus" /> Buat untuk {{ ucfirst($penerima) }}</a>
     </div>
     <nav class="announcement-tabs" aria-label="Penerima pengumuman">
         @foreach(['mahasiswa', 'dosen'] as $target)
@@ -24,8 +24,8 @@
                 <td>{{ $item->terbit_pada?->timezone('Asia/Jakarta')->format('d M Y H:i') ?? 'Belum ditentukan' }}</td>
                 <td>{{ $item->pembaca_count }}</td>
                 <td><div class="action-buttons">
-                    <a class="announcement-button secondary" href="{{ route('admin.pengumuman.edit', $item) }}">Edit</a>
-                    <form action="{{ route('admin.pengumuman.destroy', $item) }}" method="POST" onsubmit="return confirm('Hapus pengumuman ini?')">@csrf @method('DELETE')<button class="announcement-button danger">Hapus</button></form>
+                    <a class="announcement-button secondary icon-button" href="{{ route('admin.pengumuman.edit', $item) }}"><x-layout-icon name="edit" /> Edit</a>
+                    <form action="{{ route('admin.pengumuman.destroy', $item) }}" method="POST" onsubmit="return confirm('Hapus pengumuman ini?')">@csrf @method('DELETE')<button class="announcement-button danger icon-button"><x-layout-icon name="trash" /> Hapus</button></form>
                 </div></td>
             </tr>
         @empty

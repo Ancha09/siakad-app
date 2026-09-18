@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>🗓️ Tambah Jadwal Kuliah</h2>
+        <h2 class="icon-heading"><x-layout-icon name="calendar" /> Tambah Jadwal Kuliah</h2>
     </div>
 
     <div class="page-card-body">
@@ -189,9 +189,9 @@
 
             <button
                 type="submit"
-                class="btn-primary"
+                class="btn-primary icon-button"
             >
-                💾 Simpan
+                <x-layout-icon name="save" /> Simpan
             </button>
 
 

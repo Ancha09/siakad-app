@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>📝 Tambah KRS Mahasiswa</h2>
+        <h2 class="icon-heading"><x-layout-icon name="file-check" /> Tambah KRS Mahasiswa</h2>
     </div>
 
     <div class="page-card-body">
@@ -51,7 +51,7 @@
                 margin-bottom:20px;
             ">
 
-                ❌ {{ session('error') }}
+                <span class="icon-inline"><x-layout-icon name="x" /> {{ session('error') }}</span>
 
             </div>
 
@@ -284,7 +284,7 @@
                     class="btn-primary"
                 >
 
-                    💾 Simpan KRS
+                    <span class="icon-inline"><x-layout-icon name="save" /> Simpan KRS</span>
 
                 </button>
 

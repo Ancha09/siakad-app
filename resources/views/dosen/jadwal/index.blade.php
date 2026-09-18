@@ -6,9 +6,8 @@
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>📅 Jadwal Mengajar Dosen</h2>
+    <h2 class="icon-heading"><x-layout-icon name="calendar" /> Jadwal Mengajar Dosen</h2>
 </div>
 
 <div class="page-card-body">
@@ -81,8 +80,6 @@
     </div>
 
 </div>
-```
-
 </div>
 
 @endsection

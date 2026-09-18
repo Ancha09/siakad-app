@@ -13,7 +13,7 @@
     <div class="page-card-head">
 
         <div>
-            <h2>📝 Kartu Rencana Studi (KRS)</h2>
+            <h2 class="icon-heading"><x-layout-icon name="file-check" /> Kartu Rencana Studi (KRS)</h2>
 
             <p style="margin:5px 0 0;color:#64748b;font-size:13px;">
                 {{ $mahasiswa->nim }} -
@@ -27,8 +27,8 @@
 
         @if($periodeKrs && $aksesKrsDibuka)
 
-            <span class="badge badge-green">
-                🟢 KRS Dibuka
+            <span class="badge badge-green icon-inline">
+                <x-layout-icon name="check" /> KRS Dibuka
             </span>
 
         @elseif($periodeKrs)
@@ -39,8 +39,8 @@
 
         @else
 
-            <span class="badge badge-gray">
-                🔴 KRS Ditutup
+            <span class="badge badge-gray icon-inline">
+                <x-layout-icon name="x" /> KRS Ditutup
             </span>
 
         @endif
@@ -61,7 +61,7 @@
                 class="alert-success"
                 style="margin-bottom:20px;"
             >
-                ✅ {{ session('success') }}
+                <span class="icon-inline"><x-layout-icon name="check" /> {{ session('success') }}</span>
             </div>
 
         @endif
@@ -82,7 +82,7 @@
                     margin-bottom:20px;
                 "
             >
-                ❌ {{ session('error') }}
+                <span class="icon-inline"><x-layout-icon name="x" /> {{ session('error') }}</span>
             </div>
 
         @endif
@@ -137,8 +137,8 @@
                 "
             >
 
-                <span style="font-size:22px;">
-                    📅
+                <span class="icon-inline">
+                    <x-layout-icon name="calendar" />
                 </span>
 
                 <div>
@@ -209,8 +209,8 @@
                 "
             >
 
-                <strong>
-                    🔴 {{ $pesanAksesKrs }}
+                <strong class="icon-inline">
+                    <x-layout-icon name="lock" /> {{ $pesanAksesKrs }}
                 </strong>
 
                 <div
@@ -445,8 +445,8 @@
 
             <div class="page-card-head">
 
-                <h3 style="margin:0;">
-                    📋 KRS Saya
+                <h3 class="icon-heading" style="margin:0;">
+                    <x-layout-icon name="clipboard" /> KRS Saya
                 </h3>
 
                 @if($periodeKartuKrs->isNotEmpty())
@@ -625,7 +625,7 @@
                                                     padding:6px 12px;
                                                 "
                                             >
-                                                ✅ Disetujui
+                                                <span class="icon-inline"><x-layout-icon name="check" /> Disetujui</span>
                                             </span>
 
 
@@ -656,7 +656,7 @@
                                                         padding:6px 12px;
                                                     "
                                                 >
-                                                    ❌ Ditolak
+                                                    <span class="icon-inline"><x-layout-icon name="x" /> Ditolak</span>
                                                 </span>
 
 
@@ -711,7 +711,7 @@
                                                         "
                                                         onclick="return confirm('Ajukan kembali KRS ini kepada Dosen Wali?')"
                                                     >
-                                                        🔄 Ajukan Kembali
+                                                        <span class="icon-inline"><x-layout-icon name="refresh" /> Ajukan Kembali</span>
                                                     </button>
 
                                                 </form>
@@ -760,7 +760,7 @@
                                                     padding:6px 12px;
                                                 "
                                             >
-                                                📋 Diambil
+                                                <span class="icon-inline"><x-layout-icon name="clipboard" /> Diambil</span>
                                             </span>
 
 
@@ -810,7 +810,7 @@
                                                 margin-bottom:8px;
                                             "
                                         >
-                                            📚
+                                            <span class="empty-state-icon"><x-layout-icon name="book" /></span>
                                         </div>
 
                                         <strong>
@@ -855,8 +855,8 @@
 
                 <div>
 
-                    <h3 style="margin:0;">
-                        📚 Mata Kuliah Tersedia
+                    <h3 class="icon-heading" style="margin:0;">
+                        <x-layout-icon name="book" /> Mata Kuliah Tersedia
                     </h3>
 
                     @if($periodeKrs)
@@ -897,7 +897,7 @@
                                 margin-bottom:10px;
                             "
                         >
-                            🔒
+                            <span class="empty-state-icon"><x-layout-icon name="lock" /></span>
                         </div>
 
                         <strong
@@ -925,7 +925,7 @@
                 @elseif(!$aksesKrsDibuka)
 
                     <div style="text-align:center;padding:45px 20px;color:#9a3412;">
-                        <div style="font-size:40px;margin-bottom:10px;">🔒</div>
+                        <div class="empty-state-icon" style="margin-bottom:10px;"><x-layout-icon name="lock" /></div>
                         <strong style="display:block;font-size:16px;">Akses KRS Anda belum dibuka</strong>
                         <p style="margin-top:8px;font-size:13px;">{{ $pesanAksesKrs }}</p>
                     </div>
@@ -946,7 +946,7 @@
                                 margin-bottom:10px;
                             "
                         >
-                            📭
+                            <span class="empty-state-icon"><x-layout-icon name="inbox" /></span>
                         </div>
 
                         <strong
@@ -1030,8 +1030,8 @@
                                                             $aksesKrsDibuka &&
                                                             ($totalSks + ($jadwal->mataKuliah->sks ?? 0)) <= $batasSks
                                                         )
-                                                            <button type="submit" class="btn-primary" style="padding:6px 12px;font-size:11px;">
-                                                                ➕ Ambil
+                                                            <button type="submit" class="btn-primary icon-button" style="padding:6px 12px;font-size:11px;">
+                                                                <x-layout-icon name="plus" /> Ambil
                                                             </button>
                                                         @else
                                                             <button
@@ -1040,7 +1040,7 @@
                                                                 style="padding:6px 12px;font-size:11px;color:#94a3b8;cursor:not-allowed;"
                                                                 disabled
                                                             >
-                                                                🔒 Batas SKS
+                                                                <span class="icon-inline"><x-layout-icon name="lock" /> Batas SKS</span>
                                                             </button>
                                                         @endif
                                                     </form>

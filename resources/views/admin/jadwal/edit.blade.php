@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>✏️ Edit Jadwal Kuliah</h2>
+        <h2 class="icon-heading"><x-layout-icon name="edit" /> Edit Jadwal Kuliah</h2>
     </div>
 
     <div class="page-card-body">
@@ -254,9 +254,9 @@
 
             <button
                 type="submit"
-                class="btn-primary"
+                class="btn-primary icon-button"
             >
-                💾 Update
+                <x-layout-icon name="save" /> Update
             </button>
 
 

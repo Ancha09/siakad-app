@@ -14,10 +14,10 @@
         <div class="evaluation-section-heading">
             <div>
                 <span class="evaluation-eyebrow">PENCARIAN DATA</span>
-                <h2 id="filter-evaluasi-title">Filter Evaluasi Dosen</h2>
+                <h2 id="filter-evaluasi-title" class="icon-heading"><x-layout-icon name="chart" /> Filter Evaluasi Dosen</h2>
                 <p>Filter periode hanya memengaruhi jawaban evaluasi. Dosen tanpa jawaban pada periode tersebut tetap dapat ditampilkan.</p>
             </div>
-            <a href="{{ route('admin.kuesioner.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary">Download PDF Full</a>
+            <a href="{{ route('admin.kuesioner.pdf', array_merge($activeFilters, request()->except('page'))) }}" class="evaluation-button primary icon-button"><x-layout-icon name="download" /> Download PDF Full</a>
         </div>
 
         <form method="GET" action="{{ route('admin.kuesioner') }}" class="evaluation-filter-form">
@@ -79,7 +79,7 @@
             </label>
 
             <div class="evaluation-filter-actions">
-                <button type="submit" class="evaluation-button primary">Terapkan Filter</button>
+                <button type="submit" class="evaluation-button primary icon-button"><x-layout-icon name="search" /> Terapkan Filter</button>
                 <a href="{{ route('admin.kuesioner') }}" class="evaluation-button secondary">Reset</a>
             </div>
         </form>
@@ -112,7 +112,7 @@
         <div class="evaluation-section-heading table-heading">
             <div>
                 <span class="evaluation-eyebrow">REKAP PER DOSEN</span>
-                <h2 id="daftar-evaluasi-title">Daftar Evaluasi Dosen</h2>
+                <h2 id="daftar-evaluasi-title" class="icon-heading"><x-layout-icon name="users" /> Daftar Evaluasi Dosen</h2>
                 <p>Dosen yang belum pernah dinilai tetap tercantum agar mudah dipantau.</p>
             </div>
             <span class="evaluation-result-count">{{ number_format($evaluasiDosen->total()) }} dosen</span>

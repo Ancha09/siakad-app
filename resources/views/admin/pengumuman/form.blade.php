@@ -5,7 +5,7 @@
 @section('content')
 <div class="inner-page">
     <div class="page-card announcement-editor">
-        <div class="page-card-head"><h2>{{ $pengumuman->exists ? 'Edit' : 'Buat' }} pengumuman {{ ucfirst($pengumuman->penerima) }}</h2></div>
+        <div class="page-card-head"><h2 class="icon-heading"><x-layout-icon :name="$pengumuman->exists ? 'edit' : 'megaphone'" /> {{ $pengumuman->exists ? 'Edit' : 'Buat' }} pengumuman {{ ucfirst($pengumuman->penerima) }}</h2></div>
         <div class="page-card-body">
             @if($errors->any())<div class="announcement-error" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
             <form method="POST" action="{{ $pengumuman->exists ? route('admin.pengumuman.update', $pengumuman) : route('admin.pengumuman.store') }}" class="announcement-form">
@@ -23,7 +23,7 @@
                     <label>Berakhir pada (opsional)<input type="datetime-local" name="berakhir_pada" value="{{ old('berakhir_pada', $pengumuman->berakhir_pada?->timezone('Asia/Jakarta')->format('Y-m-d\TH:i')) }}"></label>
                 </div>
                 <p class="announcement-muted">Pilih Terbitkan dan kosongkan waktu terbit untuk langsung tampil. Waktu menggunakan WIB (Jakarta). Pengumuman yang berakhir otomatis tidak ditampilkan.</p>
-                <div class="action-buttons"><button class="announcement-button">Simpan pengumuman</button><a class="announcement-button secondary" href="{{ route('admin.pengumuman.index', ['penerima' => $pengumuman->penerima]) }}">Kembali</a></div>
+                <div class="action-buttons"><button class="announcement-button icon-button"><x-layout-icon name="save" /> Simpan pengumuman</button><a class="announcement-button secondary icon-button" href="{{ route('admin.pengumuman.index', ['penerima' => $pengumuman->penerima]) }}"><x-layout-icon name="arrow-left" /> Kembali</a></div>
             </form>
         </div>
     </div>
