@@ -117,6 +117,8 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::get('/krs', [DosenKrsController::class, 'index'])->name('krs');
 
+    Route::get('/krs/mahasiswa/{mahasiswa}', [DosenKrsController::class, 'show'])->name('krs.show');
+
     Route::put('/krs/{id}/setujui', [DosenKrsController::class, 'setujui'])->name('krs.setujui');
 
     Route::put('/krs/{id}/tolak', [DosenKrsController::class, 'tolak'])->name('krs.tolak');

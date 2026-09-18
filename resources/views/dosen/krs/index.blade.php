@@ -3,489 +3,156 @@
 @section('title', 'Persetujuan KRS')
 
 @section('content')
-
 <div class="inner-page">
-
-    {{-- ===================== RINGKASAN ===================== --}}
-
     <div class="khs-summary">
-
         <div class="khs-stat">
-            <div class="khs-stat-val" style="color:var(--gold)">
-                {{ $menunggu }}
-            </div>
-
-            <div class="khs-stat-label">
-                Menunggu Persetujuan
-            </div>
+            <div class="khs-stat-val" style="color:var(--gold)">{{ $menunggu }}</div>
+            <div class="khs-stat-label">Mata Kuliah Menunggu</div>
         </div>
-
-
         <div class="khs-stat">
-            <div class="khs-stat-val" style="color:var(--green)">
-                {{ $disetujui }}
-            </div>
-
-            <div class="khs-stat-label">
-                KRS Disetujui
-            </div>
+            <div class="khs-stat-val" style="color:var(--green)">{{ $disetujui }}</div>
+            <div class="khs-stat-label">Mata Kuliah Disetujui</div>
         </div>
-
-
         <div class="khs-stat">
-            <div class="khs-stat-val" style="color:#dc2626">
-                {{ $ditolak }}
-            </div>
-
-            <div class="khs-stat-label">
-                KRS Ditolak
-            </div>
+            <div class="khs-stat-val" style="color:#dc2626">{{ $ditolak }}</div>
+            <div class="khs-stat-label">Mata Kuliah Ditolak</div>
         </div>
-
     </div>
-
-
-    {{-- ===================== PESAN SUCCESS ===================== --}}
 
     @if(session('success'))
-
-        <div class="info-alert" style="margin-bottom:24px;">
-
-            <span>✅</span>
-
-            <div>
-                {{ session('success') }}
-            </div>
-
-        </div>
-
+        <div class="info-alert" style="margin-bottom:20px;">{{ session('success') }}</div>
     @endif
-
-
-    {{-- ===================== PESAN ERROR ===================== --}}
-
     @if(session('error'))
-
-        <div
-            class="info-alert"
-            style="margin-bottom:24px;"
-        >
-
-            <span>⚠️</span>
-
-            <div>
-                {{ session('error') }}
-            </div>
-
-        </div>
-
+        <div class="info-alert" style="margin-bottom:20px;color:#991b1b;">{{ session('error') }}</div>
     @endif
 
-
-    {{-- ===================== DAFTAR PENGAJUAN ===================== --}}
-
-    <div class="page-card">
-
+    <div class="page-card" style="margin-bottom:20px;">
         <div class="page-card-head">
-
-            <h2>📋 Persetujuan KRS Mahasiswa</h2>
-
-            <span class="badge badge-blue">
-                {{ $krs->count() }} Pengajuan
-            </span>
-
+            <h3 style="margin:0;">Filter Pengajuan</h3>
         </div>
-
-
         <div class="page-card-body">
-
-            <div class="table-wrap">
-
-                <table>
-
-                    <thead>
-
-                        <tr>
-
-                            <th>No</th>
-
-                            <th>NIM</th>
-
-                            <th>Nama Mahasiswa</th>
-
-                            <th>Mata Kuliah</th>
-
-                            <th>SKS</th>
-
-                            <th>Semester</th>
-
-                            <th>Status</th>
-
-                            <th>Aksi</th>
-
-                        </tr>
-
-                    </thead>
-
-
-                    <tbody>
-
-                        @forelse($krs as $item)
-
-                            <tr>
-
-                                {{-- ===================== NO ===================== --}}
-
-                                <td>
-                                    {{ $loop->iteration }}
-                                </td>
-
-
-                                {{-- ===================== NIM ===================== --}}
-
-                                <td>
-                                    {{ $item->mahasiswa->nim ?? '-' }}
-                                </td>
-
-
-                                {{-- ===================== NAMA ===================== --}}
-
-                                <td>
-                                    {{ $item->mahasiswa->nama ?? '-' }}
-                                </td>
-
-
-                                {{-- ===================== MATA KULIAH ===================== --}}
-
-                                <td>
-                                    {{ $item->jadwal->mataKuliah->nama_mk ?? '-' }}
-                                </td>
-
-
-                                {{-- ===================== SKS ===================== --}}
-
-                                <td>
-                                    {{ $item->jadwal->mataKuliah->sks ?? 0 }}
-                                </td>
-
-
-                                {{-- ===================== SEMESTER ===================== --}}
-
-                                <td>
-                                    @if($item->mahasiswa && $item->mahasiswa->semester)
-                                        Semester {{ $item->mahasiswa->semester }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-
-
-                                {{-- ===================== STATUS ===================== --}}
-
-                                <td>
-
-                                    @if($item->status === 'Menunggu')
-
-                                        <span class="badge badge-gold">
-                                            🕐 Menunggu
-                                        </span>
-
-                                    @elseif($item->status === 'Disetujui')
-
-                                        <span class="badge badge-green">
-                                            ✅ Disetujui
-                                        </span>
-
-                                    @elseif($item->status === 'Ditolak')
-
-                                        <span
-                                            class="badge"
-                                            style="
-                                                background:#fee2e2;
-                                                color:#dc2626;
-                                            "
-                                        >
-                                            ❌ Ditolak
-                                        </span>
-
-                                    @else
-
-                                        <span class="badge badge-gray">
-                                            {{ $item->status ?? '-' }}
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-
-                                {{-- ===================== AKSI ===================== --}}
-
-                                <td>
-
-                                    {{-- ===================== MENUNGGU ===================== --}}
-
-                                    @if($item->status === 'Menunggu')
-
-                                        <div
-                                            style="
-                                                display:flex;
-                                                gap:6px;
-                                                align-items:center;
-                                            "
-                                        >
-
-                                            {{-- ===================== SETUJUI ===================== --}}
-
-                                            <form
-                                                action="{{ route('dosen.krs.setujui', $item->id) }}"
-                                                method="POST"
-                                            >
-
-                                                @csrf
-
-                                                @method('PUT')
-
-                                                <button
-                                                    type="submit"
-                                                    class="btn-primary"
-                                                    style="
-                                                        padding:6px 10px;
-                                                        font-size:11px;
-                                                    "
-                                                >
-                                                    ✓ Setujui
-                                                </button>
-
-                                            </form>
-
-
-                                            {{-- ===================== TOLAK ===================== --}}
-
-                                            <button
-                                                type="button"
-                                                class="btn-outline"
-                                                style="
-                                                    padding:6px 10px;
-                                                    font-size:11px;
-                                                "
-                                                data-id="{{ $item->id }}" onclick="openTolakModal(this.dataset.id)"
-                                            >
-                                                ✕ Tolak
-                                            </button>
-
-                                            <div
-                                                id="tolakModal{{ $item->id }}"
-                                                style="
-                                                    display:none;
-                                                    position:fixed;
-                                                    inset:0;
-                                                    background:rgba(15,23,42,.55);
-                                                    z-index:9999;
-                                                    align-items:center;
-                                                    justify-content:center;
-                                                    padding:20px;
-                                                "
-                                            >
-                                                <div
-                                                    style="
-                                                        background:#fff;
-                                                        width:100%;
-                                                        max-width:500px;
-                                                        border-radius:14px;
-                                                        padding:24px;
-                                                        box-shadow:0 20px 50px rgba(0,0,0,.2);
-                                                    "
-                                                >
-
-                                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
-                                                        <h3 style="margin:0;font-size:18px;">
-                                                            ❌ Tolak Pengajuan KRS
-                                                        </h3>
-
-                                                        <button
-                                                            type="button"
-                                                            data-id="{{ $item->id }}" onclick="closeTolakModal(this.dataset.id)"
-                                                            style="border:0;background:none;font-size:20px;cursor:pointer;color:#64748b;"
-                                                        >
-                                                            ✕
-                                                        </button>
-                                                    </div>
-
-                                                    <p style="margin-bottom:8px;color:#475569;">
-                                                        Mahasiswa:
-                                                        <strong>{{ $item->mahasiswa->nama ?? '-' }}</strong>
-                                                    </p>
-
-                                                    <p style="margin-bottom:18px;color:#475569;">
-                                                        Mata Kuliah:
-                                                        <strong>{{ $item->jadwal->mataKuliah->nama_mk ?? '-' }}</strong>
-                                                    </p>
-
-                                                    <form
-                                                        action="{{ route('dosen.krs.tolak', $item->id) }}"
-                                                        method="POST"
-                                                    >
-                                                        @csrf
-                                                        @method('PUT')
-
-                                                        <div class="form-group">
-                                                            <label>Alasan Penolakan</label>
-
-                                                            <textarea
-                                                                name="alasan_penolakan"
-                                                                class="form-control"
-                                                                rows="5"
-                                                                required
-                                                                minlength="5"
-                                                                maxlength="1000"
-                                                                placeholder="Contoh: Jadwal bentrok dengan mata kuliah lain."
-                                                            ></textarea>
-
-                                                            <small style="color:#64748b;">
-                                                                Jelaskan alasan penolakan agar mahasiswa mengetahui
-                                                                apa yang perlu diperbaiki.
-                                                            </small>
-                                                        </div>
-
-                                                        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
-                                                            <button
-                                                                type="button"
-                                                                class="btn-outline"
-                                                                data-id="{{ $item->id }}" onclick="closeTolakModal(this.dataset.id)"
-                                                            >
-                                                                Batal
-                                                            </button>
-
-                                                            <button
-                                                                type="submit"
-                                                                class="btn-delete"
-                                                            >
-                                                                ❌ Tolak KRS
-                                                            </button>
-                                                        </div>
-                                                    </form>
-                                                </div>
-                                            </div>
-
-                                        </div>
-
-
-                                    {{-- ===================== DISETUJUI ===================== --}}
-
-                                    @elseif($item->status === 'Disetujui')
-
-                                        <span
-                                            style="
-                                                color:var(--green);
-                                                font-weight:600;
-                                            "
-                                        >
-                                            Sudah disetujui
-                                        </span>
-
-
-                                    {{-- ===================== DITOLAK ===================== --}}
-
-                                    @elseif($item->status === 'Ditolak')
-
-                                        <span
-                                            style="
-                                                color:#dc2626;
-                                                font-weight:600;
-                                            "
-                                        >
-                                            Ditolak
-                                        </span>
-
-
-                                    {{-- ===================== STATUS LAIN ===================== --}}
-
-                                    @else
-
-                                        <span style="color:#777;">
-                                            -
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-                            </tr>
-
-
-                        @empty
-
-                            <tr>
-
-                                <td
-                                    colspan="8"
-                                    style="
-                                        text-align:center;
-                                        padding:40px;
-                                    "
-                                >
-
-                                    <div
-                                        style="
-                                            font-size:32px;
-                                            margin-bottom:10px;
-                                        "
-                                    >
-                                        📋
-                                    </div>
-
-                                    <strong>
-                                        Belum ada pengajuan KRS
-                                    </strong>
-
-                                    <br>
-
-                                    <span style="color:#777;">
-                                        Pengajuan KRS mahasiswa akan muncul di sini.
-                                    </span>
-
-                                </td>
-
-                            </tr>
-
-                        @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
+            <form method="GET" action="{{ route('dosen.krs') }}">
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end;">
+                    <div>
+                        <label for="search">Nama / NIM</label>
+                        <input id="search" class="form-control" type="search" name="search" value="{{ request('search') }}" placeholder="Cari mahasiswa wali">
+                    </div>
+                    <div>
+                        <label for="tahun_akademik">Tahun Akademik</label>
+                        <select id="tahun_akademik" class="form-control" name="tahun_akademik">
+                            <option value="">Semua tahun</option>
+                            @foreach($tahunAkademiks as $tahun)
+                                <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label for="semester_akademik">Semester Akademik</label>
+                        <select id="semester_akademik" class="form-control" name="semester_akademik">
+                            <option value="">Semua semester</option>
+                            <option value="Ganjil" @selected(request('semester_akademik') === 'Ganjil')>Ganjil</option>
+                            <option value="Genap" @selected(request('semester_akademik') === 'Genap')>Genap</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="submit" class="btn-primary">Terapkan</button>
+                        <a href="{{ route('dosen.krs') }}" class="btn-outline">Reset</a>
+                    </div>
+                </div>
+            </form>
         </div>
-
     </div>
 
+    <div class="page-card">
+        <div class="page-card-head">
+            <h2 style="margin:0;">Persetujuan KRS Mahasiswa Wali</h2>
+            <span class="badge badge-blue">{{ $summaries->total() }} pengajuan</span>
+        </div>
+
+        <div class="page-card-body">
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Mahasiswa</th>
+                            <th>Program Studi</th>
+                            <th>Semester / Angkatan</th>
+                            <th>Periode KRS</th>
+                            <th>Jumlah MK</th>
+                            <th>Total SKS</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($summaries as $summary)
+                            @php
+                                $pending = (int) $summary->jumlah_menunggu;
+                                $approved = (int) $summary->jumlah_disetujui;
+                                $rejected = (int) $summary->jumlah_ditolak;
+                                $status = $pending > 0
+                                    ? 'Menunggu'
+                                    : ($rejected > 0 ? 'Perlu Revisi' : ($approved > 0 ? 'Disetujui' : 'Diproses'));
+                            @endphp
+                            <tr>
+                                <td>{{ $summaries->firstItem() + $loop->index }}</td>
+                                <td>
+                                    <strong>{{ $summary->mahasiswa?->nama ?? '-' }}</strong><br>
+                                    <small style="color:#64748b;">{{ $summary->mahasiswa?->nim ?? '-' }}</small>
+                                </td>
+                                <td>{{ $summary->mahasiswa?->prodi?->nama_prodi ?? '-' }}</td>
+                                <td>
+                                    Semester {{ $summary->mahasiswa?->semester ?? '-' }}<br>
+                                    <small style="color:#64748b;">Angkatan {{ $summary->mahasiswa?->angkatan ?? '-' }}</small>
+                                </td>
+                                <td>
+                                    <strong>{{ $summary->tahun_akademik }}</strong><br>
+                                    <small style="color:#64748b;">{{ $summary->semester_akademik }}</small>
+                                </td>
+                                <td>{{ (int) $summary->jumlah_mata_kuliah }} mata kuliah</td>
+                                <td><span class="badge badge-blue">Total {{ (int) $summary->total_sks }} SKS</span></td>
+                                <td>
+                                    @if($status === 'Menunggu')
+                                        <span class="badge badge-gold">Menunggu</span>
+                                    @elseif($status === 'Disetujui')
+                                        <span class="badge badge-green">Disetujui</span>
+                                    @elseif($status === 'Perlu Revisi')
+                                        <span class="badge" style="background:#fee2e2;color:#b91c1c;">Perlu Revisi</span>
+                                    @else
+                                        <span class="badge badge-gray">{{ $status }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <a
+                                        class="btn-primary"
+                                        style="display:inline-block;padding:7px 11px;font-size:12px;white-space:nowrap;"
+                                        href="{{ route('dosen.krs.show', [
+                                            'mahasiswa' => $summary->mahasiswa_id,
+                                            'tahun_akademik' => $summary->tahun_akademik,
+                                            'semester_akademik' => $summary->semester_akademik,
+                                            'return_url' => request()->fullUrl(),
+                                        ]) }}"
+                                    >
+                                        Lihat Detail
+                                    </a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" style="text-align:center;padding:42px;color:#64748b;">
+                                    <strong>Belum ada pengajuan KRS dari mahasiswa wali.</strong>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top:20px;">
+                {{ $summaries->appends(request()->query())->onEachSide(1)->links() }}
+            </div>
+        </div>
+    </div>
 </div>
-
-
-<script>
-    function openTolakModal(id) {
-        const modal = document.getElementById('tolakModal' + id);
-
-        if (modal) {
-            modal.style.display = 'flex';
-        }
-    }
-
-    function closeTolakModal(id) {
-        const modal = document.getElementById('tolakModal' + id);
-
-        if (modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    document.addEventListener('click', function(event) {
-        if (event.target.matches('[id^="tolakModal"]')) {
-            event.target.style.display = 'none';
-        }
-    });
-</script>
-
 @endsection
