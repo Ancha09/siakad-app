@@ -33,6 +33,13 @@ class KrsCardService
             ->get();
     }
 
+    /** @param Collection<int, Krs> $records */
+    public function isApprovedForDownload(Collection $records): bool
+    {
+        return $records->isNotEmpty()
+            && $records->every(fn (Krs $item) => $item->status === 'Disetujui');
+    }
+
     public function data(
         Mahasiswa $mahasiswa,
         string $tahunAkademik,

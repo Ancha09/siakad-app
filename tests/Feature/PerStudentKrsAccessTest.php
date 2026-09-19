@@ -594,6 +594,7 @@ test('academic and course semester formats are normalized safely', function () {
         ->and($service->normalizeAcademicSemester('ganjil'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('1'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('odd'))->toBe('Ganjil')
+        ->and($service->normalizeAcademicSemester('Semester Gasal'))->toBe('Ganjil')
         ->and($service->normalizeAcademicSemester('Semester Genap'))->toBe('Genap')
         ->and($service->normalizeAcademicSemester('genap'))->toBe('Genap')
         ->and($service->normalizeAcademicSemester('2'))->toBe('Genap')
@@ -602,9 +603,145 @@ test('academic and course semester formats are normalized safely', function () {
         ->and($service->requiredParity('even'))->toBe('even')
         ->and($service->normalizeCourseSemester('Semester 7'))->toBe(7)
         ->and($service->normalizeCourseSemester('semester_1'))->toBe(1)
+        ->and($service->extractCourseSemesterNumber('Semester 7'))->toBe(7)
+        ->and($service->isCourseAllowedForPeriod(7, 'Ganjil'))->toBeTrue()
+        ->and($service->isCourseAllowedForPeriod(6, 'Ganjil'))->toBeFalse()
         ->and($service->normalizeCourseSemester(' 8 '))->toBe(8)
         ->and($service->normalizeCourseSemester(null))->toBeNull()
         ->and($service->normalizeCourseSemester('tidak diketahui'))->toBeNull();
+});
+
+test('all valid scheduled courses survive staged KRS filters without hardcoded course names', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all', 'semester' => 'Ganjil']);
+
+    $curriculum = Kurikulum::create([
+        'prodi_id' => $data['prodi']->id,
+        'nama_kurikulum' => 'Kurikulum Audit KRS',
+        'tahun_mulai' => 2026,
+        'status' => 'Aktif',
+    ]);
+    $statistics = MataKuliah::create([
+        'kode_mk' => 'AUD301',
+        'nama_mk' => 'Statistika Terjadwal',
+        'sks' => 3,
+        'semester' => 3,
+        'prodi_id' => $data['prodi']->id,
+    ]);
+    // Pivot lama yang tidak sinkron tidak boleh mengalahkan semester master
+    // untuk mata kuliah milik prodi mahasiswa sendiri.
+    $curriculum->mataKuliahs()->attach($statistics->id, ['semester' => 2, 'jenis' => 'Wajib']);
+    $statisticsSchedule = Jadwal::create([
+        'mata_kuliah_id' => $statistics->id,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'kelas_id' => $data['kelas']->id,
+        'hari' => 'Kamis',
+        'jam_mulai' => '08:00:00',
+        'jam_selesai' => '10:00:00',
+        'tahun_akademik' => '2026-2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+    Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $statisticsSchedule->id,
+        'status' => 'Disetujui',
+        'tahun_akademik' => '2025/2026',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $commonCourse = MataKuliah::create([
+        'kode_mk' => 'AUD501',
+        'nama_mk' => 'Mata Kuliah Umum Terjadwal',
+        'sks' => 2,
+        'semester' => 5,
+        'prodi_id' => null,
+    ]);
+    Jadwal::create([
+        'mata_kuliah_id' => $commonCourse->id,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'kelas_id' => null,
+        'hari' => 'Jumat',
+        'jam_mulai' => '08:00:00',
+        'jam_selesai' => '10:00:00',
+        'tahun_akademik' => '2026 / 2027',
+        'semester_akademik' => 'Semester Ganjil',
+    ]);
+
+    $makeSchedule = function (string $code, int $semester, int|null $prodiId, string $year, string $academicSemester) use ($data): Jadwal {
+        $course = MataKuliah::create([
+            'kode_mk' => $code,
+            'nama_mk' => 'Audit '.$code,
+            'sks' => 2,
+            'semester' => $semester,
+            'prodi_id' => $prodiId,
+        ]);
+
+        return Jadwal::create([
+            'mata_kuliah_id' => $course->id,
+            'dosen_id' => $data['dosen']->id,
+            'ruangan_id' => $data['room']->id,
+            'kelas_id' => null,
+            'hari' => 'Sabtu',
+            'jam_mulai' => '08:00:00',
+            'jam_selesai' => '10:00:00',
+            'tahun_akademik' => $year,
+            'semester_akademik' => $academicSemester,
+        ]);
+    };
+
+    $otherProgram = Prodi::create(['kode_prodi' => 'AUD-OTHER', 'nama_prodi' => 'Prodi Audit Lain', 'jenjang' => 'S1']);
+    $makeSchedule('AUD-EVEN', 2, $data['prodi']->id, '2026/2027', 'Ganjil');
+    $makeSchedule('AUD-OTHER', 3, $otherProgram->id, '2026/2027', 'Ganjil');
+    $makeSchedule('AUD-YEAR', 3, $data['prodi']->id, '2025/2026', 'Ganjil');
+    $makeSchedule('AUD-TERM', 3, $data['prodi']->id, '2026/2027', 'Genap');
+    $takenSchedule = $makeSchedule('AUD-TAKEN', 7, $data['prodi']->id, '2026/2027', 'Ganjil');
+    $alternateTakenSchedule = Jadwal::create([
+        'mata_kuliah_id' => $takenSchedule->mata_kuliah_id,
+        'dosen_id' => null,
+        'ruangan_id' => null,
+        'kelas_id' => null,
+        'hari' => 'Senin',
+        'jam_mulai' => '13:00:00',
+        'jam_selesai' => '15:00:00',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+    Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $takenSchedule->id,
+        'status' => 'Menunggu',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+
+    $response = $this->actingAs($data['studentUser'])->get(route('mahasiswa.krs'));
+    $availableIds = $response->viewData('jadwals')->pluck('id');
+
+    $response->assertOk()
+        ->assertSee('Statistika Terjadwal')
+        ->assertSee('Mata Kuliah Umum Terjadwal');
+    expect($availableIds)
+        ->toContain($statisticsSchedule->id)
+        ->not->toContain($takenSchedule->id)
+        ->not->toContain($alternateTakenSchedule->id);
+
+    $service = app(\App\Services\AvailableKrsScheduleService::class);
+    $service->forStudent(
+        $data['student'],
+        $data['period']->fresh(),
+        [$takenSchedule->id],
+        [$takenSchedule->mata_kuliah_id]
+    );
+    $audit = $service->lastAudit();
+
+    expect($audit['candidate_count_before_filter'])->toBeGreaterThan($audit['candidate_count_after_academic_year'])
+        ->and($audit['candidate_count_after_academic_year'])->toBeGreaterThan($audit['candidate_count_after_academic_semester'])
+        ->and($audit['candidate_count_after_academic_semester'])->toBeGreaterThan($audit['candidate_count_after_parity'])
+        ->and($audit['candidate_count_after_parity'])->toBeGreaterThan($audit['candidate_count_after_study_program'])
+        ->and($audit['candidate_count_after_study_program'])->toBeGreaterThan($audit['candidate_count_after_taken_exclusion'])
+        ->and(collect($audit['included_examples'])->pluck('kode_mk'))->toContain('AUD301');
 });
 
 test('student sees a classless matching schedule with normalized academic year', function () {

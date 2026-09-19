@@ -481,12 +481,23 @@
                 @if($periodeKartuKrs->isNotEmpty())
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         @foreach($periodeKartuKrs as $periodeKartu)
-                            @include('krs.partials.pdf-download-form', [
-                                'action' => route('mahasiswa.krs.pdf'),
-                                'tahunAkademik' => $periodeKartu['tahun_akademik'],
-                                'semesterAkademik' => $periodeKartu['semester_akademik'],
-                                'buttonLabel' => 'Download KRS PDF - '.$periodeKartu['tahun_akademik'].' '.$periodeKartu['semester_akademik'],
-                            ])
+                            @if($periodeKartu['download_disetujui'])
+                                @include('krs.partials.pdf-download-form', [
+                                    'action' => route('mahasiswa.krs.pdf'),
+                                    'tahunAkademik' => $periodeKartu['tahun_akademik'],
+                                    'semesterAkademik' => $periodeKartu['semester_akademik'],
+                                    'buttonLabel' => 'Download KRS PDF - '.$periodeKartu['tahun_akademik'].' '.$periodeKartu['semester_akademik'],
+                                ])
+                            @else
+                                <div style="max-width:330px;">
+                                    <button type="button" class="btn-outline icon-button" style="background:#e2e8f0;border-color:#cbd5e1;color:#64748b;cursor:not-allowed;" disabled>
+                                        <x-layout-icon name="lock" /> Download KRS PDF - {{ $periodeKartu['tahun_akademik'] }} {{ $periodeKartu['semester_akademik'] }}
+                                    </button>
+                                    <small style="display:block;margin-top:6px;color:#ffffff;line-height:1.35;">
+                                        KRS belum disetujui dosen wali. Download KRS tersedia setelah disetujui.
+                                    </small>
+                                </div>
+                            @endif
                         @endforeach
                     </div>
                 @else

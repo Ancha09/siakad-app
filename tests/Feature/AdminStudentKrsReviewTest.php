@@ -189,6 +189,60 @@ test('admin and each student download a dynamic KRS PDF while role access stays 
         ->assertForbidden();
 });
 
+test('student KRS PDF stays locked until every course in the period is approved', function () {
+    $data = makeStudentKrsReviewData();
+    $period = ['tahun_akademik' => '2025/2026', 'semester_akademik' => 'Genap'];
+
+    Krs::where('mahasiswa_id', $data['student']->id)->update(['status' => 'Menunggu']);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('KRS belum disetujui dosen wali. Download KRS tersedia setelah disetujui.')
+        ->assertSee('Download KRS PDF - 2025/2026 Genap')
+        ->assertDontSee('action="'.route('mahasiswa.krs.pdf').'"', false);
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.pdf'), $period)
+        ->assertRedirect(route('mahasiswa.krs'))
+        ->assertSessionHas('error', 'KRS belum disetujui dosen wali. Download KRS tersedia setelah disetujui.');
+
+    // Hak download admin dan dosen wali yang sudah ada tidak ikut dikunci.
+    $this->actingAs($data['admin'])
+        ->post(route('admin.krs-mahasiswa.pdf', $data['student']), $period)
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
+    $this->actingAs($data['lecturerUser'])
+        ->post(route('dosen.krs.pdf', $data['student']), $period)
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
+
+    Krs::where('mahasiswa_id', $data['student']->id)->update(['status' => 'Disetujui']);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('action="'.route('mahasiswa.krs.pdf').'"', false)
+        ->assertDontSee('KRS belum disetujui dosen wali. Download KRS tersedia setelah disetujui.');
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.pdf'), $period)
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
+});
+
+test('student KRS PDF returns a safe message when the requested period has no KRS', function () {
+    $data = makeStudentKrsReviewData();
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.pdf'), [
+            'tahun_akademik' => '2030/2031',
+            'semester_akademik' => 'Ganjil',
+        ])
+        ->assertRedirect(route('mahasiswa.krs'))
+        ->assertSessionHas('error', 'Data KRS tidak ditemukan.');
+});
+
 test('student KRS page shows a download button per available period and an empty state without KRS', function () {
     $data = makeStudentKrsReviewData();
 

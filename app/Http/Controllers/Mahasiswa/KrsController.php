@@ -24,7 +24,8 @@ class KrsController extends Controller
 
     public function index(
         MahasiswaNilaiService $nilaiService,
-        AvailableKrsScheduleService $scheduleService
+        AvailableKrsScheduleService $scheduleService,
+        KrsCardService $cards
     )
     {
         // ===================== DATA MAHASISWA =====================
@@ -90,16 +91,16 @@ class KrsController extends Controller
             ->get();
 
         $periodeKartuKrs = $krs
-            ->where('status', '!=', 'Ditolak')
             ->filter(fn (Krs $item) => filled($item->tahun_akademik)
                 && in_array($item->semester_akademik, ['Ganjil', 'Genap'], true))
             ->groupBy(fn (Krs $item) => $item->tahun_akademik.'|'.$item->semester_akademik)
-            ->map(function ($items) {
+            ->map(function ($items) use ($cards) {
                 $first = $items->first();
 
                 return [
                     'tahun_akademik' => $first->tahun_akademik,
                     'semester_akademik' => $first->semester_akademik,
+                    'download_disetujui' => $cards->isApprovedForDownload($items),
                 ];
             })
             ->sortByDesc('tahun_akademik')
@@ -117,6 +118,14 @@ class KrsController extends Controller
 
         $jadwalDiambil = $krsPeriodeAktif
             ->pluck('jadwal_id')
+            ->filter()
+            ->values()
+            ->toArray();
+        $mataKuliahDiambil = $krsPeriodeAktif
+            ->map(fn (Krs $item) => $item->mata_kuliah_efektif?->id)
+            ->filter()
+            ->unique()
+            ->values()
             ->toArray();
 
         // ===================== TOTAL SKS =====================
@@ -125,7 +134,7 @@ class KrsController extends Controller
             ->where('status', '!=', 'Ditolak')
             ->sum(function ($item) {
 
-                return $item->jadwal->mataKuliah->sks ?? 0;
+                return $item->mata_kuliah_efektif?->sks ?? 0;
 
             });
 
@@ -146,7 +155,8 @@ class KrsController extends Controller
             $jadwals = $scheduleService->forStudent(
                 $mahasiswa,
                 $periodeKrs,
-                $jadwalDiambil
+                $jadwalDiambil,
+                $mataKuliahDiambil
             );
 
             $requiredParity = $scheduleService->requiredParity($periodeKrs->semester);
@@ -174,6 +184,7 @@ class KrsController extends Controller
                 'tahun_akademik' => $periodeKrs->tahun_akademik,
                 'semester_akademik' => $periodeKrs->semester,
                 'jumlah_jadwal' => $jadwals->count(),
+                'audit' => $scheduleService->lastAudit(),
             ]);
         }
 
@@ -206,6 +217,24 @@ class KrsController extends Controller
     {
         $period = $request->validated();
         $mahasiswa = Mahasiswa::where('user_id', Auth::id())->firstOrFail();
+        $records = $cards->records(
+            $mahasiswa,
+            $period['tahun_akademik'],
+            $period['semester_akademik']
+        );
+
+        if ($records->isEmpty()) {
+            return redirect()
+                ->route('mahasiswa.krs')
+                ->with('error', 'Data KRS tidak ditemukan.');
+        }
+
+        if (! $cards->isApprovedForDownload($records)) {
+            return redirect()
+                ->route('mahasiswa.krs')
+                ->with('error', 'KRS belum disetujui dosen wali. Download KRS tersedia setelah disetujui.');
+        }
+
         $data = $cards->data(
             $mahasiswa,
             $period['tahun_akademik'],
@@ -284,7 +313,7 @@ class KrsController extends Controller
                 $request->jadwal_id
             );
 
-        $krsPeriodeAktif = Krs::with('jadwal.mataKuliah')
+        $krsPeriodeAktif = Krs::with(['jadwal.mataKuliah', 'mataKuliahManual'])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('is_manual', false)
             ->get()
@@ -295,6 +324,7 @@ class KrsController extends Controller
         // Duplikasi hanya diperiksa pada periode aktif, bukan seluruh riwayat KRS.
         $sudahAda = $krsPeriodeAktif->contains(
             fn (Krs $item) => (int) $item->jadwal_id === (int) $jadwal->id
+                || (int) $item->mata_kuliah_efektif?->id === (int) $jadwal->mata_kuliah_id
         );
 
         if ($sudahAda) {
@@ -324,7 +354,7 @@ class KrsController extends Controller
             ->where('status', '!=', 'Ditolak')
             ->sum(function ($item) {
 
-                return $item->jadwal->mataKuliah->sks ?? 0;
+                return $item->mata_kuliah_efektif?->sks ?? 0;
 
             });
 

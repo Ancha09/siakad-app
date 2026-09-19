@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Log;
 
 class AvailableKrsScheduleService
 {
+    private array $lastAudit = [];
+
     /**
      * Ambil jadwal berdasarkan periode, prodi/kurikulum, dan paritas semester.
      * Kelas dan semester studi mahasiswa sengaja tidak dijadikan syarat.
@@ -17,7 +19,8 @@ class AvailableKrsScheduleService
     public function forStudent(
         Mahasiswa $mahasiswa,
         PeriodeKrs $periodeKrs,
-        array|Collection $excludedScheduleIds = []
+        array|Collection $excludedScheduleIds = [],
+        array|Collection $excludedCourseIds = []
     ): Collection {
         $excludedScheduleIds = collect($excludedScheduleIds)
             ->filter()
@@ -25,51 +28,78 @@ class AvailableKrsScheduleService
             ->unique()
             ->values()
             ->all();
+        $excludedCourseIds = collect($excludedCourseIds)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->merge(Jadwal::query()
+                ->whereIn('id', $excludedScheduleIds)
+                ->whereNotNull('mata_kuliah_id')
+                ->pluck('mata_kuliah_id'))
+            ->unique()
+            ->values()
+            ->all();
 
         $normalizedYear = $this->normalizeAcademicYear($periodeKrs->tahun_akademik);
 
-        $query = Jadwal::query()
+        $baseQuery = Jadwal::query()
             ->with([
                 'mataKuliah',
                 'mataKuliah.kurikulums',
                 'dosen',
                 'ruangan',
             ])
-            ->whereNotNull('mata_kuliah_id')
-            // Mengakomodasi data lama seperti 2026-2027 atau 2026 / 2027.
+            ->whereNotNull('mata_kuliah_id');
+
+        $candidateCountBeforeFilter = (clone $baseQuery)->count();
+        $yearCandidates = $baseQuery
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
                 [$normalizedYear]
-            );
-
-        if ($excludedScheduleIds !== []) {
-            $query->whereNotIn('id', $excludedScheduleIds);
-        }
-
-        $candidatesBeforeParity = $query->get()
+            )
+            ->get()
+            ->values();
+        $semesterCandidates = $yearCandidates
             ->filter(fn (Jadwal $jadwal) => $this->matchesPeriod($jadwal, $periodeKrs))
-            ->filter(fn (Jadwal $jadwal) => $this->matchesStudyProgram($jadwal, $mahasiswa))
             ->values();
 
         $requiredParity = $this->requiredParity($periodeKrs->semester);
-        $candidates = $requiredParity === null
+        $parityCandidates = $requiredParity === null
             ? collect()
-            : $candidatesBeforeParity
+            : $semesterCandidates
                 ->filter(fn (Jadwal $jadwal) => $this->matchesRequiredParity(
                     $jadwal,
                     $mahasiswa,
                     $requiredParity
                 ))
                 ->values();
+        $programCandidates = $parityCandidates
+            ->filter(fn (Jadwal $jadwal) => $this->matchesStudyProgram($jadwal, $mahasiswa))
+            ->values();
+        $candidates = $programCandidates
+            ->reject(fn (Jadwal $jadwal) => in_array((int) $jadwal->id, $excludedScheduleIds, true)
+                || in_array((int) $jadwal->mata_kuliah_id, $excludedCourseIds, true))
+            ->values();
+
+        $this->lastAudit = [
+            'candidate_count_before_filter' => $candidateCountBeforeFilter,
+            'candidate_count_after_academic_year' => $yearCandidates->count(),
+            'candidate_count_after_academic_semester' => $semesterCandidates->count(),
+            'candidate_count_after_parity' => $parityCandidates->count(),
+            'candidate_count_after_study_program' => $programCandidates->count(),
+            'candidate_count_after_taken_exclusion' => $candidates->count(),
+            'included_examples' => $candidates->take(5)->map(fn (Jadwal $jadwal) => [
+                'jadwal_id' => $jadwal->id,
+                'kode_mk' => $jadwal->mataKuliah?->kode_mk,
+                'nama_mk' => $jadwal->mataKuliah?->nama_mk,
+            ])->values()->all(),
+        ];
 
         if (app()->environment('local')) {
-            Log::debug('KRS schedule parity filter', [
+            Log::debug('KRS available schedule audit', [
                 'periode_krs_id' => $periodeKrs->id,
                 'mahasiswa_id' => $mahasiswa->id,
                 'required_parity' => $requiredParity,
-                'candidate_count_before_parity' => $candidatesBeforeParity->count(),
-                'candidate_count_after_parity' => $candidates->count(),
-            ]);
+            ] + $this->lastAudit);
         }
 
         return $candidates
@@ -81,6 +111,11 @@ class AvailableKrsScheduleService
                 return $leftKey <=> $rightKey;
             })
             ->values();
+    }
+
+    public function lastAudit(): array
+    {
+        return $this->lastAudit;
     }
 
     public function matchesPeriod(object $record, PeriodeKrs $periodeKrs): bool
@@ -101,7 +136,7 @@ class AvailableKrsScheduleService
         $value = strtolower(preg_replace('/[\s_-]+/', '', trim((string) $semester)) ?? '');
 
         return match ($value) {
-            'ganjil', 'semesterganjil', '1', 'semester1', 'odd' => 'Ganjil',
+            'ganjil', 'semesterganjil', 'gasal', 'semestergasal', '1', 'semester1', 'odd' => 'Ganjil',
             'genap', 'semestergenap', '2', 'semester2', 'even' => 'Genap',
             default => null,
         };
@@ -138,16 +173,42 @@ class AvailableKrsScheduleService
         return $number > 0 ? $number : null;
     }
 
+    public function extractCourseSemesterNumber(mixed $semester): ?int
+    {
+        return $this->normalizeCourseSemester($semester);
+    }
+
+    public function isCourseAllowedForPeriod(mixed $courseSemester, string|int|null $periodSemester): bool
+    {
+        $requiredParity = $this->requiredParity($periodSemester);
+
+        return $requiredParity !== null
+            && $this->semesterMatchesRequiredParity($courseSemester, $requiredParity);
+    }
+
     public function semesterNumberForStudent(
         Jadwal $jadwal,
         Mahasiswa $mahasiswa,
         ?string $requiredParity = null
     ): ?int {
         $curriculumEntries = $this->matchingCurriculumEntries($jadwal, $mahasiswa);
+        $courseSemester = $this->extractCourseSemesterNumber($jadwal->mataKuliah?->semester);
+        $courseProgramId = $jadwal->mataKuliah?->prodi_id;
+        $usesMasterCourseSemester = $courseProgramId === null
+            || ($mahasiswa->prodi_id !== null && (int) $courseProgramId === (int) $mahasiswa->prodi_id);
+
+        if ($usesMasterCourseSemester && $courseSemester !== null) {
+            if ($requiredParity !== null
+                && ! $this->semesterMatchesRequiredParity($courseSemester, $requiredParity)) {
+                return null;
+            }
+
+            return $courseSemester;
+        }
 
         if ($curriculumEntries->isNotEmpty()) {
             return $curriculumEntries
-                ->map(fn ($kurikulum) => $this->normalizeCourseSemester($kurikulum->pivot->semester))
+                ->map(fn ($kurikulum) => $this->extractCourseSemesterNumber($kurikulum->pivot->semester))
                 ->filter(fn (?int $semester) => $semester !== null)
                 ->when($requiredParity !== null, fn (Collection $semesters) => $semesters
                     ->filter(fn (int $semester) => $this->semesterMatchesRequiredParity(
@@ -158,7 +219,7 @@ class AvailableKrsScheduleService
                 ->first();
         }
 
-        $semester = $this->normalizeCourseSemester($jadwal->mataKuliah?->semester);
+        $semester = $courseSemester;
 
         if ($semester === null) {
             return null;
