@@ -574,7 +574,7 @@
                                     {{-- KODE MK --}}
 
                                     <td>
-                                        {{ $item->jadwal->mataKuliah->kode_mk ?? '-' }}
+                                        {{ $item->mata_kuliah_efektif?->kode_mk ?? '-' }}
                                     </td>
 
 
@@ -583,7 +583,7 @@
                                     <td>
 
                                         <strong>
-                                            {{ $item->jadwal->mataKuliah->nama_mk ?? '-' }}
+                                            {{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}
                                         </strong>
 
                                     </td>
@@ -592,21 +592,21 @@
                                     {{-- SKS --}}
 
                                     <td>
-                                        {{ $item->jadwal->mataKuliah->sks ?? 0 }}
+                                        {{ $item->mata_kuliah_efektif?->sks ?? '-' }}
                                     </td>
 
 
                                     {{-- DOSEN --}}
 
                                     <td>
-                                        {{ $item->jadwal->dosen->nama ?? '-' }}
+                                        {{ $item->dosen_efektif?->nama ?? '-' }}
                                     </td>
 
 
                                     {{-- RUANGAN --}}
 
                                     <td>
-                                        {{ $item->jadwal->ruangan->nama_ruangan ?? '-' }}
+                                        {{ $item->jadwal?->ruangan?->nama_ruangan ?? '-' }}
                                     </td>
 
 
@@ -614,15 +614,15 @@
 
                                     <td>
 
-                                        {{ $item->jadwal->hari }}
+                                        {{ $item->jadwal?->hari ?? '-' }}
 
                                         <br>
 
                                         <small style="color:#64748b;">
 
-                                            {{ $item->jadwal->jam_mulai }}
+                                            {{ $item->jadwal?->jam_mulai ?? '-' }}
                                             -
-                                            {{ $item->jadwal->jam_selesai }}
+                                            {{ $item->jadwal?->jam_selesai ?? '-' }}
 
                                         </small>
 
@@ -1035,17 +1035,17 @@
                                         @foreach($jadwalSemester as $jadwal)
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $jadwal->mataKuliah->kode_mk ?? '-' }}</td>
+                                                <td>{{ $jadwal->mataKuliah?->kode_mk ?? '-' }}</td>
                                                 <td>
-                                                    <strong>{{ $jadwal->mataKuliah->nama_mk ?? '-' }}</strong>
+                                                    <strong>{{ $jadwal->mataKuliah?->nama_mk ?? '-' }}</strong>
                                                 </td>
                                                 <td>
                                                     <span class="badge badge-blue">
-                                                        {{ $jadwal->mataKuliah->sks ?? 0 }} SKS
+                                                        {{ $jadwal->mataKuliah?->sks ?? 0 }} SKS
                                                     </span>
                                                 </td>
-                                                <td>{{ $jadwal->dosen->nama ?? '-' }}</td>
-                                                <td>{{ $jadwal->ruangan->nama_ruangan ?? '-' }}</td>
+                                                <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
+                                                <td>{{ $jadwal->ruangan?->nama_ruangan ?? '-' }}</td>
                                                 <td>
                                                     <strong>{{ $jadwal->hari }}</strong><br>
                                                     <small style="color:#64748b;">

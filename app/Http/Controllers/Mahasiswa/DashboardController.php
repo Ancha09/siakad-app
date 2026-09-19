@@ -85,25 +85,24 @@ class DashboardController extends Controller
             ->where('user_id', Auth::id())
             ->firstOrFail();
 
-        $jadwals = Krs::with([
+        $krsItems = Krs::with([
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
+            'mataKuliahManual',
+            'dosenManual',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('status', 'Disetujui')
-            ->get()
-            ->map(function ($krs) {
-                return $krs->jadwal;
-            })
-            ->filter()
-            ->values();
+            ->orderByDesc('tahun_akademik')
+            ->orderByDesc('semester_akademik')
+            ->get();
 
         return view(
             'mahasiswa.jadwal.index',
             compact(
                 'mahasiswa',
-                'jadwals'
+                'krsItems'
             )
         );
     }

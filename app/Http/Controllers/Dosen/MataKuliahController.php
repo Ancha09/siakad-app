@@ -15,8 +15,12 @@ class MataKuliahController extends Controller
             ->firstOrFail();
 
         $jadwals = Jadwal::with([
-            'mataKuliah',
+            'mataKuliah.prodi',
+            'dosen',
             'ruangan',
+        ])
+        ->withCount([
+            'krs as jumlah_mahasiswa' => fn ($query) => $query->where('status', '!=', 'Ditolak'),
         ])
         ->where('dosen_id', $dosen->id)
         ->orderBy('tahun_akademik', 'desc')
@@ -24,6 +28,6 @@ class MataKuliahController extends Controller
         ->orderBy('jam_mulai')
         ->get();
 
-        return view('dosen.matakuliah.index', compact('jadwals'));
+        return view('dosen.matakuliah.index', compact('dosen', 'jadwals'));
     }
 }

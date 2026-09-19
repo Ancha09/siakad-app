@@ -80,6 +80,8 @@ class KrsController extends Controller
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
+            'mataKuliahManual',
+            'dosenManual',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where(fn ($query) => $query

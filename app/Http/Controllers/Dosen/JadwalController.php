@@ -14,14 +14,20 @@ class JadwalController extends Controller
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
         $jadwals = Jadwal::with([
-                'mataKuliah',
+                'mataKuliah.prodi',
+                'dosen',
                 'ruangan',
             ])
+            ->withCount([
+                'krs as jumlah_mahasiswa' => fn ($query) => $query->where('status', '!=', 'Ditolak'),
+            ])
             ->where('dosen_id', $dosen->id)
+            ->orderByDesc('tahun_akademik')
+            ->orderByDesc('semester_akademik')
             ->orderBy('hari')
             ->orderBy('jam_mulai')
             ->get();
 
-        return view('dosen.jadwal.index', compact('jadwals'));
+        return view('dosen.jadwal.index', compact('dosen', 'jadwals'));
     }
 }
