@@ -315,7 +315,9 @@ class KrsController extends Controller
 
         $krsPeriodeAktif = Krs::with(['jadwal.mataKuliah', 'mataKuliahManual'])
             ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('is_manual', false)
+            ->where(fn ($query) => $query
+                ->where('is_manual', false)
+                ->orWhereNull('is_manual'))
             ->get()
             ->filter(
                 fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
@@ -345,6 +347,24 @@ class KrsController extends Controller
             return back()->with(
                 'error',
                 'Jadwal mata kuliah tidak tersedia untuk prodi, semester, dan periode KRS Anda.'
+            );
+        }
+
+        // Bentrok antarprodi boleh disimpan oleh admin, tetapi seorang mahasiswa
+        // tetap tidak boleh mengambil dua perkuliahan dengan rentang waktu tumpang tindih.
+        $jadwalBentrok = $krsPeriodeAktif
+            ->where('status', '!=', 'Ditolak')
+            ->map(fn (Krs $item) => $item->jadwal)
+            ->filter()
+            ->first(fn (Jadwal $existing) => $this->schedulesOverlap($existing, $jadwal));
+
+        if ($jadwalBentrok) {
+            $mataKuliahBentrok = $jadwalBentrok->mataKuliah?->nama_mk ?? 'mata kuliah sebelumnya';
+            $mataKuliahBaru = $jadwal->mataKuliah?->nama_mk ?? 'mata kuliah yang dipilih';
+
+            return back()->with(
+                'error',
+                "Terdapat jadwal mata kuliah yang bentrok: {$mataKuliahBentrok} dan {$mataKuliahBaru}."
             );
         }
 
@@ -534,6 +554,33 @@ class KrsController extends Controller
 
         // IPK < 3.25
         return 20;
+    }
+
+    private function schedulesOverlap(Jadwal $left, Jadwal $right): bool
+    {
+        if (strcasecmp(trim((string) $left->hari), trim((string) $right->hari)) !== 0) {
+            return false;
+        }
+
+        $leftStart = $this->timeToSeconds($left->jam_mulai);
+        $leftEnd = $this->timeToSeconds($left->jam_selesai);
+        $rightStart = $this->timeToSeconds($right->jam_mulai);
+        $rightEnd = $this->timeToSeconds($right->jam_selesai);
+
+        if (in_array(null, [$leftStart, $leftEnd, $rightStart, $rightEnd], true)) {
+            return false;
+        }
+
+        return $leftStart < $rightEnd && $leftEnd > $rightStart;
+    }
+
+    private function timeToSeconds(mixed $time): ?int
+    {
+        if (! is_string($time) || ! preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', trim($time), $parts)) {
+            return null;
+        }
+
+        return ((int) $parts[1] * 3600) + ((int) $parts[2] * 60) + (int) ($parts[3] ?? 0);
     }
 
     private function aksesKrsDibuka(PeriodeKrs $periodeKrs, Mahasiswa $mahasiswa): bool

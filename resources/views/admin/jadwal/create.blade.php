@@ -33,20 +33,7 @@
                 {{-- MATA KULIAH --}}
                 <div class="form-group">
                     <label>Mata Kuliah</label>
-
-                    <select name="mata_kuliah_id" class="form-control" required>
-                        <option value="">-- Pilih Mata Kuliah --</option>
-
-                        @foreach($mataKuliahs as $mk)
-                            <option
-                                value="{{ $mk->id }}"
-                                {{ old('mata_kuliah_id') == $mk->id ? 'selected' : '' }}
-                            >
-                                {{ $mk->kode_mk }} - {{ $mk->nama_mk }}
-                            </option>
-                        @endforeach
-
-                    </select>
+                    <x-searchable-course-select :courses="$mataKuliahs" :selected="old('mata_kuliah_id')" input-id="jadwal-mata-kuliah-search" />
                 </div>
 
 
@@ -180,6 +167,8 @@
 
                     </select>
                 </div>
+
+                @include('admin.jadwal.partials.shared-fields')
 
             </div>
 

@@ -109,7 +109,7 @@ class MataKuliahController extends Controller
             'nama_mk'  => 'required',
             'sks'      => 'required|integer|min:1|max:6',
             'semester' => 'nullable|integer|min:1|max:14',
-            'prodi_id' => 'required|exists:prodis,id',
+            'prodi_id' => 'nullable|exists:prodis,id',
         ]);
 
 
@@ -118,7 +118,7 @@ class MataKuliahController extends Controller
             'nama_mk'  => $request->nama_mk,
             'sks'      => $request->sks,
             'semester' => $request->semester,
-            'prodi_id' => $request->prodi_id,
+            'prodi_id' => $request->filled('prodi_id') ? $request->integer('prodi_id') : null,
         ]);
 
 
@@ -160,7 +160,7 @@ class MataKuliahController extends Controller
             'nama_mk' => 'required',
             'sks' => 'required|integer|min:1|max:6',
             'semester' => 'nullable|integer|min:1|max:14',
-            'prodi_id' => 'required|exists:prodis,id',
+            'prodi_id' => 'nullable|exists:prodis,id',
         ]);
 
 
@@ -169,7 +169,7 @@ class MataKuliahController extends Controller
             'nama_mk' => $request->nama_mk,
             'sks' => $request->sks,
             'semester' => $request->semester,
-            'prodi_id' => $request->prodi_id,
+            'prodi_id' => $request->filled('prodi_id') ? $request->integer('prodi_id') : null,
         ]);
 
 

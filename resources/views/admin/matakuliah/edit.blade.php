@@ -147,8 +147,11 @@
                     <select
                         name="prodi_id"
                         class="form-control"
-                        required
                     >
+
+                        <option value="" {{ old('prodi_id', $matakuliah->prodi_id) === null ? 'selected' : '' }}>
+                            Umum / MKU - Semua Program Studi
+                        </option>
 
                         @foreach($prodis as $prodi)
 

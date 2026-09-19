@@ -44,6 +44,7 @@ class AvailableKrsScheduleService
         $baseQuery = Jadwal::query()
             ->with([
                 'mataKuliah',
+                'mataKuliah.prodi',
                 'mataKuliah.kurikulums',
                 'dosen',
                 'ruangan',

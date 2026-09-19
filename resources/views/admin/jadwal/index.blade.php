@@ -276,6 +276,8 @@
 
                         <th>Mata Kuliah</th>
 
+                        <th>Program Studi</th>
+
                         <th>Dosen</th>
 
                         <th>Ruangan</th>
@@ -283,6 +285,10 @@
                         <th>Hari</th>
 
                         <th>Jam</th>
+
+                        <th>Periode</th>
+
+                        <th>Jenis / Grup</th>
 
                         <th>Aksi</th>
 
@@ -325,6 +331,9 @@
 
                             </td>
 
+                            <td>
+                                {{ $jadwal->mataKuliah?->prodi?->nama_prodi ?? 'Umum / Semua Prodi' }}
+                            </td>
 
                             {{-- DOSEN --}}
 
@@ -367,6 +376,22 @@
 
                                 {{ $jadwal->jam_selesai }}
 
+                            </td>
+
+                            <td>
+                                {{ $jadwal->tahun_akademik ?? '-' }}<br>
+                                <small style="color:#64748b;">{{ $jadwal->semester_akademik ?? '-' }}</small>
+                            </td>
+
+                            <td style="min-width:150px;">
+                                @if($jadwal->is_lintas_prodi)
+                                    <span class="badge badge-blue">Lintas Prodi</span>
+                                    <span class="badge" style="background:#dcfce7;color:#166534;">Kelas Gabungan</span>
+                                    <br>
+                                    <small style="display:inline-block;margin-top:6px;color:#475569;">{{ $jadwal->group_key ?? '-' }}</small>
+                                @else
+                                    <span class="badge" style="background:#e2e8f0;color:#334155;">Reguler</span>
+                                @endif
                             </td>
 
 
@@ -424,7 +449,7 @@
                         <tr>
 
                             <td
-                                colspan="7"
+                                colspan="10"
                                 style="
                                     text-align:center;
                                     padding:40px;

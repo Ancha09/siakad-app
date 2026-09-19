@@ -149,11 +149,10 @@
                     <select
                         name="prodi_id"
                         class="form-control"
-                        required
                     >
 
                         <option value="">
-                            -- Pilih Program Studi --
+                            Umum / MKU - Semua Program Studi
                         </option>
 
                         @foreach($prodis as $prodi)

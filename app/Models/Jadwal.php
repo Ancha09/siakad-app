@@ -16,7 +16,16 @@ class Jadwal extends Model
         'jam_selesai',
         'tahun_akademik',
         'semester_akademik',
+        'is_lintas_prodi',
+        'group_key',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_lintas_prodi' => 'boolean',
+        ];
+    }
 
     // Relasi ke Mata Kuliah
     public function mataKuliah()

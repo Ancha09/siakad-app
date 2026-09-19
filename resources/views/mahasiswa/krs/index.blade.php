@@ -1034,6 +1034,7 @@
                                             <th>No</th>
                                             <th>Kode MK</th>
                                             <th>Mata Kuliah</th>
+                                            <th>Prodi / Keterangan</th>
                                             <th>SKS</th>
                                             <th>Dosen</th>
                                             <th>Ruangan</th>
@@ -1044,15 +1045,37 @@
 
                                     <tbody>
                                         @foreach($jadwalSemester as $jadwal)
+                                            @php
+                                                $mataKuliah = $jadwal->mataKuliah;
+                                                $isMku = $mataKuliah?->prodi_id === null;
+                                                $kurikulumProdiIds = $mataKuliah?->kurikulums?->pluck('prodi_id')->filter()->unique() ?? collect();
+                                                $isLintasProdi = $jadwal->is_lintas_prodi
+                                                    || $kurikulumProdiIds->count() > 1
+                                                    || (! $isMku
+                                                        && $mahasiswa->prodi_id !== null
+                                                        && (int) $mataKuliah?->prodi_id !== (int) $mahasiswa->prodi_id
+                                                        && $kurikulumProdiIds->contains(fn ($id) => (int) $id === (int) $mahasiswa->prodi_id));
+                                            @endphp
                                             <tr>
                                                 <td>{{ $loop->iteration }}</td>
-                                                <td>{{ $jadwal->mataKuliah?->kode_mk ?? '-' }}</td>
+                                                <td>{{ $mataKuliah?->kode_mk ?? '-' }}</td>
                                                 <td>
-                                                    <strong>{{ $jadwal->mataKuliah?->nama_mk ?? '-' }}</strong>
+                                                    <strong>{{ $mataKuliah?->nama_mk ?? '-' }}</strong>
+                                                </td>
+                                                <td>
+                                                    <span style="display:block;color:#334155;">
+                                                        {{ $isMku ? 'Semua Program Studi' : ($mataKuliah?->prodi?->nama_prodi ?? '-') }}
+                                                    </span>
+                                                    @if($isMku)
+                                                        <span class="badge" style="margin-top:5px;background:#fef3c7;color:#92400e;">MKU</span>
+                                                    @endif
+                                                    @if($isLintasProdi)
+                                                        <span class="badge badge-blue" style="margin-top:5px;">Lintas Prodi</span>
+                                                    @endif
                                                 </td>
                                                 <td>
                                                     <span class="badge badge-blue">
-                                                        {{ $jadwal->mataKuliah?->sks ?? 0 }} SKS
+                                                        {{ $mataKuliah?->sks ?? 0 }} SKS
                                                     </span>
                                                 </td>
                                                 <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
