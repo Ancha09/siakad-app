@@ -7,6 +7,7 @@
         @page { margin: 24px 32px 28px; }
         * { box-sizing: border-box; }
         body { margin: 0; color: #111827; font-family: Arial, sans-serif; font-size: 10px; }
+        .template-letterhead { display: block; width: 100%; height: auto; margin: 0 0 8px; }
         .letterhead { width: 100%; border-collapse: collapse; border-bottom: 3px double #111; margin-bottom: 8px; }
         .letterhead td { border: 0; padding: 0 0 8px; vertical-align: middle; }
         .logo { width: 70px; height: 70px; object-fit: contain; }
@@ -38,28 +39,32 @@
     </style>
 </head>
 <body>
-    <table class="letterhead">
-        <tr>
-            <td style="width:78px;">
-                @if(file_exists(public_path('images/logo_sttmi.jpeg')))
-                    <img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo STTMI">
-                @endif
-            </td>
-            <td class="school">
-                <div class="sttmi">STTMI</div>
-                <div class="name">SEKOLAH TINGGI TEKNOLOGI MINERAL INDONESIA</div>
-                <div class="address">Jalan Cihanjuang No.161, Kabupaten Bandung Barat 40559 · Telp. 082-118652085</div>
-            </td>
-            <td style="width:78px;"></td>
-        </tr>
-    </table>
+    @if($templateLetterhead)
+        <img class="template-letterhead" src="{{ $templateLetterhead }}" alt="Kop resmi STTMI dari template KRS">
+    @else
+        <table class="letterhead">
+            <tr>
+                <td style="width:78px;">
+                    @if(file_exists(public_path('images/logo_sttmi.jpeg')))
+                        <img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo STTMI">
+                    @endif
+                </td>
+                <td class="school">
+                    <div class="sttmi">STTMI</div>
+                    <div class="name">Sekolah Tinggi Teknologi Mineral Indonesia</div>
+                    <div class="address">Jalan Cihanjuang No.161, Kabupaten Bandung Barat 40559 &middot; Telp. 082-118652085</div>
+                </td>
+                <td style="width:78px;"></td>
+            </tr>
+        </table>
+    @endif
 
     <table class="document-meta">
         <tr><td>No. Formulir</td><td>: Form-1/II/{{ now()->format('Y') }}</td><td style="text-align:right;">Tanggal cetak: {{ now()->format('d / m / Y') }}</td></tr>
     </table>
 
     <h1>KARTU RENCANA STUDI (KRS)</h1>
-    <div class="academic-year">TAHUN AKADEMIK {{ $tahunAkademik }} · {{ strtoupper($semesterAkademik) }}</div>
+    <div class="academic-year">TAHUN AKADEMIK {{ $tahunAkademik }} &middot; {{ strtoupper($semesterAkademik) }}</div>
 
     <table class="identity">
         <tr>
@@ -102,8 +107,8 @@
                     <strong>{{ $item->dosen_efektif?->nama ?? 'Dosen belum tersedia' }}</strong>
                     @if($item->jadwal)
                         <div class="muted">
-                            {{ $item->jadwal->hari ?? '-' }}, {{ substr((string) $item->jadwal->jam_mulai, 0, 5) }}–{{ substr((string) $item->jadwal->jam_selesai, 0, 5) }}
-                            · {{ $item->jadwal->ruangan?->nama_ruangan ?? 'Ruang belum tersedia' }}
+                            {{ $item->jadwal->hari ?? '-' }}, {{ substr((string) $item->jadwal->jam_mulai, 0, 5) }}-{{ substr((string) $item->jadwal->jam_selesai, 0, 5) }}
+                            &middot; {{ $item->jadwal->ruangan?->nama_ruangan ?? 'Ruang belum tersedia' }}
                         </div>
                     @endif
                     <div class="muted">Status: {{ $item->status }}</div>
@@ -121,18 +126,17 @@
     <table class="signatures">
         <tr>
             <td>
+                Dosen Wali
+                <div class="signature-space"></div>
+                <div class="signer">{{ $dosenWali?->nama ?? '(....................................)' }}</div>
+                @if($dosenWali?->nidn)<div>NIDN: {{ $dosenWali->nidn }}</div>@endif
+            </td>
+            <td>
                 Ketua Program Studi<br>
                 {{ trim(($mahasiswa->prodi?->jenjang ?? '').' '.($mahasiswa->prodi?->nama_prodi ?? '')) }}
                 <div class="signature-space"></div>
-                <div class="signer">{{ $ketuaProdi?->nama ?? '(........................................)' }}</div>
-                @if($ketuaProdi?->nidn)<div>NIDN: {{ $ketuaProdi->nidn }}</div>@endif
-            </td>
-            <td>
-                Ditetapkan di Bandung Barat,<br>
-                Dosen Wali
-                <div class="signature-space"></div>
-                <div class="signer">{{ $dosenWali?->nama ?? '(........................................)' }}</div>
-                @if($dosenWali?->nidn)<div>NIDN: {{ $dosenWali->nidn }}</div>@endif
+                <div class="signer">{{ $namaKetuaProgramStudi ?: '(....................................)' }}</div>
+                @if($nipKetuaProgramStudi)<div>NIP: {{ $nipKetuaProgramStudi }}</div>@endif
             </td>
         </tr>
     </table>

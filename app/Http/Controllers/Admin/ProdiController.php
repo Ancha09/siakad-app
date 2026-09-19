@@ -53,6 +53,10 @@ class ProdiController extends Controller
 
             'fakultas_id' => 'required|exists:fakultas,id',
 
+            'ketua_program_studi_nama' => 'nullable|string|max:150',
+
+            'ketua_program_studi_nip' => 'nullable|string|max:50',
+
         ]);
 
 
@@ -65,6 +69,14 @@ class ProdiController extends Controller
             'jenjang' => $request->jenjang,
 
             'fakultas_id' => $request->fakultas_id,
+
+            'ketua_program_studi_nama' => $request->filled('ketua_program_studi_nama')
+                ? trim((string) $request->ketua_program_studi_nama)
+                : null,
+
+            'ketua_program_studi_nip' => $request->filled('ketua_program_studi_nip')
+                ? trim((string) $request->ketua_program_studi_nip)
+                : null,
 
         ]);
 
@@ -113,6 +125,10 @@ class ProdiController extends Controller
             'fakultas_id' =>
                 'required|exists:fakultas,id',
 
+            'ketua_program_studi_nama' => 'nullable|string|max:150',
+
+            'ketua_program_studi_nip' => 'nullable|string|max:50',
+
         ]);
 
 
@@ -125,6 +141,14 @@ class ProdiController extends Controller
             'jenjang' => $request->jenjang,
 
             'fakultas_id' => $request->fakultas_id,
+
+            'ketua_program_studi_nama' => $request->filled('ketua_program_studi_nama')
+                ? trim((string) $request->ketua_program_studi_nama)
+                : null,
+
+            'ketua_program_studi_nip' => $request->filled('ketua_program_studi_nip')
+                ? trim((string) $request->ketua_program_studi_nip)
+                : null,
 
         ]);
 

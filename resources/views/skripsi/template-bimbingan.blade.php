@@ -27,7 +27,7 @@
 <body>
     <table class="header"><tr>
         <td style="width:72px;">@if(file_exists(public_path('images/logo_sttmi.jpeg')))<img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo">@endif</td>
-        <td><h1>KARTU BIMBINGAN SKRIPSI</h1><div class="subtitle">Sekolah Tinggi Teknologi Mandala Indonesia (STTMI)</div></td>
+        <td><h1>KARTU BIMBINGAN SKRIPSI</h1><div class="subtitle">Sekolah Tinggi Teknologi Mineral Indonesia (STTMI)</div></td>
     </tr></table>
 
     <table class="identity">

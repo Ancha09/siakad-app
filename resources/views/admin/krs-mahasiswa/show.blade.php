@@ -16,12 +16,19 @@
 
     <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
         <a href="{{ $returnUrl }}" class="btn-outline">← Kembali</a>
-        <a href="{{ route('admin.krs-mahasiswa.pdf', [
-            'mahasiswa' => $mahasiswa,
-            'tahun_akademik' => $tahunAkademik,
-            'semester_akademik' => $semesterAkademik,
-        ]) }}" class="btn-primary">Download Kartu KRS PDF</a>
+        @include('krs.partials.pdf-download-form', [
+            'action' => route('admin.krs-mahasiswa.pdf', $mahasiswa),
+            'tahunAkademik' => $tahunAkademik,
+            'semesterAkademik' => $semesterAkademik,
+            'buttonLabel' => 'Download Kartu KRS PDF',
+        ])
     </div>
+
+    @if(blank($mahasiswa->prodi?->ketua_program_studi_nama))
+        <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:12px 14px;border-radius:9px;margin-bottom:18px;">
+            Ketua Program Studi belum diisi pada Data Program Studi. PDF tetap dapat diunduh dan akan menampilkan placeholder tanda tangan.
+        </div>
+    @endif
 
     <div class="page-card" style="margin-bottom:20px;">
         <div class="page-card-head"><h2>Identitas dan Periode</h2></div>

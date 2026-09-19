@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mahasiswa;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\KrsPdfRequest;
 use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
@@ -14,7 +15,6 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 
 class KrsController extends Controller
 {
@@ -82,11 +82,15 @@ class KrsController extends Controller
             'jadwal.ruangan',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('is_manual', false)
+            ->where(fn ($query) => $query
+                ->where('is_manual', false)
+                ->orWhereNull('is_manual'))
             ->get();
 
         $periodeKartuKrs = $krs
             ->where('status', '!=', 'Ditolak')
+            ->filter(fn (Krs $item) => filled($item->tahun_akademik)
+                && in_array($item->semester_akademik, ['Ganjil', 'Genap'], true))
             ->groupBy(fn (Krs $item) => $item->tahun_akademik.'|'.$item->semester_akademik)
             ->map(function ($items) {
                 $first = $items->first();
@@ -196,19 +200,21 @@ class KrsController extends Controller
         );
     }
 
-    public function cardPdf(Request $request, KrsCardService $cards)
+    public function cardPdf(KrsPdfRequest $request, KrsCardService $cards)
     {
-        $period = $request->validate([
-            'tahun_akademik' => ['required', 'string', 'max:20', 'regex:/^\d{4}\/\d{4}$/'],
-            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
-        ]);
+        $period = $request->validated();
         $mahasiswa = Mahasiswa::where('user_id', Auth::id())->firstOrFail();
-        $data = $cards->data($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']);
+        $data = $cards->data(
+            $mahasiswa,
+            $period['tahun_akademik'],
+            $period['semester_akademik'],
+            true
+        );
         abort_if($data['printableRecords']->isEmpty(), 404, 'Tidak ada KRS yang dapat dicetak pada periode tersebut.');
 
         return Pdf::loadView('krs.card-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->download($cards->filename($mahasiswa, $data['semesterStudi']));
+            ->download($cards->filename($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']));
     }
 
     // =========================================================

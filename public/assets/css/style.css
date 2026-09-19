@@ -673,6 +673,8 @@ tr:hover td { background: var(--gray-50); }
 .manual-course-option.is-selected:not(:hover):not(.is-active) { background: var(--pale); color: var(--navy); font-weight: 700; }
 .manual-course-empty { padding: 16px 12px; color: var(--gray-600); font-size: 12px; text-align: center; }
 
+.krs-pdf-download-form { display: inline-flex; margin: 0; }
+
 .btn-primary {
   padding: 10px 22px;
   background: linear-gradient(90deg, var(--navy), var(--blue));

@@ -9,7 +9,15 @@
             <h2 style="margin:0;">Detail Pengajuan KRS</h2>
             <p style="margin:5px 0 0;color:#64748b;">Periksa mata kuliah mahasiswa sebelum memberi keputusan.</p>
         </div>
-        <a href="{{ $listUrl }}" class="btn-outline">Kembali ke Daftar Mahasiswa</a>
+        <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
+            @include('krs.partials.pdf-download-form', [
+                'action' => route('dosen.krs.pdf', $mahasiswa),
+                'tahunAkademik' => $year,
+                'semesterAkademik' => $semester,
+                'buttonLabel' => 'Download KRS PDF',
+            ])
+            <a href="{{ $listUrl }}" class="btn-outline">Kembali ke Daftar Mahasiswa</a>
+        </div>
     </div>
 
     @if($errors->any())

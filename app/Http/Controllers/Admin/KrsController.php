@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\KrsPdfRequest;
 use App\Models\Dosen;
 use App\Models\Fakultas;
 use App\Models\Jadwal;
@@ -117,15 +118,20 @@ class KrsController extends Controller
         ]);
     }
 
-    public function studentCardPdf(Request $request, Mahasiswa $mahasiswa, KrsCardService $cards)
+    public function studentCardPdf(KrsPdfRequest $request, Mahasiswa $mahasiswa, KrsCardService $cards)
     {
-        $period = $this->validatedPeriod($request);
-        $data = $cards->data($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']);
+        $period = $request->validated();
+        $data = $cards->data(
+            $mahasiswa,
+            $period['tahun_akademik'],
+            $period['semester_akademik'],
+            true
+        );
         abort_if($data['printableRecords']->isEmpty(), 404, 'Tidak ada KRS yang dapat dicetak pada periode tersebut.');
 
         return Pdf::loadView('krs.card-pdf', $data)
             ->setPaper('a4', 'portrait')
-            ->download($cards->filename($mahasiswa, $data['semesterStudi']));
+            ->download($cards->filename($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']));
     }
 
     private function validatedPeriod(Request $request): array

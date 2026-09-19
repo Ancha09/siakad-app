@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>🎓 Tambah Program Studi</h2>
+        <h2 class="icon-heading"><x-layout-icon name="school" /> Tambah Program Studi</h2>
     </div>
 
     <div class="page-card-body">
@@ -68,6 +68,31 @@
                         required
                     >
 
+                </div>
+
+                <div class="form-group">
+                    <label>Nama Ketua Program Studi</label>
+                    <input
+                        type="text"
+                        name="ketua_program_studi_nama"
+                        class="form-control"
+                        value="{{ old('ketua_program_studi_nama') }}"
+                        maxlength="150"
+                        placeholder="Boleh dikosongkan sementara"
+                    >
+                    <small style="color:#64748b;">Nama ini akan tampil otomatis pada tanda tangan PDF KRS.</small>
+                </div>
+
+                <div class="form-group">
+                    <label>NIP/NIDN Ketua Program Studi</label>
+                    <input
+                        type="text"
+                        name="ketua_program_studi_nip"
+                        class="form-control"
+                        value="{{ old('ketua_program_studi_nip') }}"
+                        maxlength="50"
+                        placeholder="Opsional"
+                    >
                 </div>
 
 
@@ -180,7 +205,7 @@
                 class="btn-primary"
             >
 
-                💾 Simpan
+                <span class="icon-inline"><x-layout-icon name="save" /> Simpan</span>
 
             </button>
 

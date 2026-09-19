@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Dosen;
+use App\Models\Fakultas;
 use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\Krs;
@@ -9,6 +10,7 @@ use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Models\Ruangan;
 use App\Models\User;
+use App\Services\KrsCardService;
 
 function makeStudentKrsReviewData(): array
 {
@@ -16,10 +18,17 @@ function makeStudentKrsReviewData(): array
     $studentUser = User::factory()->create(['role' => 'mahasiswa']);
     $otherStudentUser = User::factory()->create(['role' => 'mahasiswa']);
     $lecturerUser = User::factory()->create(['role' => 'dosen']);
+    $fakultas = Fakultas::create([
+        'kode_fakultas' => 'FT-KRS',
+        'nama_fakultas' => 'Fakultas Teknik KRS',
+    ]);
     $prodi = Prodi::create([
         'kode_prodi' => 'TG-KRS',
         'nama_prodi' => 'Teknik Geologi',
         'jenjang' => 'S1',
+        'fakultas_id' => $fakultas->id,
+        'ketua_program_studi_nama' => 'Ketua Program Studi Teknik Geologi',
+        'ketua_program_studi_nip' => '198001012010011001',
     ]);
     $dosen = Dosen::create([
         'nidn' => 'KRS-DOSEN-01',
@@ -93,6 +102,7 @@ function makeStudentKrsReviewData(): array
         'studentUser',
         'otherStudentUser',
         'lecturerUser',
+        'fakultas',
         'prodi',
         'kelas',
         'student',
@@ -129,7 +139,9 @@ test('admin can filter and open KRS grouped per student and academic period', fu
         ->assertOk()
         ->assertSee('Geologi Dinamik')
         ->assertSee('Dosen Wali Dinamis')
-        ->assertSee('Ruang KRS');
+        ->assertSee('Ruang KRS')
+        ->assertDontSee('name="nama_ketua_program_studi"', false)
+        ->assertDontSee('name="nip_ketua_program_studi"', false);
 });
 
 test('admin and each student download a dynamic KRS PDF while role access stays isolated', function () {
@@ -137,21 +149,37 @@ test('admin and each student download a dynamic KRS PDF while role access stays 
     $period = ['tahun_akademik' => '2025/2026', 'semester_akademik' => 'Genap'];
 
     $this->actingAs($data['admin'])
-        ->get(route('admin.krs-mahasiswa.pdf', ['mahasiswa' => $data['student']] + $period))
+        ->post(route('admin.krs-mahasiswa.pdf', $data['student']), $period)
         ->assertOk()
         ->assertHeader('content-type', 'application/pdf')
-        ->assertDownload('KRS Semester 2-Windiye Maharani-1025207.pdf');
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
 
     $this->actingAs($data['studentUser'])
-        ->get(route('mahasiswa.krs.pdf', $period))
+        ->post(route('mahasiswa.krs.pdf'), $period)
         ->assertOk()
         ->assertHeader('content-type', 'application/pdf')
-        ->assertDownload('KRS Semester 2-Windiye Maharani-1025207.pdf');
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
 
     $this->actingAs($data['otherStudentUser'])
-        ->get(route('mahasiswa.krs.pdf', $period))
+        ->post(route('mahasiswa.krs.pdf'), $period + ['mahasiswa_id' => $data['student']->id])
         ->assertOk()
-        ->assertDownload('KRS Semester 2-Mahasiswa KRS Lain-1025208.pdf');
+        ->assertDownload('KRS-1025208-2025-2026-Genap.pdf');
+
+    $this->actingAs($data['lecturerUser'])
+        ->post(route('dosen.krs.pdf', $data['student']), $period)
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
+
+    $otherLecturerUser = User::factory()->create(['role' => 'dosen']);
+    Dosen::create([
+        'nidn' => 'KRS-DOSEN-02',
+        'nama' => 'Dosen Wali Lain',
+        'prodi_id' => $data['prodi']->id,
+        'user_id' => $otherLecturerUser->id,
+    ]);
+    $this->actingAs($otherLecturerUser)
+        ->post(route('dosen.krs.pdf', $data['student']), $period)
+        ->assertNotFound();
 
     $this->actingAs($data['studentUser'])
         ->get(route('admin.krs-mahasiswa.show', ['mahasiswa' => $data['otherStudent']] + $period))
@@ -159,4 +187,102 @@ test('admin and each student download a dynamic KRS PDF while role access stays 
     $this->actingAs($data['lecturerUser'])
         ->get(route('admin.krs-mahasiswa.index'))
         ->assertForbidden();
+});
+
+test('student KRS page shows a download button per available period and an empty state without KRS', function () {
+    $data = makeStudentKrsReviewData();
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('Download KRS PDF - 2025/2026 Genap')
+        ->assertSee('action="'.route('mahasiswa.krs.pdf').'"', false)
+        ->assertDontSee('Belum ada KRS yang dapat diunduh.');
+
+    $emptyUser = User::factory()->create(['role' => 'mahasiswa']);
+    Mahasiswa::create([
+        'nim' => '1025209',
+        'nama' => 'Mahasiswa Tanpa KRS',
+        'angkatan' => 2025,
+        'semester' => 2,
+        'prodi_id' => $data['prodi']->id,
+        'kelas_id' => $data['kelas']->id,
+        'dosen_wali_id' => $data['student']->dosen_wali_id,
+        'user_id' => $emptyUser->id,
+    ]);
+
+    $this->actingAs($emptyUser)
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertSee('Belum ada KRS yang dapat diunduh.')
+        ->assertDontSee('Download KRS PDF -');
+});
+
+test('KRS PDF uses the program chair from the student study program and the Word template letterhead', function () {
+    $data = makeStudentKrsReviewData();
+    $period = ['tahun_akademik' => '2025/2026', 'semester_akademik' => 'Genap'];
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.pdf'), $period)
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
+
+    $card = app(KrsCardService::class)->data(
+        $data['student'],
+        '2025/2026',
+        'Genap',
+        true
+    );
+
+    expect($card['namaKetuaProgramStudi'])->toBe('Ketua Program Studi Teknik Geologi')
+        ->and($card['nipKetuaProgramStudi'])->toBe('198001012010011001')
+        ->and($card['dosenWali']->nama)->toBe('Dosen Wali Dinamis')
+        ->and($card['totalSks'])->toBe(3)
+        ->and($card['templateLetterhead'])->toStartWith('data:image/png;base64,');
+
+    $fallbackCard = app(KrsCardService::class)->data($data['student'], '2025/2026', 'Genap');
+    $fallbackHtml = view('krs.card-pdf', $fallbackCard)->render();
+    expect($fallbackHtml)
+        ->toContain('Sekolah Tinggi Teknologi Mineral Indonesia')
+        ->not->toContain('Mandala');
+});
+
+test('admin can save a program chair and old study programs without one keep working', function () {
+    $data = makeStudentKrsReviewData();
+
+    $this->actingAs($data['admin'])
+        ->put(route('admin.prodi.update', $data['prodi']), [
+            'kode_prodi' => $data['prodi']->kode_prodi,
+            'nama_prodi' => $data['prodi']->nama_prodi,
+            'jenjang' => $data['prodi']->jenjang,
+            'fakultas_id' => $data['fakultas']->id,
+            'ketua_program_studi_nama' => 'Ketua Prodi Baru',
+            'ketua_program_studi_nip' => 'NIP-KAPRODI-02',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('prodis', [
+        'id' => $data['prodi']->id,
+        'ketua_program_studi_nama' => 'Ketua Prodi Baru',
+        'ketua_program_studi_nip' => 'NIP-KAPRODI-02',
+    ]);
+
+    $data['prodi']->update([
+        'ketua_program_studi_nama' => null,
+        'ketua_program_studi_nip' => null,
+    ]);
+    $data['student']->unsetRelation('prodi');
+
+    $card = app(KrsCardService::class)->data($data['student'], '2025/2026', 'Genap');
+    expect($card['namaKetuaProgramStudi'])->toBeNull()
+        ->and($card['nipKetuaProgramStudi'])->toBeNull()
+        ->and(view('krs.card-pdf', $card)->render())->toContain('(....................................)');
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.pdf'), [
+            'tahun_akademik' => '2025/2026',
+            'semester_akademik' => 'Genap',
+        ])
+        ->assertOk()
+        ->assertDownload('KRS-1025207-2025-2026-Genap.pdf');
 });

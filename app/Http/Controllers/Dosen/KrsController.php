@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Dosen;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\KrsPdfRequest;
 use App\Models\Dosen;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
 use App\Services\AvailableKrsScheduleService;
+use App\Services\KrsCardService;
 use App\Services\LegacyListNavigation;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -151,6 +154,25 @@ class KrsController extends Controller
             'semester',
             'listUrl'
         ));
+    }
+
+    public function cardPdf(KrsPdfRequest $request, Mahasiswa $mahasiswa, KrsCardService $cards)
+    {
+        $dosen = $this->authenticatedLecturer();
+        abort_unless((int) $mahasiswa->dosen_wali_id === (int) $dosen->id, 404);
+
+        $period = $request->validated();
+        $data = $cards->data(
+            $mahasiswa,
+            $period['tahun_akademik'],
+            $period['semester_akademik'],
+            true
+        );
+        abort_if($data['printableRecords']->isEmpty(), 404, 'Tidak ada KRS yang dapat dicetak pada periode tersebut.');
+
+        return Pdf::loadView('krs.card-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->download($cards->filename($mahasiswa, $period['tahun_akademik'], $period['semester_akademik']));
     }
 
     public function setujui(Request $request, int $id)

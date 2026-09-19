@@ -2,6 +2,35 @@
 
 @section('title', 'KRS Mahasiswa')
 
+@push('styles')
+<style>
+    .student-krs-card-head .student-krs-card-title {
+        color: #ffffff;
+    }
+
+    .student-krs-card-head .krs-pdf-download-form .btn-outline {
+        background: #ffffff;
+        border-color: #ffffff;
+        color: #0a1f5c;
+    }
+
+    .student-krs-card-head .krs-pdf-download-form .btn-outline:hover,
+    .student-krs-card-head .krs-pdf-download-form .btn-outline:focus {
+        background: #eff6ff;
+        border-color: #eff6ff;
+        color: #0a1f5c;
+    }
+
+    .student-krs-card-head .student-krs-download-empty {
+        color: #ffffff;
+    }
+
+    .student-krs-available-title {
+        color: #ffffff;
+    }
+</style>
+@endpush
+
 @section('content')
 
 <div class="page-card">
@@ -443,22 +472,25 @@
 
         <div class="page-card" style="margin-bottom:25px;">
 
-            <div class="page-card-head">
+            <div class="page-card-head student-krs-card-head">
 
-                <h3 class="icon-heading" style="margin:0;">
+                <h3 class="icon-heading student-krs-card-title" style="margin:0;">
                     <x-layout-icon name="clipboard" /> KRS Saya
                 </h3>
 
                 @if($periodeKartuKrs->isNotEmpty())
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
                         @foreach($periodeKartuKrs as $periodeKartu)
-                            <a href="{{ route('mahasiswa.krs.pdf', $periodeKartu) }}"
-                               class="btn-outline"
-                               style="display:inline-block;padding:7px 11px;font-size:12px;">
-                                PDF {{ $periodeKartu['tahun_akademik'] }} {{ $periodeKartu['semester_akademik'] }}
-                            </a>
+                            @include('krs.partials.pdf-download-form', [
+                                'action' => route('mahasiswa.krs.pdf'),
+                                'tahunAkademik' => $periodeKartu['tahun_akademik'],
+                                'semesterAkademik' => $periodeKartu['semester_akademik'],
+                                'buttonLabel' => 'Download KRS PDF - '.$periodeKartu['tahun_akademik'].' '.$periodeKartu['semester_akademik'],
+                            ])
                         @endforeach
                     </div>
+                @else
+                    <span class="student-krs-download-empty" style="font-size:13px;">Belum ada KRS yang dapat diunduh.</span>
                 @endif
 
             </div>
@@ -855,7 +887,7 @@
 
                 <div>
 
-                    <h3 class="icon-heading" style="margin:0;">
+                    <h3 class="icon-heading student-krs-available-title" style="margin:0;">
                         <x-layout-icon name="book" /> Mata Kuliah Tersedia
                     </h3>
 

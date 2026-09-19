@@ -119,6 +119,8 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::get('/krs/mahasiswa/{mahasiswa}', [DosenKrsController::class, 'show'])->name('krs.show');
 
+    Route::post('/krs/mahasiswa/{mahasiswa}/pdf', [DosenKrsController::class, 'cardPdf'])->name('krs.pdf');
+
     Route::put('/krs/{id}/setujui', [DosenKrsController::class, 'setujui'])->name('krs.setujui');
 
     Route::put('/krs/{id}/tolak', [DosenKrsController::class, 'tolak'])->name('krs.tolak');
@@ -157,7 +159,7 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
 
     Route::get('/krs', [MahasiswaKrsController::class, 'index'])->name('mahasiswa.krs');
 
-    Route::get('/krs/kartu/pdf', [MahasiswaKrsController::class, 'cardPdf'])->name('mahasiswa.krs.pdf');
+    Route::post('/krs/kartu/pdf', [MahasiswaKrsController::class, 'cardPdf'])->name('mahasiswa.krs.pdf');
 
     Route::post('/krs', [MahasiswaKrsController::class, 'store'])->name('mahasiswa.krs.store');
 
@@ -334,7 +336,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::get('/krs-mahasiswa/{mahasiswa}', [KrsController::class, 'studentShow'])->name('admin.krs-mahasiswa.show');
 
-    Route::get('/krs-mahasiswa/{mahasiswa}/pdf', [KrsController::class, 'studentCardPdf'])->name('admin.krs-mahasiswa.pdf');
+    Route::post('/krs-mahasiswa/{mahasiswa}/pdf', [KrsController::class, 'studentCardPdf'])->name('admin.krs-mahasiswa.pdf');
 
     Route::get('/krs/create', [KrsController::class, 'create'])->name('admin.krs.create');
 
