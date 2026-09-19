@@ -26,6 +26,7 @@ use App\Http\Controllers\Dosen\EvaluasiController as DosenEvaluasiController;
 
 use App\Http\Controllers\Dosen\JadwalController as DosenJadwalController;
 use App\Http\Controllers\Dosen\KrsController as DosenKrsController;
+use App\Http\Controllers\Dosen\MahasiswaWaliController as DosenMahasiswaWaliController;
 use App\Http\Controllers\Dosen\MataKuliahController as DosenMataKuliahController;
 use App\Http\Controllers\Dosen\NilaiController;
 use App\Http\Controllers\Dosen\PenelitianController as DosenPenelitianController;
@@ -72,6 +73,10 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
     // ===================== DASHBOARD =====================
 
     Route::get('/dashboard', [DosenDashboardController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/mahasiswa-wali', [DosenMahasiswaWaliController::class, 'index'])->name('mahasiswa-wali');
+
+    Route::get('/mahasiswa-wali/{mahasiswa}', [DosenMahasiswaWaliController::class, 'show'])->name('mahasiswa-wali.show');
 
     // ===================== JADWAL MENGAJAR =====================
 

@@ -89,6 +89,7 @@
             <x-sidebar-item route="dosen.evaluasi" :active="request()->routeIs('dosen.evaluasi', 'dosen.evaluasi.*')" icon="clipboard">Evaluasi Saya</x-sidebar-item>
 
             <div class="nav-section-label">Bimbingan &amp; Akademik</div>
+            <x-sidebar-item route="dosen.mahasiswa-wali" :active="request()->routeIs('dosen.mahasiswa-wali', 'dosen.mahasiswa-wali.*')" icon="users">Mahasiswa Wali</x-sidebar-item>
             <x-sidebar-item route="dosen.kurikulum" :active="request()->routeIs('dosen.kurikulum', 'dosen.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
             <x-sidebar-item route="dosen.krs" :active="request()->routeIs('dosen.krs', 'dosen.krs.*')" icon="file-check">Persetujuan KRS</x-sidebar-item>
             <x-sidebar-item route="dosen.skripsi" :active="request()->routeIs('dosen.skripsi', 'dosen.skripsi.*')" icon="graduation">Pengajuan Bimbingan</x-sidebar-item>
