@@ -122,11 +122,13 @@ test('admin can filter and open KRS grouped per student and academic period', fu
         'semester' => 2,
         'semester_akademik' => 'Genap',
         'tahun_akademik' => '2025/2026',
+        'status' => 'Disetujui',
     ]));
 
     $response->assertOk()
         ->assertSee('Windiye Maharani')
         ->assertDontSee('Mahasiswa KRS Lain')
+        ->assertSee('Status Persetujuan')
         ->assertSee('3 SKS');
     expect($response->viewData('summaries')->total())->toBe(1)
         ->and($response->viewData('summaries')->url(2))->toContain('search=1025207');

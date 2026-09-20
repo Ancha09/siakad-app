@@ -45,7 +45,7 @@
         $adminInitial = mb_strtoupper(mb_substr($adminName, 0, 1));
         $adminSubtitle = match (true) {
             request()->routeIs('admin.kurikulum.*', 'admin.jadwal*', 'admin.periode-krs*', 'admin.krs*', 'admin.khs*', 'admin.skripsi*') => 'Kelola proses dan data akademik STTMI',
-            request()->routeIs('admin.presensi*', 'admin.kuesioner*', 'admin.laporan.*') => 'Monitoring dan laporan akademik STTMI',
+            request()->routeIs('admin.presensi*', 'admin.kuesioner*', 'admin.laporan.*', 'admin.ipk-cpl.*') => 'Monitoring dan laporan akademik STTMI',
             request()->routeIs('admin.pengumuman.*', 'admin.pemberitahuan*') => 'Informasi dan komunikasi kampus',
             request()->routeIs('profile.*') => 'Kelola identitas dan keamanan akun administrator',
             default => 'Ringkasan akademik seluruh program studi STTMI',
@@ -156,8 +156,8 @@
             <x-sidebar-item route="admin.kurikulum.index" :active="request()->routeIs('admin.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
             <x-sidebar-item route="admin.jadwal" :active="request()->routeIs('admin.jadwal', 'admin.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
             <x-sidebar-item route="admin.periode-krs" :active="request()->routeIs('admin.periode-krs', 'admin.periode-krs.*')" icon="period">Periode KRS</x-sidebar-item>
-            <x-sidebar-item route="admin.krs" :active="request()->routeIs('admin.krs', 'admin.krs.*')" icon="file-check">KRS</x-sidebar-item>
-            <x-sidebar-item route="admin.khs" :active="request()->routeIs('admin.khs', 'admin.khs.*')" icon="file-chart">KHS</x-sidebar-item>
+            <x-sidebar-item route="admin.krs-mahasiswa.index" :active="request()->routeIs('admin.krs', 'admin.krs.*', 'admin.krs-mahasiswa.*')" icon="file-check">KRS Admin</x-sidebar-item>
+            <x-sidebar-item route="admin.khs" :active="request()->routeIs('admin.khs', 'admin.khs.*')" icon="file-chart">KHS Admin</x-sidebar-item>
             <x-sidebar-item route="admin.nilai-manual.index" :active="request()->routeIs('admin.nilai-manual.*')" icon="file-chart">Input Nilai Lama</x-sidebar-item>
             <x-sidebar-item route="admin.skripsi" :active="request()->routeIs('admin.skripsi', 'admin.skripsi.*')" icon="graduation">Pembimbing Skripsi</x-sidebar-item>
 
@@ -165,6 +165,7 @@
             <x-sidebar-item route="admin.presensi" :active="request()->routeIs('admin.presensi', 'admin.presensi.*')" icon="attendance" badge="Baru">Monitoring Absensi</x-sidebar-item>
             <x-sidebar-item route="admin.kuesioner" :active="request()->routeIs('admin.kuesioner', 'admin.kuesioner.*')" icon="clipboard">Evaluasi Dosen</x-sidebar-item>
             <x-sidebar-item route="admin.laporan.index" :active="request()->routeIs('admin.laporan.*')" icon="file">Laporan Akademik</x-sidebar-item>
+            <x-sidebar-item route="admin.ipk-cpl.index" :active="request()->routeIs('admin.ipk-cpl.*')" icon="chart">IPK CPL</x-sidebar-item>
 
             <div class="nav-section-label">Informasi</div>
             <x-sidebar-item route="admin.pengumuman.index" :active="request()->routeIs('admin.pengumuman.*')" icon="bell">Kelola Pengumuman</x-sidebar-item>

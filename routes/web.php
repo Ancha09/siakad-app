@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\JadwalController as AdminJadwalController;
 use App\Http\Controllers\Admin\KelasController;
 use App\Http\Controllers\Admin\KhsController;
 use App\Http\Controllers\Admin\KrsController;
+use App\Http\Controllers\Admin\IpkCplController;
 use App\Http\Controllers\Admin\KuesionerController as AdminKuesionerController;
 use App\Http\Controllers\Admin\KurikulumController as AdminKurikulumController;
 use App\Http\Controllers\Admin\LaporanAkademikController;
@@ -379,6 +380,8 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::get('/khs', [KhsController::class, 'index'])->name('admin.khs');
 
+    Route::get('/khs-mahasiswa/{mahasiswa}', [KhsController::class, 'show'])->name('admin.khs.show');
+
     Route::get('/khs/create', [KhsController::class, 'create'])->name('admin.khs.create');
 
     Route::post('/khs', [KhsController::class, 'store'])->name('admin.khs.store');
@@ -434,6 +437,12 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/laporan-akademik/excel', [LaporanAkademikController::class, 'excel'])->name('admin.laporan.excel');
 
     Route::get('/laporan-akademik/pdf', [LaporanAkademikController::class, 'pdf'])->name('admin.laporan.pdf');
+
+    // ===================== IPK CPL =====================
+
+    Route::get('/ipk-cpl', [IpkCplController::class, 'index'])->name('admin.ipk-cpl.index');
+    Route::get('/ipk-cpl/excel', [IpkCplController::class, 'excel'])->name('admin.ipk-cpl.excel');
+    Route::get('/ipk-cpl/mata-kuliah/{mataKuliah}', [IpkCplController::class, 'show'])->name('admin.ipk-cpl.show');
 
 });
 

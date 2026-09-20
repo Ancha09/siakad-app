@@ -43,6 +43,8 @@
                     'Semester Studi' => $semesterStudi ? 'Semester '.$semesterStudi : '-',
                     'Tahun Akademik' => $tahunAkademik,
                     'Semester Akademik' => $semesterAkademik,
+                    'Dosen Wali' => $dosenWali?->nama ?? '-',
+                    'Status Persetujuan' => $approvalStatus,
                 ] as $label => $value)
                     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;">
                         <small style="color:#64748b;">{{ $label }}</small>

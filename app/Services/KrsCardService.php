@@ -45,13 +45,18 @@ class KrsCardService
         string $tahunAkademik,
         string $semesterAkademik,
         bool $includeTemplateAssets = false
-    ): array
-    {
+    ): array {
         $mahasiswa->loadMissing(['prodi.fakultas', 'dosenWali']);
         $records = $this->records($mahasiswa, $tahunAkademik, $semesterAkademik);
         $printableRecords = $records->where('status', '!=', 'Ditolak')->values();
         $semesterStudi = $mahasiswa->semester
             ?? $printableRecords->map(fn (Krs $item) => $item->mata_kuliah_efektif?->semester)->filter()->max();
+        $approvalStatus = match (true) {
+            $records->isNotEmpty() && $records->every(fn (Krs $item) => $item->status === 'Disetujui') => 'Disetujui',
+            $records->contains(fn (Krs $item) => $item->status === 'Ditolak') => 'Ditolak',
+            default => 'Menunggu',
+        };
+
         return [
             'mahasiswa' => $mahasiswa,
             'krsRecords' => $records,
@@ -59,6 +64,7 @@ class KrsCardService
             'tahunAkademik' => $tahunAkademik,
             'semesterAkademik' => $semesterAkademik,
             'semesterStudi' => $semesterStudi,
+            'approvalStatus' => $approvalStatus,
             'totalSks' => $printableRecords->sum(
                 fn (Krs $item) => (int) ($item->mata_kuliah_efektif?->sks ?? 0)
             ),

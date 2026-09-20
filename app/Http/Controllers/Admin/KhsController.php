@@ -3,14 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Dosen;
-use App\Models\Fakultas;
-use App\Models\Kelas;
 use App\Models\Khs;
 use App\Models\Krs;
-use App\Models\Prodi;
+use App\Models\Mahasiswa;
+use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 
 class KhsController extends Controller
 {
@@ -18,223 +20,165 @@ class KhsController extends Controller
     // INDEX
     // =====================================================
 
-    public function index(Request $request)
-    {
-        // ===================== DATA FILTER =====================
-
-        $fakultas = Fakultas::orderBy('nama_fakultas')
-            ->get();
-
-        $prodis = Prodi::with('fakultas')
-            ->orderBy('nama_prodi')
-            ->get();
-
-        $dosens = Dosen::orderBy('nama')
-            ->get();
-
-        $kelases = Kelas::with([
-            'prodi.fakultas',
-        ])
-            ->orderBy('angkatan', 'desc')
-            ->orderBy('nama_kelas')
-            ->get();
-
-        // ===================== DATA ANGKATAN =====================
-
-        $angkatans = Kelas::whereNotNull('angkatan')
-            ->select('angkatan')
-            ->distinct()
-            ->orderBy('angkatan', 'desc')
-            ->pluck('angkatan');
-
-        // ===================== QUERY KHS =====================
-
-        $query = Khs::with([
-            'krs.mahasiswa.prodi',
-            'krs.mahasiswa.kelas.prodi.fakultas',
-            'krs.jadwal.mataKuliah.prodi.fakultas',
-            'krs.mataKuliahManual.prodi.fakultas',
-            'dosenManual', 'krs.dosenManual',
-            'krs.prodiManual',
-            'krs.jadwal.dosen',
-            'krs.jadwal.ruangan',
+    public function index(
+        Request $request,
+        IpkCplReportService $reports,
+        MahasiswaNilaiService $nilaiService
+    ) {
+        $filters = $request->validate([
+            'search' => ['nullable', 'string', 'max:100'],
+            'tahun_akademik' => ['nullable', 'string', 'max:20', 'regex:/^\d{4}[\/-]\d{4}$/'],
+            'semester_akademik' => ['nullable', Rule::in(['Ganjil', 'Genap'])],
+            'semester_angka' => ['nullable', 'integer', 'between:1,14'],
+            'prodi_id' => ['nullable', 'integer', 'exists:prodis,id'],
+            'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
+            'page' => ['nullable', 'integer', 'between:1,100000'],
         ]);
 
-        // =====================================================
-        // SEARCH
-        // =====================================================
+        $grades = $reports->finalGrades($filters);
+        if (filled($filters['search'] ?? null)) {
+            $search = mb_strtolower(trim($filters['search']));
+            $grades = $grades->filter(function (Khs $grade) use ($search) {
+                $student = $grade->krs?->mahasiswa;
 
-        if ($request->filled('search')) {
-
-            $search = $request->search;
-
-            $query->where(function ($q) use ($search) {
-
-                // ===================== MAHASISWA =====================
-
-                $q->whereHas(
-                    'krs.mahasiswa',
-                    function ($mahasiswa) use ($search) {
-
-                        $mahasiswa
-                            ->whereLike('nim', '%'.$search.'%'
-                            )
-                            ->orWhereLike('nama', '%'.$search.'%'
-                            );
-                    }
-                )
-
-                // ===================== MATA KULIAH =====================
-                    ->orWhereHas(
-                        'krs.jadwal.mataKuliah',
-                        function ($mk) use ($search) {
-
-                            $mk
-                                ->whereLike('kode_mk', '%'.$search.'%'
-                                )
-                                ->orWhereLike('nama_mk', '%'.$search.'%'
-                                );
-                        }
-                    )
-                    ->orWhereHas('krs.mataKuliahManual', function ($mk) use ($search) {
-                        $mk->whereLike('kode_mk', '%'.$search.'%')->orWhereLike('nama_mk', '%'.$search.'%');
-                    })
-                    ->orWhereHas('dosenManual', 'krs.dosenManual', fn ($dosen) => $dosen->whereLike('nama', '%'.$search.'%'))
-
-                // ===================== DOSEN =====================
-                    ->orWhereHas(
-                        'krs.jadwal.dosen',
-                        function ($dosen) use ($search) {
-
-                            $dosen->whereLike('nama', '%'.$search.'%'
-                            );
-                        }
-                    );
-
-            });
+                return str_contains(mb_strtolower((string) $student?->nama), $search)
+                    || str_contains(mb_strtolower((string) $student?->nim), $search);
+            })->values();
         }
 
-        // =====================================================
-        // FILTER FAKULTAS
-        // =====================================================
+        $rows = $grades
+            ->groupBy(fn (Khs $grade) => implode('|', [
+                $grade->krs?->mahasiswa_id,
+                $this->academicYear($grade),
+                strtolower($this->academicSemester($grade)),
+            ]))
+            ->map(function (Collection $semesterGrades) use ($nilaiService) {
+                /** @var Khs $first */
+                $first = $semesterGrades->first();
+                $student = $first->krs->mahasiswa;
+                $semesterNumbers = $semesterGrades
+                    ->map(fn (Khs $grade) => $this->courseSemester($grade))
+                    ->filter()
+                    ->unique()
+                    ->sort()
+                    ->values();
 
-        if ($request->filled('fakultas_id')) {
+                return (object) [
+                    'mahasiswa' => $student,
+                    'mahasiswa_id' => $student->id,
+                    'tahun_akademik' => $this->academicYear($first),
+                    'semester_akademik' => $this->academicSemester($first),
+                    'semester_angka' => $semesterNumbers->isEmpty() ? '-' : $semesterNumbers->implode(', '),
+                    'jumlah_mata_kuliah' => $semesterGrades->count(),
+                    'total_sks' => $semesterGrades->sum(fn (Khs $grade) => $grade->sks_efektif),
+                    'ips' => $nilaiService->hitungIndeks($semesterGrades),
+                ];
+            })
+            ->sort(function (object $left, object $right) {
+                return [$right->tahun_akademik, $this->semesterOrder($right->semester_akademik), $right->mahasiswa->nama]
+                    <=> [$left->tahun_akademik, $this->semesterOrder($left->semester_akademik), $left->mahasiswa->nama];
+            })
+            ->values();
 
-            $query->whereHas(
-                'krs.mahasiswa.kelas.prodi',
-                function ($q) use ($request) {
+        $options = $reports->filterOptions();
 
-                    $q->where(
-                        'fakultas_id',
-                        $request->fakultas_id
-                    );
-                }
-            );
+        return view('admin.khs.index', [
+            'summaries' => $this->paginate($rows, 10),
+            'prodis' => $options['prodis'],
+            'angkatans' => $options['angkatans'],
+            'semesterAngkas' => $options['semesterAngkas'],
+            'tahunAkademiks' => $options['tahunAkademiks'],
+            'studentSuggestions' => Mahasiswa::query()
+                ->where('is_active', true)
+                ->orderBy('nama')
+                ->get(['id', 'nim', 'nama']),
+        ]);
+    }
+
+    public function show(
+        Request $request,
+        Mahasiswa $mahasiswa,
+        IpkCplReportService $reports,
+        MahasiswaNilaiService $nilaiService,
+        LegacyListNavigation $navigation
+    ) {
+        $period = $request->validate([
+            'tahun_akademik' => ['required', 'string', 'max:20', 'regex:/^\d{4}[\/-]\d{4}$/'],
+            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
+        ]);
+
+        $allStudentGrades = $reports->finalGrades()
+            ->filter(fn (Khs $grade) => (int) $grade->krs?->mahasiswa_id === (int) $mahasiswa->id)
+            ->values();
+        $semesterGrades = $allStudentGrades
+            ->filter(fn (Khs $grade) => $this->academicYear($grade) === str_replace('-', '/', $period['tahun_akademik'])
+                && strcasecmp($this->academicSemester($grade), $period['semester_akademik']) === 0)
+            ->sortBy(fn (Khs $grade) => $grade->krs?->mata_kuliah_efektif?->kode_mk)
+            ->values();
+
+        abort_if($semesterGrades->isEmpty(), 404, 'Data KHS pada semester tersebut tidak ditemukan.');
+
+        $targetPeriod = $this->periodOrder($period['tahun_akademik'], $period['semester_akademik']);
+        $cumulativeGrades = $allStudentGrades
+            ->filter(fn (Khs $grade) => $this->periodOrder($this->academicYear($grade), $this->academicSemester($grade)) <= $targetPeriod)
+            ->values();
+        $mahasiswa->loadMissing(['prodi', 'kelas']);
+
+        return view('admin.khs.show', [
+            'mahasiswa' => $mahasiswa,
+            'grades' => $semesterGrades,
+            'tahunAkademik' => str_replace('-', '/', $period['tahun_akademik']),
+            'semesterAkademik' => $period['semester_akademik'],
+            'totalSks' => $semesterGrades->sum(fn (Khs $grade) => $grade->sks_efektif),
+            'ips' => $nilaiService->hitungIndeks($semesterGrades),
+            'ipk' => $nilaiService->hitungIndeks($cumulativeGrades),
+            'returnUrl' => $navigation->returnUrl($request, 'admin.khs'),
+        ]);
+    }
+
+    private function academicYear(Khs $grade): string
+    {
+        return str_replace('-', '/', (string) ($grade->tahun_akademik ?: $grade->krs?->tahun_akademik));
+    }
+
+    private function academicSemester(Khs $grade): string
+    {
+        return (string) ($grade->semester_akademik ?: $grade->krs?->semester_akademik);
+    }
+
+    private function courseSemester(Khs $grade): ?int
+    {
+        foreach ([$grade->krs?->mata_kuliah_efektif?->semester, $grade->krs?->semester] as $value) {
+            if (preg_match('/\d+/', (string) $value, $match)) {
+                return (int) $match[0];
+            }
         }
 
-        // =====================================================
-        // FILTER PROGRAM STUDI
-        // =====================================================
+        return null;
+    }
 
-        if ($request->filled('prodi_id')) {
+    private function semesterOrder(string $semester): int
+    {
+        return strcasecmp($semester, 'Genap') === 0 ? 2 : 1;
+    }
 
-            $query->whereHas('krs', fn ($q) => $q
-                ->where('prodi_id', $request->prodi_id)
-                ->orWhereHas('mahasiswa', fn ($mahasiswa) => $mahasiswa->where('prodi_id', $request->prodi_id)));
-        }
+    private function periodOrder(string $year, string $semester): int
+    {
+        preg_match('/\d{4}/', $year, $match);
 
-        // =====================================================
-        // FILTER KELAS
-        // =====================================================
+        return ((int) ($match[0] ?? 0) * 10) + $this->semesterOrder($semester);
+    }
 
-        if ($request->filled('kelas_id')) {
+    private function paginate(Collection $rows, int $perPage): LengthAwarePaginator
+    {
+        $page = LengthAwarePaginator::resolveCurrentPage();
 
-            $query->whereHas(
-                'krs.mahasiswa',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'kelas_id',
-                        $request->kelas_id
-                    );
-                }
-            );
-        }
-
-        // =====================================================
-        // FILTER ANGKATAN
-        // =====================================================
-
-        if ($request->filled('angkatan')) {
-
-            $query->whereHas(
-                'krs.mahasiswa.kelas',
-                function ($q) use ($request) {
-
-                    $q->where(
-                        'angkatan',
-                        $request->angkatan
-                    );
-                }
-            );
-        }
-
-        // =====================================================
-        // FILTER DOSEN
-        // =====================================================
-
-        if ($request->filled('dosen_id')) {
-
-            $query->forDosen((int) $request->dosen_id);
-        }
-
-        // =====================================================
-        // FILTER TAHUN AKADEMIK
-        // =====================================================
-
-        if ($request->filled('tahun_akademik')) {
-
-            $query->where(
-                'tahun_akademik',
-                $request->tahun_akademik
-            );
-        }
-
-        // =====================================================
-        // FILTER SEMESTER
-        // =====================================================
-
-        if ($request->filled('semester_akademik')) {
-
-            $query->where(
-                'semester_akademik',
-                $request->semester_akademik
-            );
-        }
-
-        // =====================================================
-        // HASIL DATA
-        // =====================================================
-
-        $khs = $query
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
-
-        // =====================================================
-        // RETURN VIEW
-        // =====================================================
-
-        return view(
-            'admin.khs.index',
-            compact(
-                'khs',
-                'fakultas',
-                'prodis',
-                'dosens',
-                'kelases',
-                'angkatans'
-            )
+        return new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
         );
     }
 

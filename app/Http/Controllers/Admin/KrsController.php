@@ -30,6 +30,7 @@ class KrsController extends Controller
             'semester' => ['nullable', 'integer', 'between:1,14'],
             'semester_akademik' => ['nullable', Rule::in(['Ganjil', 'Genap'])],
             'tahun_akademik' => ['nullable', 'string', 'max:20'],
+            'status' => ['nullable', Rule::in(['Diambil', 'Menunggu', 'Disetujui', 'Ditolak'])],
             'page' => ['nullable', 'integer', 'between:1,100000'],
         ]);
 
@@ -61,6 +62,15 @@ class KrsController extends Controller
             ->select(['mahasiswa_id', 'tahun_akademik', 'semester_akademik'])
             ->selectRaw('COUNT(*) AS jumlah_mata_kuliah')
             ->groupBy('mahasiswa_id', 'tahun_akademik', 'semester_akademik')
+            ->when(($filters['status'] ?? null) === 'Disetujui', fn (Builder $query) => $query
+                ->havingRaw("SUM(CASE WHEN status <> 'Disetujui' THEN 1 ELSE 0 END) = 0"))
+            ->when(($filters['status'] ?? null) === 'Ditolak', fn (Builder $query) => $query
+                ->havingRaw("SUM(CASE WHEN status = 'Ditolak' THEN 1 ELSE 0 END) > 0"))
+            ->when(($filters['status'] ?? null) === 'Menunggu', fn (Builder $query) => $query
+                ->havingRaw("SUM(CASE WHEN status = 'Ditolak' THEN 1 ELSE 0 END) = 0")
+                ->havingRaw("SUM(CASE WHEN status <> 'Disetujui' THEN 1 ELSE 0 END) > 0"))
+            ->when(($filters['status'] ?? null) === 'Diambil', fn (Builder $query) => $query
+                ->havingRaw("SUM(CASE WHEN status = 'Diambil' THEN 1 ELSE 0 END) > 0"))
             ->orderByDesc('tahun_akademik')
             ->orderByDesc('semester_akademik')
             ->paginate(10)
@@ -91,6 +101,11 @@ class KrsController extends Controller
                 ->sum(fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0)));
             $summary->setAttribute('semester_studi', $summary->mahasiswa?->semester
                 ?? $summary->mahasiswa?->kelas?->semester);
+            $summary->setAttribute('status_persetujuan', match (true) {
+                $records->isNotEmpty() && $records->every(fn (Krs $item) => $item->status === 'Disetujui') => 'Disetujui',
+                $records->contains(fn (Krs $item) => $item->status === 'Ditolak') => 'Ditolak',
+                default => 'Menunggu',
+            });
 
             return $summary;
         }));

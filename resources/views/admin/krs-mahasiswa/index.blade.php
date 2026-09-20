@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'KRS per Mahasiswa')
+@section('title', 'KRS Admin')
 @section('page-subtitle', 'Pemeriksaan dan kartu KRS mahasiswa')
 
 @section('content')
@@ -80,6 +80,15 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="status">Status KRS</label>
+                    <select id="status" class="form-control" name="status">
+                        <option value="">Semua status</option>
+                        @foreach(['Diambil', 'Menunggu', 'Disetujui', 'Ditolak'] as $status)
+                            <option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;">
                     <button type="submit" class="btn-primary">Terapkan Filter</button>
                     <a href="{{ route('admin.krs-mahasiswa.index') }}" class="btn-outline">Reset</a>
@@ -90,7 +99,7 @@
 
     <div class="page-card">
         <div class="page-card-head" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
-            <h2>KRS per Mahasiswa</h2>
+            <h2>KRS per Mahasiswa dan Periode</h2>
             <a href="{{ route('admin.krs') }}" class="btn-outline">Kelola Baris KRS</a>
         </div>
         <div class="page-card-body">
@@ -105,6 +114,7 @@
                         <th>Semester</th>
                         <th>Mata Kuliah</th>
                         <th>Total SKS</th>
+                        <th>Status Persetujuan</th>
                         <th style="width:110px;">Aksi</th>
                     </tr>
                     </thead>
@@ -124,6 +134,7 @@
                             <td>{{ $item->semester_studi ? 'Semester '.$item->semester_studi : '-' }}</td>
                             <td>{{ $item->jumlah_mata_kuliah }} mata kuliah</td>
                             <td>{{ $item->total_sks }} SKS</td>
+                            <td><strong>{{ $item->status_persetujuan }}</strong></td>
                             <td>
                                 <a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;"
                                    href="{{ route('admin.krs-mahasiswa.show', [
@@ -135,7 +146,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" style="text-align:center;padding:36px;color:#64748b;">Tidak ada KRS mahasiswa yang sesuai dengan filter.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
                     @endforelse
                     </tbody>
                 </table>

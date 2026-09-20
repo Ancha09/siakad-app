@@ -1,520 +1,119 @@
 @extends('layouts.admin')
 
-@section('title','Data KHS')
+@section('title', 'KHS Admin')
+@section('page-subtitle', 'Rekap hasil studi mahasiswa per semester akademik')
 
 @section('content')
-
-@if(session('success'))
-
-    <div class="alert-success">
-        {{ session('success') }}
-    </div>
-
-@endif
-
-
-{{-- =====================================================
-     FILTER DATA KHS
-===================================================== --}}
-
 <div class="page-card" style="margin-bottom:20px;">
-
     <div class="page-card-head">
-        <h2>🔎 Filter Data KHS</h2>
+        <div>
+            <h2 class="icon-heading"><x-layout-icon name="file-chart" /> Filter KHS Mahasiswa</h2>
+            <p style="margin:5px 0 0;color:#64748b;font-size:13px;">Setiap baris mewakili satu mahasiswa pada satu semester akademik.</p>
+        </div>
     </div>
-
     <div class="page-card-body">
-
-        <form
-            action="{{ route('admin.khs') }}"
-            method="GET"
-        >
-
+        <form method="GET" action="{{ route('admin.khs') }}">
             <div class="krs-form-grid">
-
-                {{-- ===================== SEARCH ===================== --}}
-
                 <div class="form-group">
-
-                    <label>Pencarian</label>
-
-                    <input
-                        type="text"
-                        name="search"
-                        class="form-control"
-                        value="{{ request('search') }}"
-                        placeholder="Cari NIM, mahasiswa, atau mata kuliah..."
-                    >
-
-                </div>
-
-
-                {{-- ===================== FAKULTAS ===================== --}}
-
-                <div class="form-group">
-
-                    <label>Fakultas</label>
-
-                    <select
-                        name="fakultas_id"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Fakultas
-                        </option>
-
-                        @foreach($fakultas as $item)
-
-                            <option
-                                value="{{ $item->id }}"
-                                {{ request('fakultas_id') == $item->id ? 'selected' : '' }}
-                            >
-                                {{ $item->nama_fakultas }}
-                            </option>
-
+                    <label for="search">Nama atau NIM</label>
+                    <input id="search" type="search" name="search" class="form-control" value="{{ request('search') }}" placeholder="Cari nama atau NIM" list="khs-student-suggestions" autocomplete="off">
+                    <datalist id="khs-student-suggestions">
+                        @foreach($studentSuggestions as $student)
+                            <option value="{{ $student->nama }}">{{ $student->nim }}</option>
+                            <option value="{{ $student->nim }}">{{ $student->nama }}</option>
                         @endforeach
-
-                    </select>
-
+                    </datalist>
                 </div>
-
-
-                {{-- ===================== PROGRAM STUDI ===================== --}}
-
                 <div class="form-group">
-
-                    <label>Program Studi</label>
-
-                    <select
-                        name="prodi_id"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Program Studi
-                        </option>
-
+                    <label for="tahun_akademik">Tahun Akademik</label>
+                    <select id="tahun_akademik" name="tahun_akademik" class="form-control">
+                        <option value="">Semua tahun</option>
+                        @foreach($tahunAkademiks as $tahun)
+                            <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="semester_akademik">Semester Akademik</label>
+                    <select id="semester_akademik" name="semester_akademik" class="form-control">
+                        <option value="">Semua semester</option>
+                        @foreach(['Ganjil', 'Genap'] as $semester)
+                            <option value="{{ $semester }}" @selected(request('semester_akademik') === $semester)>{{ $semester }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="semester_angka">Semester Angka</label>
+                    <select id="semester_angka" name="semester_angka" class="form-control">
+                        <option value="">Semua semester angka</option>
+                        @foreach($semesterAngkas as $semester)
+                            <option value="{{ $semester }}" @selected((string) request('semester_angka') === (string) $semester)>Semester {{ $semester }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prodi_id">Program Studi</label>
+                    <select id="prodi_id" name="prodi_id" class="form-control">
+                        <option value="">Semua program studi</option>
                         @foreach($prodis as $prodi)
-
-                            <option
-                                value="{{ $prodi->id }}"
-                                {{ request('prodi_id') == $prodi->id ? 'selected' : '' }}
-                            >
-                                {{ $prodi->nama_prodi }}
-                            </option>
-
+                            <option value="{{ $prodi->id }}" @selected((string) request('prodi_id') === (string) $prodi->id)>{{ $prodi->jenjang }} {{ $prodi->nama_prodi }}</option>
                         @endforeach
-
                     </select>
-
                 </div>
-
-
-                {{-- ===================== KELAS ===================== --}}
-
                 <div class="form-group">
-
-                    <label>Kelas</label>
-
-                    <select
-                        name="kelas_id"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Kelas
-                        </option>
-
-                        @foreach($kelases as $kelas)
-
-                            <option
-                                value="{{ $kelas->id }}"
-                                {{ request('kelas_id') == $kelas->id ? 'selected' : '' }}
-                            >
-
-                                {{ $kelas->nama_kelas }}
-
-                                @if($kelas->angkatan)
-                                    - Angkatan {{ $kelas->angkatan }}
-                                @endif
-
-                            </option>
-
-                        @endforeach
-
-                    </select>
-
-                </div>
-
-
-                {{-- ===================== ANGKATAN ===================== --}}
-
-                <div class="form-group">
-
-                    <label>Angkatan</label>
-
-                    <select
-                        name="angkatan"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Angkatan
-                        </option>
-
+                    <label for="angkatan">Angkatan</label>
+                    <select id="angkatan" name="angkatan" class="form-control">
+                        <option value="">Semua angkatan</option>
                         @foreach($angkatans as $angkatan)
-
-                            <option
-                                value="{{ $angkatan }}"
-                                {{ request('angkatan') == $angkatan ? 'selected' : '' }}
-                            >
-                                {{ $angkatan }}
-                            </option>
-
+                            <option value="{{ $angkatan }}" @selected((string) request('angkatan') === (string) $angkatan)>{{ $angkatan }}</option>
                         @endforeach
-
                     </select>
-
                 </div>
-
-
-                {{-- ===================== DOSEN ===================== --}}
-
-                <div class="form-group">
-
-                    <label>Dosen</label>
-
-                    <select
-                        name="dosen_id"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Dosen
-                        </option>
-
-                        @foreach($dosens as $dosen)
-
-                            <option
-                                value="{{ $dosen->id }}"
-                                {{ request('dosen_id') == $dosen->id ? 'selected' : '' }}
-                            >
-                                {{ $dosen->nama }}
-                            </option>
-
-                        @endforeach
-
-                    </select>
-
-                </div>
-
-
-                {{-- ===================== TAHUN AKADEMIK ===================== --}}
-
-                <div class="form-group">
-
-                    <label>Tahun Akademik</label>
-
-                    <input
-                        type="text"
-                        name="tahun_akademik"
-                        class="form-control"
-                        value="{{ request('tahun_akademik') }}"
-                        placeholder="Contoh: 2026/2027"
-                    >
-
-                </div>
-
-
-                {{-- ===================== SEMESTER ===================== --}}
-
-                <div class="form-group">
-
-                    <label>Semester</label>
-
-                    <select
-                        name="semester_akademik"
-                        class="form-control"
-                    >
-
-                        <option value="">
-                            Semua Semester
-                        </option>
-
-                        <option
-                            value="Ganjil"
-                            {{ request('semester_akademik') == 'Ganjil' ? 'selected' : '' }}
-                        >
-                            Ganjil
-                        </option>
-
-                        <option
-                            value="Genap"
-                            {{ request('semester_akademik') == 'Genap' ? 'selected' : '' }}
-                        >
-                            Genap
-                        </option>
-
-                    </select>
-
-                </div>
-
             </div>
-
-
-            {{-- ===================== BUTTON ===================== --}}
-
-            <div style="margin-top:20px;">
-
-                <button
-                    type="submit"
-                    class="btn-primary"
-                >
-                    🔍 Terapkan Filter
-                </button>
-
-                <a
-                    href="{{ route('admin.khs') }}"
-                    class="btn-outline"
-                >
-                    Reset
-                </a>
-
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+                <button type="submit" class="btn-primary icon-button"><x-layout-icon name="search" /> Terapkan Filter</button>
+                <a href="{{ route('admin.khs') }}" class="btn-outline">Reset Filter</a>
             </div>
-
         </form>
-
     </div>
-
 </div>
-
-
-{{-- =====================================================
-     DATA KHS
-===================================================== --}}
 
 <div class="page-card">
-
-    <div class="page-card-head">
-
-        <h2>📑 Data Kartu Hasil Studi (KHS)</h2>
-
-    </div>
-
-
+    <div class="page-card-head"><h2>KHS per Mahasiswa dan Semester</h2></div>
     <div class="page-card-body">
-
-        <div class="table-wrap">
-
+        <div class="table-wrap" style="overflow-x:auto;">
             <table>
-
-                <thead>
-
-                <tr>
-
-                    <th>No</th>
-                    <th>NIM</th>
-                    <th>Mahasiswa</th>
-                    <th>Program Studi</th>
-                    <th>Mata Kuliah</th>
-                    <th>Dosen</th>
-                    <th>Nilai Angka</th>
-                    <th>Nilai Huruf</th>
-                    <th>Bobot</th>
-                    <th>Tahun Akademik</th>
-                    <th>Semester</th>
-                    <th width="120">Aksi</th>
-
-                </tr>
-
-                </thead>
-
-
+                <thead><tr><th>No</th><th>Mahasiswa</th><th>Program Studi</th><th>Angkatan</th><th>Periode</th><th>Semester Angka</th><th>Mata Kuliah</th><th>SKS</th><th>IPS</th><th style="width:120px;">Aksi</th></tr></thead>
                 <tbody>
-
-                @forelse($khs as $item)
-
-                    <tr>
-
-                        {{-- ===================== NO ===================== --}}
-
-                        <td>
-                            {{ $khs->firstItem() + $loop->index }}
-                        </td>
-
-
-                        {{-- ===================== NIM ===================== --}}
-
-                        <td>
-                            {{ $item->krs->mahasiswa->nim ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== MAHASISWA ===================== --}}
-
-                        <td>
-                            {{ $item->krs->mahasiswa->nama ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== PROGRAM STUDI ===================== --}}
-
-                        <td>
-                            {{ $item->krs?->prodi_efektif?->nama_prodi ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== MATA KULIAH ===================== --}}
-
-                        <td>
-
-                            {{ $item->krs?->mata_kuliah_efektif?->kode_mk ?? '-' }}
-
-                            <br>
-
-                            <small style="color:#64748b;">
-
-                                {{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}
-
-                            </small>
-
-                        </td>
-
-
-                        {{-- ===================== DOSEN ===================== --}}
-
-                        <td>
-                            {{ $item->dosen_efektif?->nama ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== NILAI ANGKA ===================== --}}
-
-                        <td>
-                            {{ $item->nilai_angka ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== NILAI HURUF ===================== --}}
-
-                        <td>
-
-                            <strong>
-                                {{ $item->nilai_huruf ?? '-' }}
-                            </strong>
-
-                        </td>
-
-
-                        {{-- ===================== BOBOT ===================== --}}
-
-                        <td>
-                            {{ $item->bobot ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== TAHUN AKADEMIK ===================== --}}
-
-                        <td>
-                            {{ $item->tahun_akademik ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== SEMESTER ===================== --}}
-
-                        <td>
-                            {{ $item->semester_akademik ?? '-' }}
-                        </td>
-
-
-                        {{-- ===================== AKSI ===================== --}}
-
-                        <td>
-
-                            <div class="action-buttons">
-
-                                {{-- ADMIN HANYA BOLEH HAPUS --}}
-
-                                <form
-                                    action="{{ route('admin.khs.destroy', $item->id) }}"
-                                    method="POST"
-                                >
-
-                                    @csrf
-                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
-
-                                    @method('DELETE')
-
-                                    <button
-                                        type="submit"
-                                        class="btn-delete"
-                                        onclick="return confirm('Yakin ingin menghapus data KHS ini?')"
-                                    >
-                                        🗑 Hapus
-                                    </button>
-
-                                </form>
-
-                            </div>
-
-                        </td>
-
-                    </tr>
-
-
-                @empty
-
-                    <tr>
-
-                        <td
-                            colspan="12"
-                            style="text-align:center;padding:35px"
-                        >
-
-                            @if(request()->hasAny([
-                                'search',
-                                'fakultas_id',
-                                'prodi_id',
-                                'kelas_id',
-                                'angkatan',
-                                'dosen_id',
-                                'tahun_akademik',
-                                'semester_akademik'
-                            ]))
-
-                                Data KHS tidak ditemukan
-                                berdasarkan filter yang dipilih.
-
-                            @else
-
-                                Belum ada data KHS.
-
-                            @endif
-
-                        </td>
-
-                    </tr>
-
-                @endforelse
-
+                    @forelse($summaries as $item)
+                        <tr>
+                            <td>{{ $summaries->firstItem() + $loop->index }}</td>
+                            <td><strong>{{ $item->mahasiswa->nama }}</strong><br><small style="color:#64748b;">{{ $item->mahasiswa->nim }}</small></td>
+                            <td>{{ $item->mahasiswa->prodi?->jenjang }} {{ $item->mahasiswa->prodi?->nama_prodi ?? '-' }}</td>
+                            <td>{{ $item->mahasiswa->angkatan ?? $item->mahasiswa->kelas?->angkatan ?? '-' }}</td>
+                            <td><strong>{{ $item->tahun_akademik }}</strong><br><small>{{ $item->semester_akademik }}</small></td>
+                            <td>{{ $item->semester_angka === '-' ? '-' : 'Semester '.$item->semester_angka }}</td>
+                            <td>{{ $item->jumlah_mata_kuliah }}</td>
+                            <td>{{ $item->total_sks }}</td>
+                            <td><strong>{{ number_format($item->ips, 2) }}</strong></td>
+                            <td>
+                                <a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;" href="{{ route('admin.khs.show', [
+                                    'mahasiswa' => $item->mahasiswa_id,
+                                    'tahun_akademik' => $item->tahun_akademik,
+                                    'semester_akademik' => $item->semester_akademik,
+                                    'return_url' => request()->fullUrl(),
+                                ]) }}">Detail KHS</a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="10" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
+                    @endforelse
                 </tbody>
-
             </table>
-
         </div>
-
-
-        {{-- ===================== PAGINATION ===================== --}}
-
-        <div style="margin-top:20px">
-
-            {{ $khs->appends(request()->query())->onEachSide(1)->links() }}
-
-        </div>
-
+        @if($summaries->hasPages())
+            <div style="margin-top:20px;">{{ $summaries->appends(request()->query())->onEachSide(1)->links() }}</div>
+        @endif
     </div>
-
 </div>
-
 @endsection
