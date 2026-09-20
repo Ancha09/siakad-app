@@ -441,6 +441,9 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== IPK CPL =====================
 
     Route::get('/ipk-cpl', [IpkCplController::class, 'index'])->name('admin.ipk-cpl.index');
+    Route::get('/ipk-cpl/program-studi/{prodi}', [IpkCplController::class, 'program'])->name('admin.ipk-cpl.program');
+    Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}', [IpkCplController::class, 'cpl'])->name('admin.ipk-cpl.cpl');
+    Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}/mapping/{mapping}', [IpkCplController::class, 'course'])->name('admin.ipk-cpl.course');
     Route::get('/ipk-cpl/excel', [IpkCplController::class, 'excel'])->name('admin.ipk-cpl.excel');
     Route::get('/ipk-cpl/mata-kuliah/{mataKuliah}', [IpkCplController::class, 'show'])->name('admin.ipk-cpl.show');
 

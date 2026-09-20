@@ -25,4 +25,16 @@ class MataKuliah extends Model
             ->withPivot(['id', 'semester', 'jenis', 'silabus_path'])
             ->withTimestamps();
     }
+
+    public function cplMappings()
+    {
+        return $this->hasMany(CplMataKuliah::class);
+    }
+
+    public function cpls()
+    {
+        return $this->belongsToMany(Cpl::class, 'cpl_mata_kuliah')
+            ->withPivot(['id', 'kode_sumber', 'nama_sumber', 'semester', 'sks'])
+            ->withTimestamps();
+    }
 }

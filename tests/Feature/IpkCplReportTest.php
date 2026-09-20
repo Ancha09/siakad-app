@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Cpl;
+use App\Models\CplMataKuliah;
 use App\Models\Dosen;
 use App\Models\Khs;
 use App\Models\Krs;
@@ -8,25 +10,23 @@ use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Models\User;
 
-function createIpkCplGrade(
+function createMappedCplGrade(
     Mahasiswa $student,
     MataKuliah $course,
     Dosen $lecturer,
-    Prodi $program,
     string $academicYear,
     string $academicSemester,
-    mixed $score,
-    ?string $letter,
-    mixed $weight
+    float $score,
+    string $letter,
+    float $weight
 ): Khs {
     $krs = Krs::create([
         'mahasiswa_id' => $student->id,
-        'jadwal_id' => null,
         'mata_kuliah_id' => $course->id,
         'dosen_id' => $lecturer->id,
-        'prodi_id' => $program->id,
+        'prodi_id' => $student->prodi_id,
         'angkatan' => $student->angkatan,
-        'semester' => $student->semester,
+        'semester' => $course->semester,
         'status' => 'Disetujui',
         'tahun_akademik' => $academicYear,
         'semester_akademik' => $academicSemester,
@@ -47,164 +47,126 @@ function createIpkCplGrade(
     ]);
 }
 
-function makeIpkCplReportFixture(): array
+function makeMappedCplFixture(): array
 {
     $admin = User::factory()->create(['role' => 'admin']);
     $studentUser = User::factory()->create(['role' => 'mahasiswa']);
-    $programA = Prodi::create(['kode_prodi' => 'CPL-A', 'nama_prodi' => 'Program CPL A', 'jenjang' => 'S1']);
-    $programB = Prodi::create(['kode_prodi' => 'CPL-B', 'nama_prodi' => 'Program CPL B', 'jenjang' => 'S1']);
-    $lecturerA = Dosen::create(['nidn' => 'CPL-DOSEN-A', 'nama' => 'Dosen CPL A', 'prodi_id' => $programA->id]);
-    $lecturerB = Dosen::create(['nidn' => 'CPL-DOSEN-B', 'nama' => 'Dosen CPL B', 'prodi_id' => $programB->id]);
-    $studentA1 = Mahasiswa::create([
-        'nim' => 'CPL-A-001', 'nama' => 'Mahasiswa CPL A1', 'angkatan' => 2024,
-        'semester' => 1, 'prodi_id' => $programA->id, 'user_id' => $studentUser->id,
-    ]);
-    $studentA2 = Mahasiswa::create([
-        'nim' => 'CPL-A-002', 'nama' => 'Mahasiswa CPL A2', 'angkatan' => 2024,
-        'semester' => 1, 'prodi_id' => $programA->id,
-    ]);
-    $studentA3 = Mahasiswa::create([
-        'nim' => 'CPL-A-003', 'nama' => 'Mahasiswa CPL A3', 'angkatan' => 2024,
-        'semester' => 1, 'prodi_id' => $programA->id,
-    ]);
-    $studentB = Mahasiswa::create([
-        'nim' => 'CPL-B-001', 'nama' => 'Mahasiswa CPL B', 'angkatan' => 2023,
-        'semester' => 2, 'prodi_id' => $programB->id,
-    ]);
-    $courseA = MataKuliah::create([
-        'kode_mk' => 'CPL-A-101', 'nama_mk' => 'Matematika I', 'sks' => 3,
-        'semester' => 1, 'prodi_id' => $programA->id,
-    ]);
-    $courseB = MataKuliah::create([
-        'kode_mk' => 'CPL-B-101', 'nama_mk' => 'Matematika I', 'sks' => 3,
-        'semester' => 2, 'prodi_id' => $programB->id,
-    ]);
+    $lecturerUser = User::factory()->create(['role' => 'dosen']);
+    $mining = Prodi::create(['kode_prodi' => 'TP-CPL', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
+    $geology = Prodi::create(['kode_prodi' => 'TG-CPL', 'nama_prodi' => 'Teknik Geologi', 'jenjang' => 'S1']);
+    $lecturer = Dosen::create(['nidn' => 'CPL-MAP-01', 'nama' => 'Dosen Mapping CPL', 'prodi_id' => $mining->id, 'user_id' => $lecturerUser->id]);
+    $studentA = Mahasiswa::create(['nim' => 'CPL-M-001', 'nama' => 'Mahasiswa Tambang A', 'angkatan' => 2024, 'semester' => 3, 'prodi_id' => $mining->id]);
+    $studentB = Mahasiswa::create(['nim' => 'CPL-M-002', 'nama' => 'Mahasiswa Tambang B', 'angkatan' => 2023, 'semester' => 3, 'prodi_id' => $mining->id]);
+    $studentGeology = Mahasiswa::create(['nim' => 'CPL-G-001', 'nama' => 'Mahasiswa Geologi', 'angkatan' => 2024, 'semester' => 1, 'prodi_id' => $geology->id, 'user_id' => $studentUser->id]);
+    $courseA = MataKuliah::create(['kode_mk' => 'TP101', 'nama_mk' => 'Matematika Tambang', 'sks' => 3, 'semester' => 1, 'prodi_id' => $mining->id]);
+    $courseB = MataKuliah::create(['kode_mk' => 'TP301', 'nama_mk' => 'Perencanaan Tambang', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    $cpl = Cpl::create(['program_studi_id' => $mining->id, 'kode_cpl' => 'CPL 1', 'nama_cpl' => 'Rekayasa pertambangan', 'sort_order' => 1]);
+    $secondCpl = Cpl::create(['program_studi_id' => $mining->id, 'kode_cpl' => 'CPL 2', 'nama_cpl' => 'Rekayasa berkelanjutan', 'sort_order' => 2]);
+    $mappingA = CplMataKuliah::create(['cpl_id' => $cpl->id, 'mata_kuliah_id' => $courseA->id, 'kode_sumber' => 'TP 101', 'nama_sumber' => $courseA->nama_mk, 'semester' => 1, 'sks' => 3]);
+    $mappingB = CplMataKuliah::create(['cpl_id' => $cpl->id, 'mata_kuliah_id' => $courseB->id, 'kode_sumber' => 'TP 301', 'nama_sumber' => $courseB->nama_mk, 'semester' => 3, 'sks' => 2]);
+    CplMataKuliah::create(['cpl_id' => $secondCpl->id, 'mata_kuliah_id' => null, 'kode_sumber' => 'TP 999', 'nama_sumber' => 'Belum Ada di Master', 'semester' => 8, 'sks' => 2]);
 
-    $oldDuplicate = createIpkCplGrade($studentA1, $courseA, $lecturerA, $programA, '2024/2025', 'Ganjil', 40, 'D', 1);
-    $latestDuplicate = createIpkCplGrade($studentA1, $courseA, $lecturerA, $programA, '2024/2025', 'Ganjil', 80, 'A-', 3.75);
-    $gradeA2 = createIpkCplGrade($studentA2, $courseA, $lecturerA, $programA, '2024/2025', 'Ganjil', 60, 'C+', 2.5);
-    $emptyGrade = createIpkCplGrade($studentA3, $courseA, $lecturerA, $programA, '2024/2025', 'Ganjil', null, null, null);
-    $gradeB = createIpkCplGrade($studentB, $courseB, $lecturerB, $programB, '2024/2025', 'Genap', 90, 'A', 4);
+    $oldDuplicate = createMappedCplGrade($studentA, $courseA, $lecturer, '2024/2025', 'Ganjil', 60, 'C', 2);
+    $latestA = createMappedCplGrade($studentA, $courseA, $lecturer, '2024/2025', 'Ganjil', 90, 'A', 4);
+    $latestB = createMappedCplGrade($studentB, $courseA, $lecturer, '2024/2025', 'Ganjil', 80, 'B', 3);
+    $courseBGrade = createMappedCplGrade($studentA, $courseB, $lecturer, '2024/2025', 'Ganjil', 65, 'C', 2);
+    $geologyGrade = createMappedCplGrade($studentGeology, $courseA, $lecturer, '2024/2025', 'Ganjil', 95, 'A', 4);
 
     return compact(
-        'admin', 'studentUser', 'programA', 'programB', 'lecturerA', 'lecturerB',
-        'courseA', 'courseB', 'oldDuplicate', 'latestDuplicate', 'gradeA2', 'emptyGrade', 'gradeB'
+        'admin', 'studentUser', 'lecturerUser', 'mining', 'geology', 'studentA', 'studentB',
+        'courseA', 'courseB', 'cpl', 'secondCpl', 'mappingA', 'mappingB', 'oldDuplicate',
+        'latestA', 'latestB', 'courseBGrade', 'geologyGrade'
     );
 }
 
-test('IPK CPL reports latest valid grades per course without mixing course codes', function () {
-    $data = makeIpkCplReportFixture();
+test('CPL Excel importer creates nine CPL blocks and keeps unmatched courses visible', function () {
+    $program = Prodi::create(['kode_prodi' => 'TP-IMPORT', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
+    $course = MataKuliah::create(['kode_mk' => 'KU103', 'nama_mk' => 'Matematika I', 'sks' => 4, 'semester' => 1, 'prodi_id' => $program->id]);
 
-    $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.index', [
-        'tahun_akademik' => '2024/2025',
-    ]));
+    $this->artisan('ipk-cpl:import')->assertSuccessful();
 
-    $response->assertOk()
-        ->assertSee('IPK CPL')
-        ->assertSee('CPL-A-101')
-        ->assertSee('CPL-B-101')
-        ->assertSee('Matematika I')
-        ->assertSee('Download Excel');
+    expect(Cpl::where('program_studi_id', $program->id)->count())->toBe(9)
+        ->and(CplMataKuliah::count())->toBe(146)
+        ->and(CplMataKuliah::whereNotNull('mata_kuliah_id')->count())->toBe(1)
+        ->and(CplMataKuliah::whereNull('mata_kuliah_id')->count())->toBe(145);
 
-    $rows = collect($response->viewData('rows')->items())->keyBy('kode_mata_kuliah');
-    $rowA = $rows['CPL-A-101'];
-    $rowB = $rows['CPL-B-101'];
+    $this->assertDatabaseHas('cpl_mata_kuliah', [
+        'kode_sumber' => 'KU 103',
+        'mata_kuliah_id' => $course->id,
+    ]);
+    $this->assertDatabaseHas('cpl_mata_kuliah', [
+        'kode_sumber' => 'TA 801',
+        'mata_kuliah_id' => null,
+    ]);
 
-    expect($rows)->toHaveCount(2)
-        ->and($rowA->jumlah_mahasiswa)->toBe(2)
-        ->and($rowA->rata_nilai)->toBe(70.0)
-        ->and($rowA->rata_bobot)->toBe(3.13)
-        ->and($rowA->nilai_a)->toBe(1)
-        ->and($rowA->nilai_c)->toBe(1)
-        ->and($rowA->nilai_d)->toBe(0)
-        ->and($rowA->persentase_lulus)->toBe(100.0)
-        ->and($rowB->jumlah_mahasiswa)->toBe(1)
-        ->and($response->viewData('summary')['total_data_nilai'])->toBe(3)
-        ->and($response->viewData('summary')['rata_rata_keseluruhan'])->toBe(76.67);
-
-    expect((float) $data['oldDuplicate']->fresh()->nilai_angka)->toBe(40.0)
-        ->and((float) $data['latestDuplicate']->fresh()->nilai_angka)->toBe(80.0)
-        ->and($data['emptyGrade']->fresh()->nilai_angka)->toBeNull();
+    $this->artisan('ipk-cpl:import')->assertSuccessful();
+    expect(CplMataKuliah::count())->toBe(146);
 });
 
-test('IPK CPL filters program semester cohort course and lecturer', function () {
-    $data = makeIpkCplReportFixture();
+test('admin CPL report uses weighted SKS averages latest grades and mining students only', function () {
+    $data = makeMappedCplFixture();
 
-    $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.index', [
+    $landing = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.index'));
+    $landing->assertOk()
+        ->assertSee('CPL Teknik Pertambangan')
+        ->assertSee('CPL Teknik Geologi')
+        ->assertSee('Data CPL Teknik Geologi belum tersedia.');
+
+    $program = $this->get(route('admin.ipk-cpl.program', [
+        'prodi' => $data['mining'],
         'tahun_akademik' => '2024/2025',
-        'semester_akademik' => 'Ganjil',
-        'prodi_id' => $data['programA']->id,
-        'angkatan' => 2024,
-        'mata_kuliah_id' => $data['courseA']->id,
-        'dosen_id' => $data['lecturerA']->id,
     ]));
+    $program->assertOk()->assertSee('2.90')->assertSee('Rekayasa pertambangan');
 
-    $response->assertOk()
-        ->assertSee('CPL-A-101');
+    $first = $program->viewData('rows')->firstWhere('kode_cpl', 'CPL 1');
+    expect($first->ipk_cpl)->toBe(2.9)
+        ->and($first->courses->firstWhere('mata_kuliah_id', $data['courseA']->id)->rata_bobot)->toBe(3.5)
+        ->and($first->courses->firstWhere('mata_kuliah_id', $data['courseA']->id)->jumlah_mahasiswa)->toBe(2);
 
-    expect($response->viewData('rows')->total())->toBe(1)
-        ->and($response->viewData('rows')->first()->kode_mata_kuliah)->toBe('CPL-A-101')
-        ->and($response->viewData('summary')['total_mata_kuliah'])->toBe(1);
+    expect((float) $data['oldDuplicate']->fresh()->bobot)->toBe(2.0)
+        ->and((float) $data['geologyGrade']->fresh()->bobot)->toBe(4.0);
 });
 
-test('IPK CPL separates numeric course semesters and shows only matching latest student grades', function () {
-    $data = makeIpkCplReportFixture();
+test('CPL detail and course detail preserve filters and list only calculated students', function () {
+    $data = makeMappedCplFixture();
+    $filters = ['tahun_akademik' => '2024/2025', 'angkatan' => 2024, 'tahun_studi' => 1];
 
-    $index = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.index', [
-        'tahun_akademik' => '2024/2025',
-        'semester_akademik' => 'Ganjil',
-        'semester_angka' => 1,
-    ]));
-
-    $index->assertOk()
-        ->assertSee('Semester 1')
-        ->assertSee('Detail Mahasiswa');
-
-    expect($index->viewData('rows')->total())->toBe(1)
-        ->and($index->viewData('rows')->first()->semester_angka)->toBe(1);
-
-    $detail = $this->get(route('admin.ipk-cpl.show', [
-        'mataKuliah' => $data['courseA'],
-        'tahun_akademik' => '2024/2025',
-        'semester_akademik' => 'Ganjil',
-        'prodi_id' => $data['programA']->id,
-        'semester_angka' => 1,
-    ]));
+    $detail = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.cpl', [
+        'prodi' => $data['mining'],
+        'cpl' => $data['cpl'],
+    ] + $filters));
 
     $detail->assertOk()
-        ->assertSee('Mahasiswa CPL A1')
-        ->assertSee('Mahasiswa CPL A2')
-        ->assertDontSee('Mahasiswa CPL A3');
+        ->assertSee('Matematika Tambang')
+        ->assertDontSee('Perencanaan Tambang')
+        ->assertSee('4.00');
 
-    expect($detail->viewData('grades'))->toHaveCount(2)
-        ->and($detail->viewData('summary')->rata_nilai)->toBe(70.0);
+    expect($detail->viewData('row')->courses)->toHaveCount(1)
+        ->and($detail->viewData('row')->ipk_cpl)->toBe(4.0);
+
+    $students = $this->get(route('admin.ipk-cpl.course', [
+        'prodi' => $data['mining'],
+        'cpl' => $data['cpl'],
+        'mapping' => $data['mappingA'],
+    ] + $filters));
+
+    $students->assertOk()
+        ->assertSee('Mahasiswa Tambang A')
+        ->assertDontSee('Mahasiswa Tambang B')
+        ->assertDontSee('Mahasiswa Geologi');
+    expect($students->viewData('grades'))->toHaveCount(1);
 });
 
-test('IPK CPL Excel follows filters and routes are admin only', function () {
-    $data = makeIpkCplReportFixture();
-
-    $this->actingAs($data['admin'])
-        ->get(route('admin.ipk-cpl.excel', [
-            'tahun_akademik' => '2024/2025',
-            'prodi_id' => $data['programA']->id,
-        ]))
-        ->assertOk()
-        ->assertHeader('content-type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+test('CPL routes are admin only and do not expose unavailable geology reports', function () {
+    $data = makeMappedCplFixture();
 
     $this->actingAs($data['studentUser'])
-        ->get(route('admin.ipk-cpl.index'))
+        ->get(route('admin.ipk-cpl.program', $data['mining']))
         ->assertForbidden();
-});
-
-test('IPK CPL shows a safe empty state when no final grades exist', function () {
-    $admin = User::factory()->create(['role' => 'admin']);
-
-    $response = $this->actingAs($admin)->get(route('admin.ipk-cpl.index'));
-
-    $response->assertOk()->assertSee('Belum ada data untuk filter yang dipilih.');
-    expect($response->viewData('summary'))->toMatchArray([
-        'total_mata_kuliah' => 0,
-        'total_data_nilai' => 0,
-        'rata_rata_keseluruhan' => null,
-    ]);
+    $this->actingAs($data['lecturerUser'])
+        ->get(route('admin.ipk-cpl.program', $data['mining']))
+        ->assertForbidden();
+    $this->actingAs($data['admin'])
+        ->get(route('admin.ipk-cpl.program', $data['geology']))
+        ->assertNotFound();
 });

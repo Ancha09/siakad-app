@@ -3,24 +3,74 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cpl;
+use App\Models\CplMataKuliah;
 use App\Models\MataKuliah;
+use App\Models\Prodi;
 use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
 use App\Services\ReportExporter;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class IpkCplController extends Controller
 {
-    public function index(Request $request, IpkCplReportService $reports)
+    public function index()
     {
-        $filters = $this->validatedFilters($request);
-        $report = $reports->report($filters);
-        $report['rows'] = $this->paginate($report['rows'], 15);
+        $programs = Prodi::query()->orderBy('nama_prodi')->get();
+        $mining = $programs->first(fn (Prodi $program) => str_contains(Str::lower($program->nama_prodi), 'pertambangan'));
+        $geology = $programs->first(fn (Prodi $program) => str_contains(Str::lower($program->nama_prodi), 'geologi'));
 
-        return view('admin.ipk-cpl.index', $report + $reports->filterOptions());
+        return view('admin.ipk-cpl.index', compact('mining', 'geology'));
+    }
+
+    public function program(Request $request, Prodi $prodi, IpkCplReportService $reports)
+    {
+        $this->ensureMiningProgram($prodi);
+        $filters = $this->validatedCplFilters($request);
+
+        return view('admin.ipk-cpl.program', $reports->cplOverview($prodi, $filters)
+            + $reports->cplFilterOptions($prodi)
+            + ['filters' => $filters]);
+    }
+
+    public function cpl(
+        Request $request,
+        Prodi $prodi,
+        Cpl $cpl,
+        IpkCplReportService $reports,
+        LegacyListNavigation $navigation
+    ) {
+        $this->ensureMiningProgram($prodi);
+        $filters = $this->validatedCplFilters($request);
+
+        return view('admin.ipk-cpl.cpl', $reports->cplDetail($prodi, $cpl, $filters) + [
+            'filters' => $filters,
+            'returnUrl' => $navigation->returnUrl($request, 'admin.ipk-cpl.program', ['prodi' => $prodi]),
+        ]);
+    }
+
+    public function course(
+        Request $request,
+        Prodi $prodi,
+        Cpl $cpl,
+        CplMataKuliah $mapping,
+        IpkCplReportService $reports,
+        LegacyListNavigation $navigation
+    ) {
+        $this->ensureMiningProgram($prodi);
+        $filters = $this->validatedCplFilters($request);
+
+        return view('admin.ipk-cpl.course', $reports->mappedCourseDetail($prodi, $cpl, $mapping, $filters) + [
+            'filters' => $filters,
+            'returnUrl' => $navigation->returnUrl($request, 'admin.ipk-cpl.cpl', [
+                'prodi' => $prodi,
+                'cpl' => $cpl,
+            ]),
+        ]);
     }
 
     public function excel(Request $request, IpkCplReportService $reports, ReportExporter $exporter)
@@ -89,6 +139,23 @@ class IpkCplController extends Controller
             'mata_kuliah_id' => ['nullable', 'integer', 'exists:mata_kuliahs,id'],
             'dosen_id' => ['nullable', 'integer', 'exists:dosens,id'],
         ]);
+    }
+
+    private function validatedCplFilters(Request $request): array
+    {
+        return $request->validate([
+            'tahun_akademik' => ['nullable', 'string', 'max:20', 'regex:/^\d{4}[\/-]\d{4}$/'],
+            'angkatan' => ['nullable', 'integer', 'min:1900', 'max:'.(now()->year + 1)],
+            'tahun_studi' => ['nullable', Rule::in(['1', '2', '3', '4'])],
+            'cpl_id' => ['nullable', 'integer', 'exists:cpls,id'],
+            'mata_kuliah_id' => ['nullable', 'integer', 'exists:mata_kuliahs,id'],
+            'program_studi_id' => ['nullable', 'integer', 'exists:prodis,id'],
+        ]);
+    }
+
+    private function ensureMiningProgram(Prodi $program): void
+    {
+        abort_unless(str_contains(Str::lower($program->nama_prodi), 'pertambangan'), 404);
     }
 
     private function paginate(Collection $rows, int $perPage): LengthAwarePaginator

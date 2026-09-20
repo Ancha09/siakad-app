@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Cpl;
+use App\Models\CplMataKuliah;
 use App\Models\Dosen;
 use App\Models\Khs;
 use App\Models\Mahasiswa;
@@ -12,6 +14,195 @@ use Illuminate\Support\Collection;
 class IpkCplReportService
 {
     private const PASSING_SCORE = 60;
+
+    public function cplOverview(Prodi $program, array $filters = []): array
+    {
+        $gradesByCourse = $this->programGrades($program, $filters)
+            ->groupBy(fn (Khs $grade) => $grade->krs?->mata_kuliah_efektif?->id);
+
+        $cpls = Cpl::query()
+            ->with(['mappings.mataKuliah'])
+            ->where('program_studi_id', $program->id)
+            ->when($filters['cpl_id'] ?? null, fn ($query, $cplId) => $query->whereKey($cplId))
+            ->orderBy('sort_order')
+            ->get();
+
+        $rows = $cpls->map(function (Cpl $cpl) use ($gradesByCourse, $filters) {
+            $mappings = $this->filteredMappings($cpl->mappings, $filters);
+            if ($mappings->isEmpty()) {
+                return null;
+            }
+
+            $courses = $mappings->map(
+                fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradesByCourse)
+            )->values();
+            $withGrades = $courses->filter(fn (object $course) => $course->rata_bobot !== null && $course->sks > 0);
+            $calculatedSks = $withGrades->sum('sks');
+            $ipkCpl = $calculatedSks > 0
+                ? round($withGrades->sum('mutu_sks') / $calculatedSks, 2)
+                : null;
+            $unmatched = $courses->where('terhubung', false)->count();
+
+            return (object) [
+                'cpl' => $cpl,
+                'kode_cpl' => $cpl->kode_cpl,
+                'nama_cpl' => $cpl->nama_cpl,
+                'jumlah_mata_kuliah' => $courses->count(),
+                'total_sks' => $courses->sum('sks'),
+                'mata_kuliah_bernilai' => $withGrades->count(),
+                'belum_terhubung' => $unmatched,
+                'ipk_cpl' => $ipkCpl,
+                'status' => match (true) {
+                    $unmatched > 0 => $unmatched.' mata kuliah belum terhubung ke master',
+                    $withGrades->isEmpty() => 'Belum ada nilai',
+                    $withGrades->count() < $courses->count() => $withGrades->count().'/'.$courses->count().' mata kuliah memiliki nilai',
+                    default => 'Data lengkap',
+                },
+                'courses' => $courses,
+            ];
+        })->filter()->values();
+
+        return [
+            'program' => $program,
+            'rows' => $rows,
+            'summary' => [
+                'jumlah_cpl' => $rows->count(),
+                'jumlah_mapping' => $rows->sum('jumlah_mata_kuliah'),
+                'belum_terhubung' => $rows->sum('belum_terhubung'),
+                'cpl_bernilai' => $rows->whereNotNull('ipk_cpl')->count(),
+            ],
+        ];
+    }
+
+    public function cplDetail(Prodi $program, Cpl $cpl, array $filters = []): array
+    {
+        abort_unless((int) $cpl->program_studi_id === (int) $program->id, 404);
+        $filters['cpl_id'] = $cpl->id;
+        $overview = $this->cplOverview($program, $filters);
+        $row = $overview['rows']->first();
+        abort_if($row === null, 404, 'Mapping CPL tidak ditemukan untuk filter tersebut.');
+
+        return $overview + ['row' => $row];
+    }
+
+    public function mappedCourseDetail(
+        Prodi $program,
+        Cpl $cpl,
+        CplMataKuliah $mapping,
+        array $filters = []
+    ): array {
+        abort_unless((int) $cpl->program_studi_id === (int) $program->id
+            && (int) $mapping->cpl_id === (int) $cpl->id, 404);
+        abort_if($this->filteredMappings(collect([$mapping]), $filters)->isEmpty(), 404);
+
+        $mapping->loadMissing('mataKuliah');
+        $grades = collect();
+        if ($mapping->mata_kuliah_id !== null) {
+            $grades = $this->programGrades($program, $filters)
+                ->filter(fn (Khs $grade) => (int) $grade->krs?->mata_kuliah_efektif?->id === (int) $mapping->mata_kuliah_id)
+                ->sortBy(fn (Khs $grade) => strtolower((string) $grade->krs?->mahasiswa?->nama))
+                ->values();
+        }
+
+        return [
+            'program' => $program,
+            'cpl' => $cpl,
+            'mapping' => $mapping,
+            'grades' => $grades,
+        ];
+    }
+
+    public function cplFilterOptions(Prodi $program): array
+    {
+        $grades = $this->programGrades($program, []);
+        $cpls = Cpl::query()
+            ->with('mappings.mataKuliah')
+            ->where('program_studi_id', $program->id)
+            ->orderBy('sort_order')
+            ->get();
+
+        return [
+            'tahunAkademiks' => $grades->map(fn (Khs $grade) => $this->normalizeAcademicYear($this->academicYear($grade)))
+                ->filter()->unique()->sortDesc()->values(),
+            'angkatans' => $grades->map(fn (Khs $grade) => $grade->krs?->mahasiswa?->angkatan)
+                ->filter()->unique()->sortDesc()->values(),
+            'cplOptions' => $cpls,
+            'courseOptions' => $cpls->flatMap->mappings
+                ->filter(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id !== null)
+                ->unique('mata_kuliah_id')
+                ->sortBy('kode_sumber')
+                ->values(),
+        ];
+    }
+
+    private function programGrades(Prodi $program, array $filters): Collection
+    {
+        return $this->latestFinalGrades()
+            ->filter(fn (Khs $grade) => $this->hasAnyGradeValue($grade)
+                && (int) $grade->krs?->mahasiswa?->prodi_id === (int) $program->id)
+            ->filter(fn (Khs $grade) => empty($filters['tahun_akademik'])
+                || $this->normalizeAcademicYear($this->academicYear($grade)) === $this->normalizeAcademicYear($filters['tahun_akademik']))
+            ->filter(fn (Khs $grade) => empty($filters['angkatan'])
+                || (int) $grade->krs?->mahasiswa?->angkatan === (int) $filters['angkatan'])
+            ->unique(fn (Khs $grade) => implode('|', [
+                $grade->krs?->mahasiswa_id,
+                $grade->krs?->mata_kuliah_efektif?->id,
+            ]))
+            ->values();
+    }
+
+    private function filteredMappings(Collection $mappings, array $filters): Collection
+    {
+        [$minimumSemester, $maximumSemester] = $this->studyYearRange($filters['tahun_studi'] ?? null);
+
+        return $mappings
+            ->filter(fn (CplMataKuliah $mapping) => $minimumSemester === null
+                || ($mapping->semester !== null
+                    && $mapping->semester >= $minimumSemester
+                    && $mapping->semester <= $maximumSemester))
+            ->filter(fn (CplMataKuliah $mapping) => empty($filters['mata_kuliah_id'])
+                || (int) $mapping->mata_kuliah_id === (int) $filters['mata_kuliah_id'])
+            ->values();
+    }
+
+    private function mappingResult(CplMataKuliah $mapping, Collection $gradesByCourse): object
+    {
+        $grades = $mapping->mata_kuliah_id === null
+            ? collect()
+            : $gradesByCourse->get($mapping->mata_kuliah_id, collect());
+        $weights = $grades->pluck('bobot')->filter(fn ($weight) => is_numeric($weight));
+        $averageWeight = $weights->isEmpty() ? null : round((float) $weights->avg(), 2);
+        $sks = (int) ($mapping->sks ?? $mapping->mataKuliah?->sks ?? 0);
+
+        return (object) [
+            'mapping' => $mapping,
+            'mata_kuliah_id' => $mapping->mata_kuliah_id,
+            'kode_mata_kuliah' => $mapping->kode_sumber,
+            'nama_mata_kuliah' => $mapping->nama_sumber,
+            'semester' => $mapping->semester,
+            'sks' => $sks,
+            'jumlah_mahasiswa' => $grades->pluck('krs.mahasiswa_id')->filter()->unique()->count(),
+            'rata_bobot' => $averageWeight,
+            'mutu_sks' => $averageWeight === null ? null : round($averageWeight * $sks, 2),
+            'terhubung' => $mapping->mata_kuliah_id !== null,
+            'status' => match (true) {
+                $mapping->mata_kuliah_id === null => 'Belum terhubung ke master mata kuliah',
+                $averageWeight === null => 'Belum ada nilai',
+                default => 'Ada nilai',
+            },
+        ];
+    }
+
+    private function studyYearRange(mixed $studyYear): array
+    {
+        if (! in_array((int) $studyYear, [1, 2, 3, 4], true)) {
+            return [null, null];
+        }
+
+        $minimum = (((int) $studyYear - 1) * 2) + 1;
+
+        return [$minimum, $minimum + 1];
+    }
 
     public function report(array $filters = []): array
     {

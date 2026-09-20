@@ -52,6 +52,11 @@ class Prodi extends Model
         return $this->hasMany(Kurikulum::class);
     }
 
+    public function cpls()
+    {
+        return $this->hasMany(Cpl::class, 'program_studi_id');
+    }
+
     public function kelas()
     {
         return $this->hasMany(

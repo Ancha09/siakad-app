@@ -28,7 +28,7 @@ class LegacyListNavigation
         }
 
         parse_str($target['query'] ?? '', $query);
-        $allowed = ['search', 'q', 'mahasiswa_id', 'angkatan', 'semester', 'tahun_akademik', 'semester_akademik', 'fakultas_id', 'prodi_id', 'kelas_id', 'mata_kuliah_id', 'dosen_id', 'ruangan_id', 'hari', 'status', 'status_akses', 'status_evaluasi', 'jenis', 'tahun', 'tanggal_mulai', 'tanggal_selesai', 'page'];
+        $allowed = ['search', 'q', 'mahasiswa_id', 'angkatan', 'semester', 'tahun_akademik', 'semester_akademik', 'tahun_studi', 'cpl_id', 'program_studi_id', 'fakultas_id', 'prodi_id', 'kelas_id', 'mata_kuliah_id', 'dosen_id', 'ruangan_id', 'hari', 'status', 'status_akses', 'status_evaluasi', 'jenis', 'tahun', 'tanggal_mulai', 'tanggal_selesai', 'page'];
         $query = array_filter(array_intersect_key($query, array_flip($allowed)), fn ($value) => is_string($value));
         if (isset($query['page']) && (! ctype_digit($query['page']) || (int) $query['page'] < 1 || (int) $query['page'] > 100000)) {
             unset($query['page']);
