@@ -20,12 +20,14 @@ class IpkCplReportService
         $gradesByCourse = $this->programGrades($program, $filters)
             ->groupBy(fn (Khs $grade) => $grade->krs?->mata_kuliah_efektif?->id);
 
-        $cpls = Cpl::query()
+        $allCpls = Cpl::query()
             ->with(['mappings.mataKuliah'])
             ->where('program_studi_id', $program->id)
-            ->when($filters['cpl_id'] ?? null, fn ($query, $cplId) => $query->whereKey($cplId))
             ->orderBy('sort_order')
             ->get();
+        $cpls = $allCpls
+            ->when($filters['cpl_id'] ?? null, fn (Collection $items, $cplId) => $items->where('id', (int) $cplId))
+            ->values();
 
         $rows = $cpls->map(function (Cpl $cpl) use ($gradesByCourse, $filters) {
             $mappings = $this->filteredMappings($cpl->mappings, $filters);
@@ -38,6 +40,7 @@ class IpkCplReportService
             )->values();
             $withGrades = $courses->filter(fn (object $course) => $course->rata_bobot !== null && $course->sks > 0);
             $calculatedSks = $withGrades->sum('sks');
+            $totalSks = $courses->sum('sks');
             $ipkCpl = $calculatedSks > 0
                 ? round($withGrades->sum('mutu_sks') / $calculatedSks, 2)
                 : null;
@@ -48,7 +51,9 @@ class IpkCplReportService
                 'kode_cpl' => $cpl->kode_cpl,
                 'nama_cpl' => $cpl->nama_cpl,
                 'jumlah_mata_kuliah' => $courses->count(),
-                'total_sks' => $courses->sum('sks'),
+                'total_sks' => $totalSks,
+                'sks_dihitung' => $calculatedSks,
+                'kelengkapan_persen' => $totalSks > 0 ? round(($calculatedSks / $totalSks) * 100, 2) : 0,
                 'mata_kuliah_bernilai' => $withGrades->count(),
                 'belum_terhubung' => $unmatched,
                 'ipk_cpl' => $ipkCpl,
@@ -62,9 +67,36 @@ class IpkCplReportService
             ];
         })->filter()->values();
 
+        $allMappings = $allCpls->flatMap->mappings->values();
+        $unmatchedMappings = CplMataKuliah::query()
+            ->with('cpl')
+            ->whereNull('mata_kuliah_id')
+            ->whereHas('cpl', fn ($query) => $query->where('program_studi_id', $program->id))
+            ->orderBy('kode_sumber')
+            ->get();
+        $chartRows = $rows->take(9)->values();
+
         return [
             'program' => $program,
             'rows' => $rows,
+            'chart' => [
+                'labels' => $chartRows->pluck('kode_cpl')->all(),
+                'names' => $chartRows->pluck('nama_cpl')->all(),
+                'ipk' => $chartRows->pluck('ipk_cpl')->all(),
+                'sks_dihitung' => $chartRows->pluck('sks_dihitung')->all(),
+                'total_sks' => $chartRows->pluck('total_sks')->all(),
+                'kelengkapan' => $chartRows->pluck('kelengkapan_persen')->all(),
+            ],
+            'mappingSummary' => [
+                'jumlah_cpl' => $allCpls->count(),
+                'jumlah_mapping' => $allMappings->count(),
+                'cocok_master' => $allMappings->whereNotNull('mata_kuliah_id')->count(),
+                'belum_cocok_master' => $unmatchedMappings
+                    ->unique(fn (CplMataKuliah $mapping) => strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '', $mapping->kode_sumber))
+                        .'|'.strtolower(trim($mapping->nama_sumber)))
+                    ->count(),
+            ],
+            'unmatchedMappings' => $unmatchedMappings,
             'summary' => [
                 'jumlah_cpl' => $rows->count(),
                 'jumlah_mapping' => $rows->sum('jumlah_mata_kuliah'),
