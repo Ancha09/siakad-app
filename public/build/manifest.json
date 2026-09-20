@@ -1,11 +1,17 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-CIEWbvSo.css",
+    "file": "assets/app-CYWxa63T.css",
     "name": "app",
     "names": [
       "app.css"
     ],
     "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/admin-chart.js": {
+    "file": "assets/admin-chart-BDEOZKPw.js",
+    "name": "admin-chart",
+    "src": "resources/js/admin-chart.js",
     "isEntry": true
   },
   "resources/js/app.js": {

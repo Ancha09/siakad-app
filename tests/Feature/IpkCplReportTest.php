@@ -161,6 +161,10 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
         ->assertSee('ipkCplChartPayload', false)
         ->assertSee('chartInitialized', false)
         ->assertSee("destroyChart('ipkCplChart'", false)
+        ->assertSee('animation: false', false)
+        ->assertSee('Belum ada data grafik untuk filter ini.')
+        ->assertDontSee('cdn.jsdelivr.net/npm/chart.js', false)
+        ->assertDontSee('parsing: false', false)
         ->assertDontSee('setInterval', false)
         ->assertDontSee('Mahasiswa Tambang A')
         ->assertDontSee('Mahasiswa Tambang B')
@@ -172,7 +176,10 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
         ->and($first->sks_dihitung)->toBe(5)
         ->and($first->kelengkapan_persen)->toBe(100.0)
         ->and($first->courses)->toBeEmpty();
-    expect($program->viewData('chart')['labels'])->toBeArray()->toHaveCount(2);
+    expect(array_keys($program->viewData('chart')))->toBe(['labels', 'ipk', 'kelengkapan'])
+        ->and($program->viewData('chart')['labels'])->toBeArray()->toHaveCount(2)
+        ->and($program->viewData('chart')['ipk'][0])->toBe(2.9)
+        ->and($program->viewData('chart')['kelengkapan'][0])->toBe(100.0);
 
     $defaultYear = $this->get(route('admin.ipk-cpl.program', ['prodi' => $data['mining']]));
     $defaultYear->assertOk();

@@ -85,10 +85,7 @@ class IpkCplReportService
             'rows' => $rows,
             'chart' => [
                 'labels' => $chartRows->pluck('kode_cpl')->all(),
-                'names' => $chartRows->pluck('nama_cpl')->all(),
                 'ipk' => $chartRows->pluck('ipk_cpl')->all(),
-                'sks_dihitung' => $chartRows->pluck('sks_dihitung')->all(),
-                'total_sks' => $chartRows->pluck('total_sks')->all(),
                 'kelengkapan' => $chartRows->pluck('kelengkapan_persen')->all(),
             ],
             'mappingSummary' => [

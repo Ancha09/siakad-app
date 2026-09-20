@@ -128,7 +128,7 @@
         <div class="page-card-body">
             <div class="cpl-chart-canvas">
                 <canvas id="ipkCplChart" aria-label="Grafik batang IPK CPL"></canvas>
-                <div id="ipkCplChartEmpty" class="cpl-chart-empty" hidden>Belum ada data untuk grafik.</div>
+                <div id="ipkCplChartEmpty" class="cpl-chart-empty" hidden>Belum ada data grafik untuk filter ini.</div>
             </div>
         </div>
     </div>
@@ -137,7 +137,7 @@
         <div class="page-card-body">
             <div class="cpl-chart-canvas">
                 <canvas id="cplCompletenessChart" aria-label="Grafik kelengkapan data CPL"></canvas>
-                <div id="cplCompletenessChartEmpty" class="cpl-chart-empty" hidden>Belum ada data untuk grafik.</div>
+                <div id="cplCompletenessChartEmpty" class="cpl-chart-empty" hidden>Belum ada data grafik untuk filter ini.</div>
             </div>
         </div>
     </div>
@@ -196,8 +196,7 @@
 
         if (!ipkCanvas || !completenessCanvas || !payloadElement) return;
         if (ipkCanvas.dataset.chartInitialized === 'true'
-            || completenessCanvas.dataset.chartInitialized === 'true'
-            || ipkCanvas.dataset.chartLoading === 'true') return;
+            || completenessCanvas.dataset.chartInitialized === 'true') return;
 
         let data;
         try {
@@ -206,17 +205,28 @@
             data = {};
         }
 
-        data.labels = Array.isArray(data.labels) ? data.labels.slice(0, 9) : [];
-        data.names = Array.isArray(data.names) ? data.names.slice(0, 9) : [];
-        data.ipk = Array.isArray(data.ipk) ? data.ipk.slice(0, 9) : [];
-        data.sks_dihitung = Array.isArray(data.sks_dihitung) ? data.sks_dihitung.slice(0, 9) : [];
-        data.total_sks = Array.isArray(data.total_sks) ? data.total_sks.slice(0, 9) : [];
-        data.kelengkapan = Array.isArray(data.kelengkapan) ? data.kelengkapan.slice(0, 9) : [];
+        const labels = Array.isArray(data.labels) ? data.labels.slice(0, 9) : [];
+        const ipkValues = labels.map(function (_, index) {
+            const source = Array.isArray(data.ipk) ? data.ipk[index] : null;
+            const value = Number(source);
+            return source !== null && source !== undefined && Number.isFinite(value) ? value : null;
+        });
+        const completenessValues = labels.map(function (_, index) {
+            const source = Array.isArray(data.kelengkapan) ? data.kelengkapan[index] : 0;
+            const value = Number(source);
+            return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
+        });
 
         const showEmpty = function (canvas, emptyId) {
             canvas.hidden = true;
             const empty = document.getElementById(emptyId);
             if (empty) empty.hidden = false;
+        };
+
+        const showCanvas = function (canvas, emptyId) {
+            canvas.hidden = false;
+            const empty = document.getElementById(emptyId);
+            if (empty) empty.hidden = true;
         };
 
         const destroyChart = function (globalKey, canvas) {
@@ -243,56 +253,64 @@
 
             destroyChart('ipkCplChart', ipkCanvas);
             destroyChart('ipkCplCompletenessChart', completenessCanvas);
-            delete ipkCanvas.dataset.chartLoading;
             ipkCanvas.dataset.chartInitialized = 'true';
             completenessCanvas.dataset.chartInitialized = 'true';
-
-            const tooltipDetails = function (index) {
-                return [
-                    data.names[index] || data.labels[index] || '-',
-                    'IPK CPL: ' + (data.ipk[index] === null || data.ipk[index] === undefined ? 'Belum ada nilai' : Number(data.ipk[index]).toFixed(2)),
-                    'SKS dihitung: ' + Number(data.sks_dihitung[index] || 0),
-                    'Total SKS mapping: ' + Number(data.total_sks[index] || 0),
-                    'Kelengkapan: ' + Number(data.kelengkapan[index] || 0).toFixed(2) + '%'
-                ];
-            };
             const commonOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: false,
-                parsing: false,
                 normalized: true,
                 devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { afterBody: items => items.length ? tooltipDetails(items[0].dataIndex) : [] } }
+                    legend: {
+                        display: true,
+                        position: 'bottom',
+                        labels: { color: '#334155', boxWidth: 14 }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#334155' }, grid: { display: false } },
+                    y: { ticks: { color: '#334155' }, grid: { color: '#e2e8f0' } }
                 }
             };
 
-            const hasIpkData = data.labels.length > 0
-                && data.ipk.some(value => value !== null && value !== undefined && Number.isFinite(Number(value)));
+            const hasIpkData = labels.length > 0 && ipkValues.some(value => value !== null);
 
             if (hasIpkData) {
+                showCanvas(ipkCanvas, 'ipkCplChartEmpty');
                 window.ipkCplChart = new window.Chart(ipkCanvas, {
                     type: 'bar',
                     data: {
-                        labels: data.labels,
-                        datasets: [{ label: 'IPK CPL', data: data.ipk, backgroundColor: '#0b5b9d', borderColor: '#063b65', borderWidth: 1, borderRadius: 6 }]
+                        labels: labels,
+                        datasets: [{ label: 'IPK CPL', data: ipkValues, backgroundColor: '#0b5b9d', borderColor: '#063b65', borderWidth: 1, borderRadius: 6 }]
                     },
-                    options: { ...commonOptions, scales: { y: { beginAtZero: true, max: 4, ticks: { stepSize: 0.5 } } } }
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            ...commonOptions.scales,
+                            y: { ...commonOptions.scales.y, beginAtZero: true, max: 4, ticks: { color: '#334155', stepSize: 0.5 } }
+                        }
+                    }
                 });
             } else {
                 showEmpty(ipkCanvas, 'ipkCplChartEmpty');
             }
 
-            if (data.labels.length > 0) {
+            if (labels.length > 0) {
+                showCanvas(completenessCanvas, 'cplCompletenessChartEmpty');
                 window.ipkCplCompletenessChart = new window.Chart(completenessCanvas, {
                     type: 'bar',
                     data: {
-                        labels: data.labels,
-                        datasets: [{ label: 'Kelengkapan Data', data: data.kelengkapan, backgroundColor: '#f59e0b', borderColor: '#b45309', borderWidth: 1, borderRadius: 6 }]
+                        labels: labels,
+                        datasets: [{ label: 'Kelengkapan Data', data: completenessValues, backgroundColor: '#0891b2', borderColor: '#0e7490', borderWidth: 1, borderRadius: 6 }]
                     },
-                    options: { ...commonOptions, scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => value + '%' } } } }
+                    options: {
+                        ...commonOptions,
+                        scales: {
+                            ...commonOptions.scales,
+                            y: { ...commonOptions.scales.y, beginAtZero: true, max: 100, ticks: { color: '#334155', callback: value => value + '%' } }
+                        }
+                    }
                 });
             } else {
                 showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
@@ -304,23 +322,8 @@
             return;
         }
 
-        ipkCanvas.dataset.chartLoading = 'true';
-        const existingLoader = document.getElementById('ipkCplChartJsFallback');
-        if (existingLoader) {
-            existingLoader.addEventListener('load', renderCharts, { once: true });
-            return;
-        }
-
-        const fallbackScript = document.createElement('script');
-        fallbackScript.id = 'ipkCplChartJsFallback';
-        fallbackScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js';
-        fallbackScript.addEventListener('load', renderCharts, { once: true });
-        fallbackScript.addEventListener('error', function () {
-            delete ipkCanvas.dataset.chartLoading;
-            showEmpty(ipkCanvas, 'ipkCplChartEmpty');
-            showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
-        }, { once: true });
-        document.head.appendChild(fallbackScript);
+        showEmpty(ipkCanvas, 'ipkCplChartEmpty');
+        showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
     };
 
     if (document.readyState === 'loading') {

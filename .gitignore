@@ -22,7 +22,12 @@
 /.zed
 /auth.json
 /node_modules
-/public/build
+# Asset production ikut Git karena server hosting tidak selalu menjalankan npm build.
+/public/build/*
+!/public/build/manifest.json
+!/public/build/assets/
+!/public/build/assets/*.js
+!/public/build/assets/*.css
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage
