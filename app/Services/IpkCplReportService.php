@@ -9,34 +9,38 @@ use App\Models\Khs;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class IpkCplReportService
 {
     private const PASSING_SCORE = 60;
 
-    public function cplOverview(Prodi $program, array $filters = []): array
+    public function cplOverview(Prodi $program, array $filters = [], bool $includeCourseDetails = true): array
     {
-        $gradesByCourse = $this->programGrades($program, $filters)
-            ->groupBy(fn (Khs $grade) => $grade->krs?->mata_kuliah_efektif?->id);
+        $gradeStats = filled($filters['tahun_akademik'] ?? null)
+            ? $this->courseGradeStatistics($program, $filters)
+            : collect();
 
         $allCpls = Cpl::query()
             ->with(['mappings.mataKuliah'])
             ->where('program_studi_id', $program->id)
             ->orderBy('sort_order')
+            ->limit(9)
             ->get();
         $cpls = $allCpls
             ->when($filters['cpl_id'] ?? null, fn (Collection $items, $cplId) => $items->where('id', (int) $cplId))
             ->values();
 
-        $rows = $cpls->map(function (Cpl $cpl) use ($gradesByCourse, $filters) {
+        $rows = $cpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails) {
             $mappings = $this->filteredMappings($cpl->mappings, $filters);
             if ($mappings->isEmpty()) {
                 return null;
             }
 
             $courses = $mappings->map(
-                fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradesByCourse)
+                fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradeStats)
             )->values();
             $withGrades = $courses->filter(fn (object $course) => $course->rata_bobot !== null && $course->sks > 0);
             $calculatedSks = $withGrades->sum('sks');
@@ -63,7 +67,7 @@ class IpkCplReportService
                     $withGrades->count() < $courses->count() => $withGrades->count().'/'.$courses->count().' mata kuliah memiliki nilai',
                     default => 'Data lengkap',
                 },
-                'courses' => $courses,
+                'courses' => $includeCourseDetails ? $courses : collect(),
             ];
         })->filter()->values();
 
@@ -128,13 +132,24 @@ class IpkCplReportService
         abort_if($this->filteredMappings(collect([$mapping]), $filters)->isEmpty(), 404);
 
         $mapping->loadMissing('mataKuliah');
-        $grades = collect();
+        $grades = null;
         if ($mapping->mata_kuliah_id !== null) {
-            $grades = $this->programGrades($program, $filters)
-                ->filter(fn (Khs $grade) => (int) $grade->krs?->mata_kuliah_efektif?->id === (int) $mapping->mata_kuliah_id)
-                ->sortBy(fn (Khs $grade) => strtolower((string) $grade->krs?->mahasiswa?->nama))
-                ->values();
+            $gradeIds = $this->latestGradeRowsQuery($program, $filters)
+                ->where('course_id', $mapping->mata_kuliah_id)
+                ->select('khs_id');
+            $grades = Khs::query()
+                ->with(['krs.mahasiswa.prodi', 'krs.mataKuliahManual', 'krs.jadwal.mataKuliah'])
+                ->whereIn('khs.id', $gradeIds)
+                ->join('krs', 'krs.id', '=', 'khs.krs_id')
+                ->join('mahasiswas', 'mahasiswas.id', '=', 'krs.mahasiswa_id')
+                ->select('khs.*')
+                ->orderBy('mahasiswas.nama')
+                ->orderBy('khs.id')
+                ->paginate(50)
+                ->withQueryString();
         }
+
+        $grades ??= Khs::query()->whereRaw('1 = 0')->paginate(50)->withQueryString();
 
         return [
             'program' => $program,
@@ -146,7 +161,6 @@ class IpkCplReportService
 
     public function cplFilterOptions(Prodi $program): array
     {
-        $grades = $this->programGrades($program, []);
         $cpls = Cpl::query()
             ->with('mappings.mataKuliah')
             ->where('program_studi_id', $program->id)
@@ -154,10 +168,13 @@ class IpkCplReportService
             ->get();
 
         return [
-            'tahunAkademiks' => $grades->map(fn (Khs $grade) => $this->normalizeAcademicYear($this->academicYear($grade)))
-                ->filter()->unique()->sortDesc()->values(),
-            'angkatans' => $grades->map(fn (Khs $grade) => $grade->krs?->mahasiswa?->angkatan)
-                ->filter()->unique()->sortDesc()->values(),
+            'tahunAkademiks' => $this->academicYears($program),
+            'angkatans' => Mahasiswa::query()
+                ->where('prodi_id', $program->id)
+                ->whereNotNull('angkatan')
+                ->distinct()
+                ->orderByDesc('angkatan')
+                ->pluck('angkatan'),
             'cplOptions' => $cpls,
             'courseOptions' => $cpls->flatMap->mappings
                 ->filter(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id !== null)
@@ -165,6 +182,84 @@ class IpkCplReportService
                 ->sortBy('kode_sumber')
                 ->values(),
         ];
+    }
+
+    public function latestAcademicYear(Prodi $program): ?string
+    {
+        return $this->academicYears($program)->first();
+    }
+
+    private function academicYears(Prodi $program): Collection
+    {
+        return DB::table('khs')
+            ->join('krs', 'krs.id', '=', 'khs.krs_id')
+            ->join('mahasiswas', 'mahasiswas.id', '=', 'krs.mahasiswa_id')
+            ->where('mahasiswas.prodi_id', $program->id)
+            ->where('krs.status', 'Disetujui')
+            ->selectRaw("COALESCE(NULLIF(khs.tahun_akademik, ''), krs.tahun_akademik) AS academic_year")
+            ->distinct()
+            ->pluck('academic_year')
+            ->map(fn ($year) => $this->normalizeAcademicYear($year))
+            ->filter()
+            ->unique()
+            ->sortDesc()
+            ->values();
+    }
+
+    /**
+     * Statistik ringkas dihitung oleh database. Halaman utama tidak pernah
+     * mengambil seluruh record KHS atau relasi mahasiswa ke memory PHP.
+     */
+    private function courseGradeStatistics(Prodi $program, array $filters): Collection
+    {
+        return $this->latestGradeRowsQuery($program, $filters)
+            ->whereNotNull('bobot')
+            ->selectRaw('course_id, AVG(bobot) AS average_weight, COUNT(DISTINCT mahasiswa_id) AS student_count')
+            ->groupBy('course_id')
+            ->get()
+            ->keyBy(fn (object $row) => (int) $row->course_id);
+    }
+
+    /**
+     * Menghasilkan satu nilai final terbaru per mahasiswa dan mata kuliah.
+     * Filter tahun/prodi diterapkan sebelum ROW_NUMBER agar database hanya
+     * merangking subset yang dibutuhkan oleh laporan aktif.
+     */
+    private function latestGradeRowsQuery(Prodi $program, array $filters): QueryBuilder
+    {
+        $courseExpression = 'COALESCE(jadwals.mata_kuliah_id, krs.mata_kuliah_id)';
+        $academicYearExpression = "REPLACE(REPLACE(TRIM(COALESCE(NULLIF(khs.tahun_akademik, ''), krs.tahun_akademik)), '-', '/'), ' ', '')";
+        $academicSemesterExpression = "COALESCE(NULLIF(TRIM(khs.semester_akademik), ''), NULLIF(TRIM(krs.semester_akademik), ''))";
+
+        $rankedGrades = DB::table('khs')
+            ->join('krs', 'krs.id', '=', 'khs.krs_id')
+            ->join('mahasiswas', 'mahasiswas.id', '=', 'krs.mahasiswa_id')
+            ->leftJoin('jadwals', 'jadwals.id', '=', 'krs.jadwal_id')
+            ->where('krs.status', 'Disetujui')
+            ->where('mahasiswas.prodi_id', $program->id)
+            ->whereRaw($courseExpression.' IS NOT NULL')
+            ->whereRaw($academicSemesterExpression.' IS NOT NULL')
+            ->where(function ($query) {
+                $query->whereNotNull('khs.nilai_angka')
+                    ->orWhereNotNull('khs.nilai_huruf')
+                    ->orWhereNotNull('khs.bobot');
+            })
+            ->when(filled($filters['tahun_akademik'] ?? null), function ($query) use ($filters, $academicYearExpression) {
+                $query->whereRaw($academicYearExpression.' = ?', [
+                    $this->normalizeAcademicYear($filters['tahun_akademik']),
+                ]);
+            })
+            ->when(filled($filters['angkatan'] ?? null), fn ($query) => $query
+                ->where('mahasiswas.angkatan', (int) $filters['angkatan']))
+            ->selectRaw('khs.id AS khs_id')
+            ->selectRaw('krs.mahasiswa_id AS mahasiswa_id')
+            ->selectRaw($courseExpression.' AS course_id')
+            ->selectRaw('khs.bobot AS bobot')
+            ->selectRaw('ROW_NUMBER() OVER (PARTITION BY krs.mahasiswa_id, '.$courseExpression.' ORDER BY khs.updated_at DESC, khs.id DESC) AS grade_rank');
+
+        return DB::query()
+            ->fromSub($rankedGrades, 'ranked_grades')
+            ->where('grade_rank', 1);
     }
 
     private function programGrades(Prodi $program, array $filters): Collection
@@ -197,13 +292,10 @@ class IpkCplReportService
             ->values();
     }
 
-    private function mappingResult(CplMataKuliah $mapping, Collection $gradesByCourse): object
+    private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats): object
     {
-        $grades = $mapping->mata_kuliah_id === null
-            ? collect()
-            : $gradesByCourse->get($mapping->mata_kuliah_id, collect());
-        $weights = $grades->pluck('bobot')->filter(fn ($weight) => is_numeric($weight));
-        $averageWeight = $weights->isEmpty() ? null : round((float) $weights->avg(), 2);
+        $stats = $mapping->mata_kuliah_id === null ? null : $gradeStats->get($mapping->mata_kuliah_id);
+        $averageWeight = $stats === null ? null : round((float) $stats->average_weight, 2);
         $sks = (int) ($mapping->sks ?? $mapping->mataKuliah?->sks ?? 0);
 
         return (object) [
@@ -213,7 +305,7 @@ class IpkCplReportService
             'nama_mata_kuliah' => $mapping->nama_sumber,
             'semester' => $mapping->semester,
             'sks' => $sks,
-            'jumlah_mahasiswa' => $grades->pluck('krs.mahasiswa_id')->filter()->unique()->count(),
+            'jumlah_mahasiswa' => (int) ($stats->student_count ?? 0),
             'rata_bobot' => $averageWeight,
             'mutu_sks' => $averageWeight === null ? null : round($averageWeight * $sks, 2),
             'terhubung' => $mapping->mata_kuliah_id !== null,

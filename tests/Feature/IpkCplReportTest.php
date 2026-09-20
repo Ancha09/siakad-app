@@ -157,11 +157,13 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
     $program->assertSee('Grafik IPK CPL Tahun Akademik 2024/2025')
         ->assertSee('Kelengkapan Data CPL')
         ->assertSee('CPL Terimport')
-        ->assertSee('Mapping Belum Cocok dengan Master')
+        ->assertDontSee('Aksi Mapping Manual')
         ->assertSee('ipkCplChartPayload', false)
         ->assertSee('chartInitialized', false)
         ->assertSee("destroyChart('ipkCplChart'", false)
         ->assertDontSee('setInterval', false)
+        ->assertDontSee('Mahasiswa Tambang A')
+        ->assertDontSee('Mahasiswa Tambang B')
         ->assertSee('Download PDF')
         ->assertSee('Download Excel');
 
@@ -169,9 +171,12 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
     expect($first->ipk_cpl)->toBe(2.9)
         ->and($first->sks_dihitung)->toBe(5)
         ->and($first->kelengkapan_persen)->toBe(100.0)
-        ->and($first->courses->firstWhere('mata_kuliah_id', $data['courseA']->id)->rata_bobot)->toBe(3.5)
-        ->and($first->courses->firstWhere('mata_kuliah_id', $data['courseA']->id)->jumlah_mahasiswa)->toBe(2);
+        ->and($first->courses)->toBeEmpty();
     expect($program->viewData('chart')['labels'])->toBeArray()->toHaveCount(2);
+
+    $defaultYear = $this->get(route('admin.ipk-cpl.program', ['prodi' => $data['mining']]));
+    $defaultYear->assertOk();
+    expect($defaultYear->viewData('filters')['tahun_akademik'])->toBe('2024/2025');
 
     expect((float) $data['oldDuplicate']->fresh()->bobot)->toBe(2.0)
         ->and((float) $data['geologyGrade']->fresh()->bobot)->toBe(4.0);
@@ -247,7 +252,10 @@ test('CPL detail and course detail preserve filters and list only calculated stu
         ->assertSee('Mahasiswa Tambang A')
         ->assertDontSee('Mahasiswa Tambang B')
         ->assertDontSee('Mahasiswa Geologi');
-    expect($students->viewData('grades'))->toHaveCount(1);
+    expect($students->viewData('grades'))
+        ->toBeInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class)
+        ->toHaveCount(1)
+        ->and($students->viewData('grades')->perPage())->toBe(50);
 });
 
 test('admin can download filtered CPL reports as PDF and Excel', function () {

@@ -18,8 +18,13 @@
 <div class="page-card" style="margin-bottom:20px;">
     <div class="page-card-head"><h2>{{ $row->kode_cpl }} - {{ $row->nama_cpl }}</h2></div>
     <div class="page-card-body">
+        <div style="padding:16px;border:1px solid #dbe6f1;background:#f8fafc;border-radius:10px;margin-bottom:16px;line-height:1.65;">
+            <div style="margin-bottom:10px;"><strong style="color:#0b5b9d;">Deskripsi CPL</strong><br>{{ $row->cpl->deskripsi ?: '-' }}</div>
+            <div style="margin-bottom:10px;"><strong style="color:#0b5b9d;">Turunan Visi-Misi</strong><br>{!! nl2br(e($row->cpl->turunan_visi_misi ?: '-')) !!}</div>
+            <div><strong style="color:#0b5b9d;">CPL KKNI</strong><br>{{ $row->cpl->cpl_kkni ?: '-' }}</div>
+        </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;">
-            @foreach(['Jumlah Mata Kuliah' => $row->jumlah_mata_kuliah, 'Total SKS Mapping' => $row->total_sks, 'Mata Kuliah Bernilai' => $row->mata_kuliah_bernilai, 'IPK CPL' => $row->ipk_cpl === null ? '-' : number_format($row->ipk_cpl, 2)] as $label => $value)
+            @foreach(['Jumlah Mata Kuliah' => $row->jumlah_mata_kuliah, 'Total SKS Mapping' => $row->total_sks, 'SKS Dihitung' => $row->sks_dihitung, 'Kelengkapan Data' => number_format($row->kelengkapan_persen, 2).'%', 'IPK CPL' => $row->ipk_cpl === null ? '-' : number_format($row->ipk_cpl, 2)] as $label => $value)
                 <div style="padding:16px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:24px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
             @endforeach
         </div>
@@ -51,9 +56,9 @@
                                         'prodi' => $program,
                                         'cpl' => $row->cpl,
                                         'mapping' => $course->mapping,
-                                        'tahun_akademik' => request('tahun_akademik'),
-                                        'angkatan' => request('angkatan'),
-                                        'tahun_studi' => request('tahun_studi'),
+                                        'tahun_akademik' => $filters['tahun_akademik'] ?? null,
+                                        'angkatan' => $filters['angkatan'] ?? null,
+                                        'tahun_studi' => $filters['tahun_studi'] ?? null,
                                         'return_url' => request()->fullUrl(),
                                     ]) }}">Detail Mahasiswa</a>
                                 @else

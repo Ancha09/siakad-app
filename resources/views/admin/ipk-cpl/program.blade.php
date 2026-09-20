@@ -14,8 +14,6 @@
     .cpl-chart-canvas canvas { display:block;max-width:100%;max-height:300px; }
     .cpl-chart-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;text-align:center; }
     .cpl-chart-empty[hidden] { display:none !important; }
-    .mapping-action { min-width:330px; }
-    .mapping-action .manual-course-picker { min-width:280px; }
     @media (max-width:720px) {
         .cpl-chart-grid { grid-template-columns:1fr; }
         .cpl-chart-canvas { height:240px; }
@@ -26,7 +24,10 @@
 
 @section('content')
 @php
-    $downloadFilters = array_filter(request()->only(['tahun_akademik', 'angkatan', 'tahun_studi', 'cpl_id', 'mata_kuliah_id']), fn ($value) => filled($value));
+    $downloadFilters = collect($filters)
+        ->only(['tahun_akademik', 'angkatan', 'tahun_studi', 'cpl_id', 'mata_kuliah_id'])
+        ->filter(fn ($value) => filled($value))
+        ->all();
 @endphp
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
     <a href="{{ route('admin.ipk-cpl.index') }}" class="btn-outline">Kembali ke Pilihan Program Studi</a>
@@ -44,6 +45,11 @@
         {{ $errors->first() }}
     </div>
 @endif
+@if(blank($filters['tahun_akademik'] ?? null))
+    <div style="background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;padding:13px 16px;border-radius:10px;margin-bottom:18px;">
+        Pilih tahun akademik terlebih dahulu untuk menampilkan IPK CPL.
+    </div>
+@endif
 
 <div class="page-card" style="margin-bottom:20px;">
     <div class="page-card-head"><h2>Filter CPL Teknik Pertambangan</h2></div>
@@ -59,9 +65,9 @@
                 <div class="form-group">
                     <label for="tahun_akademik">Tahun Akademik</label>
                     <select id="tahun_akademik" name="tahun_akademik" class="form-control">
-                        <option value="">Semua tahun akademik</option>
+                        <option value="">Pilih tahun akademik</option>
                         @foreach($tahunAkademiks as $tahun)
-                            <option value="{{ $tahun }}" @selected(request('tahun_akademik') === $tahun)>{{ $tahun }}</option>
+                            <option value="{{ $tahun }}" @selected(($filters['tahun_akademik'] ?? null) === $tahun)>{{ $tahun }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -70,7 +76,7 @@
                     <select id="angkatan" name="angkatan" class="form-control">
                         <option value="">Semua angkatan</option>
                         @foreach($angkatans as $angkatan)
-                            <option value="{{ $angkatan }}" @selected((string) request('angkatan') === (string) $angkatan)>{{ $angkatan }}</option>
+                            <option value="{{ $angkatan }}" @selected((string) ($filters['angkatan'] ?? '') === (string) $angkatan)>{{ $angkatan }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -79,7 +85,7 @@
                     <select id="tahun_studi" name="tahun_studi" class="form-control">
                         <option value="">Semua tahun</option>
                         @foreach([1 => 'Semester 1 dan 2', 2 => 'Semester 3 dan 4', 3 => 'Semester 5 dan 6', 4 => 'Semester 7 dan 8'] as $tahun => $semester)
-                            <option value="{{ $tahun }}" @selected((string) request('tahun_studi') === (string) $tahun)>Tahun {{ $tahun }} - {{ $semester }}</option>
+                            <option value="{{ $tahun }}" @selected((string) ($filters['tahun_studi'] ?? '') === (string) $tahun)>Tahun {{ $tahun }} - {{ $semester }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -88,7 +94,7 @@
                     <select id="cpl_id" name="cpl_id" class="form-control">
                         <option value="">Semua CPL</option>
                         @foreach($cplOptions as $cplOption)
-                            <option value="{{ $cplOption->id }}" @selected((string) request('cpl_id') === (string) $cplOption->id)>{{ $cplOption->kode_cpl }} - {{ $cplOption->nama_cpl }}</option>
+                            <option value="{{ $cplOption->id }}" @selected((string) ($filters['cpl_id'] ?? '') === (string) $cplOption->id)>{{ $cplOption->kode_cpl }} - {{ $cplOption->nama_cpl }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -97,7 +103,7 @@
                     <select id="mata_kuliah_id" name="mata_kuliah_id" class="form-control">
                         <option value="">Semua mata kuliah</option>
                         @foreach($courseOptions as $courseOption)
-                            <option value="{{ $courseOption->mata_kuliah_id }}" @selected((string) request('mata_kuliah_id') === (string) $courseOption->mata_kuliah_id)>{{ $courseOption->kode_sumber }} - {{ $courseOption->nama_sumber }}</option>
+                            <option value="{{ $courseOption->mata_kuliah_id }}" @selected((string) ($filters['mata_kuliah_id'] ?? '') === (string) $courseOption->mata_kuliah_id)>{{ $courseOption->kode_sumber }} - {{ $courseOption->nama_sumber }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -116,15 +122,9 @@
     @endforeach
 </div>
 
-@if($mappingSummary['belum_cocok_master'] > 0)
-    <div style="margin:-5px 0 20px;text-align:right;">
-        <a class="btn-outline" href="#mapping-belum-cocok">Lihat mapping belum cocok</a>
-    </div>
-@endif
-
 <div class="cpl-chart-grid">
     <div class="page-card">
-        <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ request('tahun_akademik') ?: 'Semua Tahun' }}</h2></div>
+        <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>
         <div class="page-card-body">
             <div class="cpl-chart-canvas">
                 <canvas id="ipkCplChart" aria-label="Grafik batang IPK CPL"></canvas>
@@ -148,7 +148,7 @@
     <div class="page-card-body">
         <div class="table-wrap" style="overflow-x:auto;">
             <table class="ipk-cpl-table">
-                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>SKS Dihitung</th><th>Total SKS</th><th>Kelengkapan</th><th>IPK CPL</th><th>Status</th><th style="width:110px;">Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>MK Bernilai</th><th>SKS Dihitung</th><th>Total SKS</th><th>Kelengkapan</th><th>IPK CPL</th><th>Status</th><th style="width:110px;">Aksi</th></tr></thead>
                 <tbody>
                     @forelse($rows as $item)
                         <tr>
@@ -156,6 +156,7 @@
                             <td><strong>{{ $item->kode_cpl }}</strong></td>
                             <td style="min-width:260px;">{{ $item->nama_cpl }}</td>
                             <td>{{ $item->jumlah_mata_kuliah }}</td>
+                            <td>{{ $item->mata_kuliah_bernilai }}</td>
                             <td>{{ $item->sks_dihitung }}</td>
                             <td>{{ $item->total_sks }}</td>
                             <td>{{ number_format($item->kelengkapan_persen, 2) }}%</td>
@@ -164,15 +165,15 @@
                             <td><a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;" href="{{ route('admin.ipk-cpl.cpl', [
                                 'prodi' => $program,
                                 'cpl' => $item->cpl,
-                                'tahun_akademik' => request('tahun_akademik'),
-                                'angkatan' => request('angkatan'),
-                                'tahun_studi' => request('tahun_studi'),
-                                'mata_kuliah_id' => request('mata_kuliah_id'),
+                                'tahun_akademik' => $filters['tahun_akademik'] ?? null,
+                                'angkatan' => $filters['angkatan'] ?? null,
+                                'tahun_studi' => $filters['tahun_studi'] ?? null,
+                                'mata_kuliah_id' => $filters['mata_kuliah_id'] ?? null,
                                 'return_url' => request()->fullUrl(),
                             ]) }}">Detail</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
+                        <tr><td colspan="11" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -180,54 +181,6 @@
     </div>
 </div>
 
-<div class="page-card" id="mapping-belum-cocok" style="margin-top:20px;scroll-margin-top:20px;">
-    <div class="page-card-head"><h2>Mapping Belum Cocok dengan Master</h2></div>
-    <div class="page-card-body">
-        <p style="margin:0 0 16px;color:#64748b;">Mapping pada bagian ini tidak ikut dihitung sampai terhubung ke master mata kuliah Teknik Pertambangan.</p>
-        <div class="table-wrap" style="overflow-x:auto;">
-            <table class="ipk-cpl-table">
-                <thead><tr><th>No</th><th>Kode Excel</th><th>Nama Excel</th><th>CPL</th><th>Status</th><th>Saran Kemungkinan</th><th>Aksi Mapping Manual</th></tr></thead>
-                <tbody>
-                    @forelse($unmatchedRows as $unmatched)
-                        @php($mapping = $unmatched->mapping)
-                        <tr>
-                            <td>{{ $loop->iteration }}</td>
-                            <td><strong>{{ $mapping->kode_sumber }}</strong></td>
-                            <td>{{ $mapping->nama_sumber }}</td>
-                            <td>{{ $unmatched->cpl_list ?: '-' }}</td>
-                            <td><span style="color:#b45309;font-weight:700;white-space:nowrap;">Belum cocok master</span></td>
-                            <td style="min-width:230px;">
-                                @forelse($unmatched->suggestions as $suggestion)
-                                    <div style="margin-bottom:5px;">
-                                        <strong>{{ $suggestion->course->kode_mk }}</strong> - {{ $suggestion->course->nama_mk }}
-                                        <small style="display:block;color:#64748b;">{{ $suggestion->reason }}</small>
-                                    </div>
-                                @empty
-                                    <span style="color:#64748b;">Tidak ada saran yang cukup dekat</span>
-                                @endforelse
-                            </td>
-                            <td class="mapping-action">
-                                <form method="POST" action="{{ route('admin.ipk-cpl.mapping.update', ['prodi' => $program, 'cpl' => $mapping->cpl_id, 'mapping' => $mapping]) }}">
-                                    @csrf
-                                    @method('PATCH')
-                                    <input type="hidden" name="return_url" value="{{ request()->fullUrl() }}">
-                                    <x-searchable-course-select
-                                        :courses="$mappingCourseOptions"
-                                        :selected="null"
-                                        :input-id="'mapping-course-'.$mapping->id"
-                                    />
-                                    <button type="submit" class="btn-primary" style="margin-top:8px;padding:8px 12px;">Hubungkan</button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="7" style="text-align:center;padding:36px;color:#166534;">Semua mapping sudah terhubung ke master mata kuliah.</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
 @endsection
 
 @push('scripts')

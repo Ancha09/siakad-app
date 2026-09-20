@@ -23,7 +23,7 @@
                     @forelse($grades as $grade)
                         @php($student = $grade->krs?->mahasiswa)
                         <tr>
-                            <td>{{ $loop->iteration }}</td>
+                            <td>{{ ($grades->firstItem() ?? 1) + $loop->index }}</td>
                             <td>{{ $student?->nim ?? '-' }}</td>
                             <td><strong>{{ $student?->nama ?? '-' }}</strong></td>
                             <td>{{ $student?->angkatan ?? '-' }}</td>
@@ -38,6 +38,9 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+        <div style="margin-top:18px;">
+            {{ $grades->appends(request()->query())->links() }}
         </div>
     </div>
 </div>

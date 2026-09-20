@@ -1,0 +1,68 @@
+<?php
+
+namespace App\Support;
+
+final class MiningCplCatalog
+{
+    /**
+     * @return array<string, array{deskripsi:string,turunan_visi_misi:string,cpl_kkni:string}>
+     */
+    public static function all(): array
+    {
+        return [
+            'CPL 1' => [
+                'deskripsi' => 'Mampu menguasai dan menerapkan prinsip-prinsip ilmu rekayasa, sains, dan matematika secara profesional untuk merumuskan dan memecahkan permasalahan teknis kompleks dalam kegiatan eksplorasi dan eksploitasi pertambangan.',
+                'turunan_visi_misi' => 'Misi 1: pendidikan secara profesional',
+                'cpl_kkni' => 'KK1, P1',
+            ],
+            'CPL 2' => [
+                'deskripsi' => 'Mampu merancang solusi rekayasa pertambangan yang berkelanjutan dan berwawasan lingkungan dengan mempertimbangkan aspek keselamatan kerja, ekonomi, sosial-budaya, serta perlindungan dan pelestarian lingkungan hidup.',
+                'turunan_visi_misi' => 'Misi 3: perlindungan pelestarian lingkungan',
+                'cpl_kkni' => 'KK2, P2',
+            ],
+            'CPL 3' => [
+                'deskripsi' => 'Mampu menyampaikan gagasan, hasil kajian, dan laporan teknis pertambangan secara sistematis dan terstruktur baik secara lisan maupun tulisan kepada pemangku kepentingan di tingkat nasional.',
+                'turunan_visi_misi' => 'Visi PS: tingkat nasional',
+                'cpl_kkni' => 'KU3, KU4',
+            ],
+            'CPL 4' => [
+                'deskripsi' => 'Mampu menginternalisasi dan menerapkan etika profesi keteknikan pertambangan dalam pengambilan keputusan yang bertanggung jawab terhadap dampak pekerjaan bagi masyarakat, ekonomi, dan kelestarian lingkungan.',
+                'turunan_visi_misi' => 'Misi 3: perlindungan & pelestarian lingkungan',
+                'cpl_kkni' => 'S7, S8, S10, KK5',
+            ],
+            'CPL 5' => [
+                'deskripsi' => 'Mampu membangun dan mengembangkan jejaring kerja sama yang produktif dengan pemangku kepentingan industri pertambangan, bekerja secara efektif dalam tim multidisiplin, dan memimpin kelompok kerja menuju target yang terukur.',
+                'turunan_visi_misi' => 'Misi 4: menjalin kerjasama',
+                'cpl_kkni' => 'KU6, KU7, S9',
+            ],
+            'CPL 6' => [
+                'deskripsi' => 'Mampu merancang dan melaksanakan penelitian inovatif di bidang pertambangan secara sistematis, menginterpretasi data dan hasil eksperimen, serta menyimpulkan solusi teknis yang aplikatif dan berdampak nyata.',
+                'turunan_visi_misi' => 'Misi 2: penelitian inovatif',
+                'cpl_kkni' => 'KU5, KK4, KU8',
+            ],
+            'CPL 7' => [
+                'deskripsi' => 'Mampu mengembangkan diri secara mandiri dan berkelanjutan melalui penguasaan perkembangan ilmu teknologi pertambangan terkini sebagai landasan adaptasi terhadap dinamika industri dan kebutuhan pemangku kepentingan.',
+                'turunan_visi_misi' => 'Visi PS: ilmu teknologi pertambangan',
+                'cpl_kkni' => 'KU8, KU3, P4',
+            ],
+            'CPL 8' => [
+                'deskripsi' => 'Mampu mengidentifikasi peluang dan mengembangkan usaha di bidang jasa dan industri pertambangan dengan menerapkan prinsip kewirausahaan yang profesional, inovatif, dan bertanggung jawab.',
+                'turunan_visi_misi' => "Misi 1: profesional\nMisi 2: inovatif",
+                'cpl_kkni' => 'S9, KU3',
+            ],
+            'CPL 9' => [
+                'deskripsi' => 'Mampu mengimplementasikan nilai-nilai intelektualitas dan inovasi dalam seluruh aspek keprofesian sebagai ciri khas Sarjana Teknik Pertambangan STTMI yang unggul dan berdaya saing di bidang ilmu teknologi pertambangan pada tingkat nasional.',
+                'turunan_visi_misi' => "Visi PS\nSK.004/STTMI/K/IV/2020: berbasis intelektualitas, inovasi dan yang unggul serta mampu bersaing secara global",
+                'cpl_kkni' => 'S1, S2, S4, S6',
+            ],
+        ];
+    }
+
+    /**
+     * @return array{deskripsi:string,turunan_visi_misi:string,cpl_kkni:string}|null
+     */
+    public static function forCode(string $code): ?array
+    {
+        return self::all()[strtoupper(trim($code))] ?? null;
+    }
+}

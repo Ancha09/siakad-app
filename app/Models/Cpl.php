@@ -11,6 +11,8 @@ class Cpl extends Model
         'kode_cpl',
         'nama_cpl',
         'deskripsi',
+        'turunan_visi_misi',
+        'cpl_kkni',
         'sort_order',
     ];
 
