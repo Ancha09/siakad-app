@@ -2,6 +2,27 @@
 
 @section('title', 'IPK CPL')
 
+@push('styles')
+<style>
+    .ipk-cpl-table thead tr {
+        background: #1d4ed8;
+    }
+
+    .ipk-cpl-table thead th {
+        color: #ffffff;
+        border-bottom-color: #1e40af;
+    }
+
+    .ipk-cpl-table tbody tr:nth-child(even) td {
+        background: #f8fbff;
+    }
+
+    .ipk-cpl-table tbody tr:hover td {
+        background: #eff6ff;
+    }
+</style>
+@endpush
+
 @section('content')
 <div class="page-card">
     <div class="page-card-head">
@@ -114,7 +135,7 @@
         </div>
 
         <div class="table-wrap" style="overflow-x:auto;">
-            <table>
+            <table class="ipk-cpl-table">
                 <thead>
                     <tr>
                         <th>No</th>
