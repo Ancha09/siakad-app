@@ -5,20 +5,20 @@
 @push('styles')
 <style>
     .ipk-cpl-table thead tr {
-        background: #1d4ed8;
+        background: linear-gradient(135deg, var(--navy) 0%, #0b5b9d 100%);
     }
 
     .ipk-cpl-table thead th {
         color: #ffffff;
-        border-bottom-color: #1e40af;
+        border-bottom-color: var(--navy);
     }
 
     .ipk-cpl-table tbody tr:nth-child(even) td {
-        background: #f8fbff;
+        background: #f4f8fc;
     }
 
     .ipk-cpl-table tbody tr:hover td {
-        background: #eff6ff;
+        background: #e3eff9;
     }
 </style>
 @endpush
