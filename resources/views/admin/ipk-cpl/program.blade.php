@@ -14,7 +14,6 @@
     .cpl-chart-canvas canvas { display:block;width:100% !important;height:100% !important;max-width:none;max-height:none; }
     .cpl-chart-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;text-align:center; }
     .cpl-chart-empty[hidden] { display:none !important; }
-    .cpl-multi-badge { display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;white-space:nowrap; }
     @media (max-width:720px) {
         .cpl-chart-canvas { height:320px; }
     }
@@ -27,23 +26,6 @@
         ->only(['tahun_akademik', 'angkatan', 'tahun_studi', 'cpl_id', 'mata_kuliah_id'])
         ->filter(fn ($value) => filled($value))
         ->all();
-    $manualOverrideGroups = $manualOverrides
-        ->groupBy(fn (array $item) => implode('|', [
-            $item['source'] ?? '-',
-            $item['target'] ?? '-',
-            $item['reason'] ?? '-',
-        ]))
-        ->map(function ($items) {
-            $first = $items->first();
-
-            return [
-                'source' => $first['source'] ?? '-',
-                'target' => $first['target'] ?? '-',
-                'reason' => $first['reason'] ?? '-',
-                'cpls' => $items->pluck('cpl')->filter()->unique()->sort()->implode(', '),
-            ];
-        })
-        ->values();
 @endphp
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
     <a href="{{ route('admin.ipk-cpl.index') }}" class="btn-outline">Kembali ke Pilihan Program Studi</a>
@@ -66,13 +48,6 @@
         Pilih tahun akademik terlebih dahulu untuk menampilkan IPK CPL.
     </div>
 @endif
-
-<div style="background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;padding:13px 16px;border-radius:10px;margin-bottom:18px;line-height:1.55;">
-    Konfigurasi laporan prodi: CPL aktif {{ implode(', ', $reportConfiguration['active_cpls']) }}.
-    {{ $reportConfiguration['hidden_cpl'] }} disembunyikan sementara dan
-    {{ $reportConfiguration['redirected_mapping_count'] }} mapping uniknya dialihkan ke
-    {{ $reportConfiguration['redirect_target_cpl'] }}. Pilihan Teknik Geologi disembunyikan sementara.
-</div>
 
 <div class="page-card" style="margin-bottom:20px;">
     <div class="page-card-head"><h2>Filter CPL Teknik Pertambangan</h2></div>
@@ -140,39 +115,10 @@
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
-    @foreach(['CPL Aktif' => $mappingSummary['jumlah_cpl'], 'Mapping Aktif' => $mappingSummary['jumlah_mapping'], 'Mapping CPL 9 ke CPL 3' => $mappingSummary['dialihkan_cpl9'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
+    @foreach(['CPL Aktif' => $mappingSummary['jumlah_cpl'], 'Mapping Aktif' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
         <div style="padding:17px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:26px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
     @endforeach
 </div>
-
-@if($manualOverrideGroups->isNotEmpty())
-    <div class="page-card" style="margin-bottom:20px;">
-        <div class="page-card-head"><h2>Manual Override Akreditasi</h2></div>
-        <div class="page-card-body">
-            <div class="table-wrap" style="overflow-x:auto;">
-                <table class="ipk-cpl-table">
-                    <thead><tr><th>No</th><th>Sumber CPL</th><th>Master Tujuan</th><th>CPL</th><th>Catatan</th></tr></thead>
-                    <tbody>
-                        @foreach($manualOverrideGroups as $override)
-                            <tr>
-                                <td>{{ $loop->iteration }}</td>
-                                <td>{{ $override['source'] }}</td>
-                                <td>{{ $override['target'] }}</td>
-                                <td>
-                                    {{ $override['cpls'] ?: '-' }}
-                                    @if(str_contains($override['cpls'], ','))
-                                        <span class="cpl-multi-badge">Multi-CPL</span>
-                                    @endif
-                                </td>
-                                <td>{{ $override['reason'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-@endif
 
 <div class="page-card cpl-chart-card">
     <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>

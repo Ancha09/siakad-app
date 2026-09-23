@@ -343,6 +343,8 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
 
     $program->assertSee('Grafik IPK CPL Tahun Akademik 2024/2025')
         ->assertDontSee('Kelengkapan Data CPL')
+        ->assertDontSee('Konfigurasi laporan prodi')
+        ->assertDontSee('Manual Override Akreditasi')
         ->assertDontSee('cplCompletenessChart', false)
         ->assertDontSee('<th>Status</th>', false)
         ->assertSee('CPL Aktif')
@@ -383,7 +385,7 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
 
     $cpl3 = Cpl::where('program_studi_id', $data['mining']->id)->where('kode_cpl', 'CPL 3')->firstOrFail();
     $this->get(route('admin.ipk-cpl.cpl', ['prodi' => $data['mining'], 'cpl' => $cpl3, 'tahun_akademik' => '2024/2025']))
-        ->assertOk()->assertSee('Pelaporan Teknis Pertambangan')->assertSee('Dialihkan dari CPL 9');
+        ->assertOk()->assertSee('Pelaporan Teknis Pertambangan')->assertDontSee('Dialihkan dari CPL 9');
     $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $cpl3, 'mapping' => $cpl9Mapping, 'tahun_akademik' => '2024/2025']))
         ->assertOk()->assertSee('Mahasiswa Tambang A');
     $cpl9 = Cpl::where('program_studi_id', $data['mining']->id)->where('kode_cpl', 'CPL 9')->firstOrFail();
@@ -579,6 +581,9 @@ test('admin can download filtered CPL reports as PDF and Excel', function () {
     expect($pdfHtml)
         ->not->toContain('Kelengkapan')
         ->not->toContain('<th>Status</th>')
+        ->not->toContain('Konfigurasi laporan')
+        ->not->toContain('Manual Override')
+        ->not->toContain('keputusan admin/prodi')
         ->not->toContain('Mapping Belum Cocok Master');
 });
 
@@ -656,7 +661,7 @@ test('manual targets are used by web PDF Excel and course filters without changi
     $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
     $parameters = ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025', 'mata_kuliah_id' => $data['targets'][0]->id];
     $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.program', $parameters));
-    $response->assertOk()->assertSee('3.00')->assertSee('Mapping Manual Override')->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
+    $response->assertOk()->assertSee('3.00')->assertDontSee('Mapping Manual Override')->assertDontSee('Manual Override Akreditasi')->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
     expect($response->viewData('rows')->first()->ipk_cpl)->toBe(3.0)
         ->and($response->viewData('mappingSummary')['manual_override'])->toBe(4)
         ->and($response->viewData('courseOptions')->pluck('mata_kuliah_id')->all())->toContain($data['targets'][0]->id)
@@ -666,8 +671,12 @@ test('manual targets are used by web PDF Excel and course filters without changi
     $this->get(route('admin.ipk-cpl.program.excel', $parameters))->assertOk()->assertDownload();
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $parameters);
     $pdfHtml = view('admin.ipk-cpl.pdf', $report + ['filterDescription' => '2024/2025'])->render();
-    expect($pdfHtml)->toContain('3.00')->toContain('Dasar Komputasi')->toContain('keputusan admin/prodi')
-        ->not->toContain('Status CPL')->not->toContain('Kelengkapan Data CPL');
+    expect($pdfHtml)->toContain('3.00')
+        ->not->toContain('Dasar Komputasi')
+        ->not->toContain('keputusan admin/prodi')
+        ->not->toContain('Manual Override')
+        ->not->toContain('Status CPL')
+        ->not->toContain('Kelengkapan Data CPL');
     expect(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades);
 });
 

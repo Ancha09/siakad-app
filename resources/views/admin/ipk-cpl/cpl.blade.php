@@ -15,13 +15,6 @@
 @section('content')
 <div style="margin-bottom:18px;"><a href="{{ $returnUrl }}" class="btn-outline">Kembali ke Daftar CPL</a></div>
 
-@if($row->kode_cpl === $reportConfiguration['redirect_target_cpl'] && $reportConfiguration['redirected_mapping_count'] > 0)
-    <div style="background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;padding:13px 16px;border-radius:10px;margin-bottom:18px;">
-        {{ $reportConfiguration['redirected_mapping_count'] }} mapping dari {{ $reportConfiguration['hidden_cpl'] }}
-        dialihkan sementara ke {{ $reportConfiguration['redirect_target_cpl'] }} sesuai arahan prodi.
-    </div>
-@endif
-
 <div class="page-card" style="margin-bottom:20px;">
     <div class="page-card-head"><h2>{{ $row->kode_cpl }} - {{ $row->nama_cpl }}</h2></div>
     <div class="page-card-body">
@@ -49,14 +42,7 @@
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td><strong>{{ $course->kode_mata_kuliah }}</strong></td>
-                            <td>
-                                {{ $course->nama_mata_kuliah }}
-                                @if($course->dialihkan_dari_cpl)
-                                    <div style="margin-top:4px;color:#1e40af;font-size:12px;font-weight:700;">
-                                        Dialihkan dari {{ $course->dialihkan_dari_cpl }}
-                                    </div>
-                                @endif
-                            </td>
+                            <td>{{ $course->nama_mata_kuliah }}</td>
                             <td>{{ $course->semester ?? '-' }}</td>
                             <td>{{ $course->sks }}</td>
                             <td>{{ $course->jumlah_mahasiswa }}</td>

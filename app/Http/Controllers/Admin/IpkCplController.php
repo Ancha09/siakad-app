@@ -194,25 +194,6 @@ class IpkCplController extends Controller
             ],
         ];
 
-        if ($report['manualOverrides']->isNotEmpty()) {
-            $sheets[] = [
-                'title' => 'Manual Override',
-                'headings' => ['Sumber Excel', 'CPL', 'Master Target', 'Alasan', 'Mapping Diperbarui'],
-                'rows' => $report['manualOverrides']->map(fn (array $note) => array_values($note)),
-            ];
-        }
-
-        $sheets[] = [
-            'title' => 'Catatan Konfigurasi',
-            'headings' => ['Pengaturan', 'Keterangan'],
-            'rows' => collect([
-                ['CPL aktif', implode(', ', $report['reportConfiguration']['active_cpls'])],
-                ['CPL disembunyikan', $report['reportConfiguration']['hidden_cpl'].' disembunyikan sementara dari laporan'],
-                ['Pengalihan mapping', $report['reportConfiguration']['redirected_mapping_count'].' mapping unik '.$report['reportConfiguration']['hidden_cpl'].' dialihkan ke '.$report['reportConfiguration']['redirect_target_cpl']],
-                ['Teknik Geologi', 'Pilihan IPK CPL Teknik Geologi disembunyikan sementara'],
-            ]),
-        ];
-
         if ($report['unmatchedMappings']->isNotEmpty()) {
             $sheets[] = [
                 'title' => 'Mapping Belum Cocok',
