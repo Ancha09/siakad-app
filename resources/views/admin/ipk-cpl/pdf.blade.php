@@ -16,8 +16,10 @@
         <tr>
             <td><span>CPL Ditampilkan</span><strong>{{ $rows->count() }}</strong></td>
             <td><span>Mapping Terimport</span><strong>{{ $mappingSummary['jumlah_mapping'] }}</strong></td>
-            <td><span>Cocok Master</span><strong>{{ $mappingSummary['cocok_master'] }}</strong></td>
-            <td><span>Belum Cocok</span><strong>{{ $mappingSummary['belum_cocok_master'] }}</strong></td>
+            <td><span>Mapping Aman</span><strong>{{ $mappingSummary['aman'] }}</strong></td>
+            <td><span>Manual Override</span><strong>{{ $mappingSummary['manual_override'] }}</strong></td>
+            <td><span>Mapping Bermasalah</span><strong>{{ $mappingSummary['bermasalah'] }}</strong></td>
+<td><span>Sumber Unik Bermasalah</span><strong>{{ $mappingSummary['belum_cocok_master'] }}</strong></td>
             <td><span>CPL Memiliki Nilai</span><strong>{{ $summary['cpl_bernilai'] }}</strong></td>
         </tr>
     </table>
@@ -43,5 +45,11 @@
         </tbody>
     </table>
 
+    @if($manualOverrides->isNotEmpty())
+        <p class="muted" style="font-size:9px;">Catatan ekuivalensi mapping berdasarkan keputusan admin/prodi untuk akreditasi (nilai mahasiswa tidak diubah):</p>
+        @foreach($manualOverrides as $override)
+            <p class="muted" style="font-size:8px;margin:3px 0;">{{ $override['cpl'] }}: {{ $override['source'] }} &rarr; {{ $override['target'] }}. {{ $override['reason'] }} Mapping diperbarui: {{ $override['updated_at'] }}.</p>
+        @endforeach
+    @endif
 </body>
 </html>

@@ -18,9 +18,7 @@ class IpkCplReportService
 {
     private const PASSING_SCORE = 60;
 
-    public function __construct(private readonly CplMappingImporter $mappingMatcher)
-    {
-    }
+    public function __construct(private readonly CplMappingImporter $mappingMatcher, private readonly CplManualOverrides $overrides) {}
 
     public function cplOverview(Prodi $program, array $filters = [], bool $includeCourseDetails = true): array
     {
@@ -37,6 +35,7 @@ class IpkCplReportService
             ->get();
 
         $allRows = $allCpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails, $program) {
+            $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl));
             $mappings = $this->filteredMappings($cpl->mappings, $filters);
             $courses = $mappings->map(
                 fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradeStats, $program)
@@ -70,15 +69,11 @@ class IpkCplReportService
         })->values();
         $unmatchedMappings = $allMappings
             ->reject(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
-                && $this->mappingMatcher->isSafeMatch(
-                    $mapping->mataKuliah,
-                    $mapping->kode_sumber,
-                    $mapping->nama_sumber,
-                    $program
-                ))
+                && $this->overrides->accepted($mapping, $program))
             ->sortBy('kode_sumber', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
         $chartRows = $allRows->take(9)->values();
+        $manualNotes = $this->overrides->notes($allMappings, $program);
 
         return [
             'program' => $program,
@@ -90,6 +85,9 @@ class IpkCplReportService
             'mappingSummary' => [
                 'jumlah_cpl' => $allCpls->count(),
                 'jumlah_mapping' => $allMappings->count(),
+                'manual_override' => $manualNotes->count(),
+                'aman' => $allMappings->count() - $unmatchedMappings->count() - $manualNotes->count(),
+                'bermasalah' => $unmatchedMappings->count(),
                 'cocok_master' => $allMappings->count() - $unmatchedMappings->count(),
                 'belum_cocok_master' => $unmatchedMappings
                     ->unique(fn (CplMataKuliah $mapping) => $this->mappingMatcher->sourceKey(
@@ -98,6 +96,7 @@ class IpkCplReportService
                     ))
                     ->count(),
             ],
+            'manualOverrides' => $manualNotes,
             'unmatchedMappings' => $unmatchedMappings,
             'summary' => [
                 'jumlah_cpl' => $rows->count(),
@@ -129,12 +128,7 @@ class IpkCplReportService
         abort_if($this->filteredMappings(collect([$mapping]), $filters)->isEmpty(), 404);
 
         $mapping->loadMissing('mataKuliah');
-        abort_if($mapping->mataKuliah === null || ! $this->mappingMatcher->isSafeMatch(
-            $mapping->mataKuliah,
-            $mapping->kode_sumber,
-            $mapping->nama_sumber,
-            $program
-        ), 404, 'Mapping mata kuliah belum cocok dengan master Teknik Pertambangan.');
+        abort_if($mapping->mataKuliah === null || ! $this->overrides->accepted($mapping, $program), 404, 'Mapping mata kuliah belum cocok dengan master Teknik Pertambangan.');
         $grades = null;
         if ($mapping->mata_kuliah_id !== null) {
             $gradeIds = $this->latestGradeRowsQuery($program, $filters)
@@ -179,14 +173,9 @@ class IpkCplReportService
                 ->orderByDesc('angkatan')
                 ->pluck('angkatan'),
             'cplOptions' => $cpls,
-            'courseOptions' => $cpls->flatMap->mappings
+            'courseOptions' => $cpls->flatMap(fn (Cpl $cpl) => $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl)))
                 ->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
-                    && $this->mappingMatcher->isSafeMatch(
-                        $mapping->mataKuliah,
-                        $mapping->kode_sumber,
-                        $mapping->nama_sumber,
-                        $program
-                    ))
+                    && $this->overrides->accepted($mapping, $program))
                 ->unique('mata_kuliah_id')
                 ->sortBy('kode_sumber')
                 ->values(),
@@ -303,12 +292,7 @@ class IpkCplReportService
 
     private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats, Prodi $program): object
     {
-        $isLinked = $mapping->mataKuliah !== null && $this->mappingMatcher->isSafeMatch(
-            $mapping->mataKuliah,
-            $mapping->kode_sumber,
-            $mapping->nama_sumber,
-            $program
-        );
+        $isLinked = $mapping->mataKuliah !== null && $this->overrides->accepted($mapping, $program);
         $stats = $isLinked ? $gradeStats->get($mapping->mata_kuliah_id) : null;
         $averageWeight = $stats === null ? null : round((float) $stats->average_weight, 2);
         $sks = (int) ($mapping->sks ?? $mapping->mataKuliah?->sks ?? 0);

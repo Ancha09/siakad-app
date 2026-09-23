@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\CplMataKuliah;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
 use Illuminate\Console\Command;
 
@@ -15,7 +16,7 @@ class AuditIpkCplMapping extends Command
 
     protected $description = 'Audit read-only mapping CPL yang belum cocok atau terhubung ke master yang mencurigakan';
 
-    public function handle(CplMappingImporter $matcher): int
+    public function handle(CplMappingImporter $matcher, CplManualOverrides $overrides): int
     {
         $requestedProgram = $matcher->normalizeCourseName((string) $this->option('prodi'));
         $program = Prodi::query()->get()->first(function (Prodi $item) use ($matcher, $requestedProgram) {
@@ -38,27 +39,17 @@ class AuditIpkCplMapping extends Command
             ->orderBy('kode_sumber')
             ->get();
         $safeCount = $mappings->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
-            && $matcher->isSafeMatch(
-                $mapping->mataKuliah,
-                $mapping->kode_sumber,
-                $mapping->nama_sumber,
-                $program
-            ))->count();
+            && $overrides->accepted($mapping, $program))->count();
 
         $problemGroups = $mappings
             ->reject(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
-                && $matcher->isSafeMatch(
-                    $mapping->mataKuliah,
-                    $mapping->kode_sumber,
-                    $mapping->nama_sumber,
-                    $program
-                ))
+                && $overrides->accepted($mapping, $program))
             ->groupBy(fn (CplMataKuliah $mapping) => $matcher->sourceKey(
                 $mapping->kode_sumber,
                 $mapping->nama_sumber
             ));
 
-        $rows = $problemGroups->map(function ($group) use ($courses, $matcher, $program) {
+        $rows = $problemGroups->map(function ($group) use ($courses, $matcher, $program, $overrides) {
             /** @var CplMataKuliah $mapping */
             $mapping = $group->first();
             $safeCandidate = $matcher->matchCourse(
@@ -89,6 +80,17 @@ class AuditIpkCplMapping extends Command
                 $reason = 'Tidak ditemukan master dengan kode exact';
             }
 
+            $decision = $overrides->decision($mapping->kode_sumber, $mapping->nama_sumber, $mapping->cpl->kode_cpl, $program);
+            if ($decision !== null) {
+                $candidate = $decision['target_code'].' - '.$decision['target_name'];
+                try {
+                    $overrides->resolve($decision, $program, $mapping->sks, $mapping->semester);
+                    $reason = $decision['reason'].' Jalankan ipk-cpl:apply-overrides.';
+                } catch (\RuntimeException $exception) {
+                    $reason = $exception->getMessage();
+                }
+            }
+
             return [
                 $mapping->kode_sumber,
                 $mapping->nama_sumber,
@@ -101,7 +103,12 @@ class AuditIpkCplMapping extends Command
 
         $this->info('Program studi: '.$program->nama_prodi);
         $this->line('Total mapping: '.$mappings->count());
-        $this->line('Mapping aman: '.$safeCount);
+        $notes = $overrides->notes($mappings, $program);
+        $this->line('Mapping aman: '.($safeCount - $notes->count()));
+        $this->line('Mapping manual override: '.$notes->count());
+        if ($notes->isNotEmpty()) {
+            $this->table(['Sumber Excel', 'CPL', 'Master Target', 'Alasan', 'Mapping Diperbarui'], $notes->map(fn ($note) => array_values($note))->all());
+        }
         $this->warn('Mapping bermasalah: '.($mappings->count() - $safeCount));
         $this->warn('Mata kuliah sumber unik bermasalah: '.$problemGroups->count());
 

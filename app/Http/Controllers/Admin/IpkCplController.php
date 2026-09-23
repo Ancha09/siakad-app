@@ -7,6 +7,7 @@ use App\Models\Cpl;
 use App\Models\CplMataKuliah;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
 use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
@@ -53,6 +54,7 @@ class IpkCplController extends Controller
         Cpl $cpl,
         CplMataKuliah $mapping,
         CplMappingImporter $matcher,
+        CplManualOverrides $overrides,
         LegacyListNavigation $navigation
     ) {
         $this->ensureMiningProgram($prodi);
@@ -68,6 +70,13 @@ class IpkCplController extends Controller
         if (! $matcher->isCourseEligible($course, $prodi, $mapping->kode_sumber)) {
             throw ValidationException::withMessages([
                 'mata_kuliah_id' => 'Pilih mata kuliah Teknik Pertambangan atau mata kuliah umum tanpa prodi.',
+            ]);
+        }
+
+        $decision = $overrides->decision($mapping->kode_sumber, $mapping->nama_sumber, $cpl->kode_cpl, $prodi);
+        if ($decision !== null && ! $overrides->targetMatches($course, $decision, $prodi)) {
+            throw ValidationException::withMessages([
+                'mata_kuliah_id' => 'Keputusan prodi untuk sumber ini hanya mengizinkan '.$decision['target_code'].' - '.$decision['target_name'].'.',
             ]);
         }
 
@@ -178,6 +187,14 @@ class IpkCplController extends Controller
                 ])),
             ],
         ];
+
+        if ($report['manualOverrides']->isNotEmpty()) {
+            $sheets[] = [
+                'title' => 'Manual Override',
+                'headings' => ['Sumber Excel', 'CPL', 'Master Target', 'Alasan', 'Mapping Diperbarui'],
+                'rows' => $report['manualOverrides']->map(fn (array $note) => array_values($note)),
+            ];
+        }
 
         if ($report['unmatchedMappings']->isNotEmpty()) {
             $sheets[] = [

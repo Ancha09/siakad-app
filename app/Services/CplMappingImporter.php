@@ -9,6 +9,7 @@ use App\Models\Prodi;
 use App\Support\MiningCplCatalog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -27,6 +28,7 @@ class CplMappingImporter
             throw new RuntimeException("Program Studi {$programName} tidak ditemukan.");
         }
 
+        $overrides = app(CplManualOverrides::class);
         $courses = MataKuliah::query()->with('prodi')->get();
         $rows = IOFactory::load($path)->getActiveSheet()->toArray(null, true, true, true);
         $result = [
@@ -35,10 +37,12 @@ class CplMappingImporter
             'cpls' => 0,
             'mappings' => 0,
             'matched' => 0,
+            'manual_overrides' => 0,
             'unmatched' => [],
         ];
 
-        DB::transaction(function () use ($rows, $program, $courses, &$result) {
+        DB::transaction(function () use ($rows, $program, $courses, $overrides, &$result) {
+            Prodi::query()->whereKey($program->id)->lockForUpdate()->firstOrFail();
             $currentCpl = null;
             $seenCpls = [];
 
@@ -72,7 +76,18 @@ class CplMappingImporter
 
                 $sourceCode = trim((string) $row['A']);
                 $sourceName = $this->cleanSourceName((string) $row['B']);
-                $course = $this->matchCourse($courses, $sourceCode, $sourceName, $program);
+                $decision = $overrides->decision($sourceCode, $sourceName, $currentCpl->kode_cpl, $program);
+                $problem = null;
+                if ($decision !== null) {
+                    try {
+                        $course = $overrides->resolve($decision, $program, (int) $row['D'], (int) $row['C'], true);
+                    } catch (RuntimeException $exception) {
+                        $course = null;
+                        $problem = $exception->getMessage();
+                    }
+                } else {
+                    $course = $this->matchCourse($courses, $sourceCode, $sourceName, $program);
+                }
                 $existing = CplMataKuliah::query()
                     ->where('cpl_id', $currentCpl->id)
                     ->where('kode_sumber', $sourceCode)
@@ -86,7 +101,7 @@ class CplMappingImporter
                     ? $courses->firstWhere('id', $existing->mata_kuliah_id)
                     : null;
                 $resolvedCourse = $course
-                    ?? ($existingCourse && $this->isSafeMatch($existingCourse, $sourceCode, $sourceName, $program)
+                    ?? ($decision === null && $existingCourse && $this->isSafeMatch($existingCourse, $sourceCode, $sourceName, $program)
                         ? $existingCourse
                         : null);
 
@@ -108,17 +123,26 @@ class CplMappingImporter
                 if ($existing !== null) {
                     $existing->fill($mappingValues)->save();
                 } else {
-                    CplMataKuliah::create(['cpl_id' => $currentCpl->id] + $mappingValues);
+                    $existing = CplMataKuliah::create(['cpl_id' => $currentCpl->id] + $mappingValues);
+                }
+
+                if ($decision !== null && $resolvedCourse !== null
+                    && ($existing->wasRecentlyCreated || $existing->wasChanged('mata_kuliah_id'))) {
+                    $log = ['mapping_id' => $existing->id, 'course_id' => $resolvedCourse->id,
+                        'decision' => $decision, 'updated_at' => $existing->updated_at?->toDateTimeString()];
+                    DB::afterCommit(fn () => Log::info('CPL manual override imported', $log));
                 }
 
                 $result['mappings']++;
                 if ($resolvedCourse !== null) {
                     $result['matched']++;
+                    $result['manual_overrides'] += $decision !== null ? 1 : 0;
                 } else {
                     $result['unmatched'][] = [
                         'kode' => $sourceCode,
                         'nama' => $sourceName,
                         'cpl' => $currentCpl->kode_cpl,
+                        'reason' => $problem ?? 'Tidak ditemukan master aman atau target sudah dipakai pada CPL yang sama.',
                     ];
                 }
             }
@@ -180,8 +204,7 @@ class CplMappingImporter
         string $sourceCode,
         string $sourceName,
         Prodi $program
-    ): ?MataKuliah
-    {
+    ): ?MataKuliah {
         if ($candidates->isEmpty()) {
             return null;
         }
@@ -332,6 +355,7 @@ class CplMappingImporter
         }
 
         $value = preg_replace('/\s*\((TP|TG)\)\s*$/iu', '', (string) $value);
+
         return strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '', Str::ascii((string) $value)));
     }
 
@@ -387,6 +411,7 @@ class CplMappingImporter
             'GL301',
             'GL401',
             'KU302',
+            'TA601',
         ], true);
     }
 

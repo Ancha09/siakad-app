@@ -30,12 +30,13 @@ class ImportIpkCplMapping extends Command
         $this->info("CPL terimport: {$result['cpls']}");
         $this->info("Mapping terimport: {$result['mappings']}");
         $this->info("Mapping cocok master: {$result['matched']}");
-        $this->warn('Belum cocok master: '.count($result['unmatched']));
+        $this->info('Mapping manual override: '.$result['manual_overrides']);
+        $this->warn('Sumber unik belum cocok master: '.count($result['unmatched']));
 
         if ($result['unmatched'] !== []) {
             $this->table(
-                ['Kode', 'Mata Kuliah', 'CPL'],
-                array_map(fn (array $item) => [$item['kode'], $item['nama'], $item['cpl']], $result['unmatched'])
+                ['Kode', 'Mata Kuliah', 'CPL', 'Alasan'],
+                array_map(fn (array $item) => [$item['kode'], $item['nama'], $item['cpl'], $item['reason']], $result['unmatched'])
             );
         }
 

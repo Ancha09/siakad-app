@@ -9,9 +9,11 @@ use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Models\User;
+use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
 use App\Services\IpkCplReportService;
 use App\Support\MiningCplCatalog;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 function createMappedCplGrade(
     Mahasiswa $student,
@@ -90,8 +92,8 @@ test('CPL Excel importer creates nine CPL blocks and keeps unmatched courses vis
 
     expect(Cpl::where('program_studi_id', $program->id)->count())->toBe(9)
         ->and(CplMataKuliah::count())->toBe(146)
-        ->and(CplMataKuliah::whereNotNull('mata_kuliah_id')->count())->toBe(1)
-        ->and(CplMataKuliah::whereNull('mata_kuliah_id')->count())->toBe(145);
+        ->and(CplMataKuliah::whereNotNull('mata_kuliah_id')->count())->toBe(3)
+        ->and(CplMataKuliah::whereNull('mata_kuliah_id')->count())->toBe(143);
 
     $this->assertDatabaseHas('cpl_mata_kuliah', [
         'kode_sumber' => 'KU 103',
@@ -196,7 +198,7 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         ->toBe([$mining->id]);
 });
 
-test('TP import repairs only the five reviewed mappings and leaves ambiguous sources unmatched', function () {
+test('TP import preserves reviewed automatic mappings and applies approved manual overrides', function () {
     $mining = Prodi::create(['kode_prodi' => 'TP', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
     $geology = Prodi::create(['kode_prodi' => 'TG', 'nama_prodi' => 'Teknik Geologi', 'jenjang' => 'S1']);
 
@@ -256,7 +258,7 @@ test('TP import repairs only the five reviewed mappings and leaves ambiguous sou
             ->get();
 
         expect($mappings)->not->toBeEmpty()
-            ->and($mappings->every(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id === null))->toBeTrue();
+            ->and($mappings->every(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id !== null))->toBeTrue();
     }
 
     expect(CplMataKuliah::query()
@@ -471,7 +473,7 @@ test('CPL detail and course detail preserve filters and list only calculated stu
         ->assertDontSee('Mahasiswa Tambang B')
         ->assertDontSee('Mahasiswa Geologi');
     expect($students->viewData('grades'))
-        ->toBeInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class)
+        ->toBeInstanceOf(LengthAwarePaginator::class)
         ->toHaveCount(1)
         ->and($students->viewData('grades')->perPage())->toBe(50);
 });
@@ -529,4 +531,168 @@ test('CPL routes are admin only and do not expose unavailable geology reports', 
     $this->actingAs($data['admin'])
         ->get(route('admin.ipk-cpl.program', $data['geology']))
         ->assertNotFound();
+});
+
+function makeApprovedOverrideFixture(): array
+{
+    $data = makeMappedCplFixture();
+    $targets = [
+        MataKuliah::create(['kode_mk' => 'KU 302 (TP)', 'nama_mk' => 'Dasar Komputasi', 'prodi_id' => $data['mining']->id, 'sks' => 2, 'semester' => 3]),
+        MataKuliah::create(['kode_mk' => 'KU 106', 'nama_mk' => 'Pengantar Ilmu Kebumian dan Pertambangan', 'prodi_id' => $data['mining']->id, 'sks' => 2, 'semester' => 1]),
+    ];
+    $seventh = Cpl::create(['program_studi_id' => $data['mining']->id, 'kode_cpl' => 'CPL 7', 'nama_cpl' => 'CPL 7', 'sort_order' => 7]);
+    $approved = collect([
+        [$data['cpl'], 'KU-302', 'Matriks Ruang Vektor', 3],
+        [$data['cpl'], 'TA 106', 'Pengantar Ilmu Kebumian & Pertambangan', 1],
+        [$data['secondCpl'], 'TA601', 'MK Pilihan 2', 6],
+        [$seventh, 'TA 601', 'MK Pilihan 2', 6],
+    ])->map(fn ($row) => CplMataKuliah::create([
+        'cpl_id' => $row[0]->id, 'kode_sumber' => $row[1], 'nama_sumber' => $row[2], 'semester' => $row[3], 'sks' => 2,
+    ]));
+
+    return $data + compact('targets', 'approved');
+}
+
+test('approved override command updates four mappings idempotently and preserves academic records', function () {
+    $data = makeApprovedOverrideFixture();
+    $beforeGrades = Khs::orderBy('id')->get()->toArray();
+    $beforeKrs = Krs::orderBy('id')->get()->toArray();
+    $beforeCourses = MataKuliah::orderBy('id')->get()->toArray();
+    $beforeUnrelated = CplMataKuliah::whereNotIn('id', $data['approved']->pluck('id'))->orderBy('id')->get()->toArray();
+
+    $this->artisan('ipk-cpl:audit-mapping')->expectsOutputToContain('Mapping bermasalah: 5')->assertSuccessful();
+    $this->artisan('ipk-cpl:apply-overrides')
+        ->expectsOutputToContain('Mapping diperbarui: 4')
+        ->expectsOutputToContain('Master TA 601 dibuat.')
+        ->expectsOutputToContain('Mapping manual override: 4')
+        ->expectsOutputToContain('Mapping bermasalah: 1')->assertSuccessful();
+    $elective = MataKuliah::where('kode_mk', 'TA 601')->sole();
+    expect($elective->nama_mk)->toBe('MK Pilihan 2')
+        ->and((int) $elective->prodi_id)->toBe($data['mining']->id)
+        ->and((int) $elective->sks)->toBe(2)->and((int) $elective->semester)->toBe(6);
+    expect($data['approved'][0]->fresh()->mata_kuliah_id)->toBe($data['targets'][0]->id)
+        ->and($data['approved'][1]->fresh()->mata_kuliah_id)->toBe($data['targets'][1]->id)
+        ->and($data['approved'][2]->fresh()->mata_kuliah_id)->toBe($elective->id)
+        ->and($data['approved'][3]->fresh()->mata_kuliah_id)->toBe($elective->id);
+    $firstMappings = CplMataKuliah::orderBy('id')->get()->toArray();
+    $this->travel(1)->days();
+    $this->artisan('ipk-cpl:apply-overrides')->expectsOutputToContain('Mapping diperbarui: 0')->assertSuccessful();
+    expect(MataKuliah::where('kode_mk', 'TA 601')->count())->toBe(1)
+        ->and(CplMataKuliah::orderBy('id')->get()->toArray())->toBe($firstMappings)
+        ->and(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades)
+        ->and(Krs::orderBy('id')->get()->toArray())->toBe($beforeKrs)
+        ->and(MataKuliah::where('id', '!=', $elective->id)->orderBy('id')->get()->toArray())->toBe($beforeCourses)
+        ->and(CplMataKuliah::whereNotIn('id', $data['approved']->pluck('id'))->orderBy('id')->get()->toArray())->toBe($beforeUnrelated);
+});
+
+test('manual targets are used by web PDF Excel and course filters without changing grade values', function () {
+    $data = makeApprovedOverrideFixture();
+    $lecturer = Dosen::firstOrFail();
+    $grade = createMappedCplGrade($data['studentA'], $data['targets'][0], $lecturer, '2024/2025', 'Ganjil', 80, 'B', 3);
+    $beforeGrades = Khs::orderBy('id')->get()->toArray();
+    $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
+    $parameters = ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025', 'mata_kuliah_id' => $data['targets'][0]->id];
+    $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.program', $parameters));
+    $response->assertOk()->assertSee('3.00')->assertSee('Mapping Manual Override')->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
+    expect($response->viewData('rows')->first()->ipk_cpl)->toBe(3.0)
+        ->and($response->viewData('mappingSummary')['manual_override'])->toBe(4)
+        ->and($response->viewData('courseOptions')->pluck('mata_kuliah_id')->all())->toContain($data['targets'][0]->id)
+        ->and(substr_count($response->getContent(), '<canvas'))->toBe(1);
+    $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $data['cpl'], 'mapping' => $data['approved'][0], 'tahun_akademik' => '2024/2025']))->assertOk()->assertSee('Mahasiswa Tambang A');
+    $this->get(route('admin.ipk-cpl.program.pdf', $parameters))->assertOk()->assertDownload();
+    $this->get(route('admin.ipk-cpl.program.excel', $parameters))->assertOk()->assertDownload();
+    $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $parameters);
+    $pdfHtml = view('admin.ipk-cpl.pdf', $report + ['filterDescription' => '2024/2025'])->render();
+    expect($pdfHtml)->toContain('3.00')->toContain('Dasar Komputasi')->toContain('keputusan admin/prodi')
+        ->not->toContain('Status CPL')->not->toContain('Kelengkapan Data CPL');
+    expect(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades);
+});
+
+test('TA601 uses an existing normalized TP master and never selects a different elective or final project', function () {
+    $data = makeApprovedOverrideFixture();
+    foreach (['TA 301', 'TA 401', 'TA 501', 'TA 801'] as $code) {
+        MataKuliah::create(['kode_mk' => $code, 'nama_mk' => $code === 'TA 801' ? 'Tugas Akhir' : 'MK Pilihan 2', 'sks' => 2, 'semester' => 6, 'prodi_id' => $data['mining']->id]);
+    }
+    $existing = MataKuliah::create(['kode_mk' => 'TA-601 (TP)', 'nama_mk' => 'MK Pilihan 2', 'sks' => 2, 'semester' => 6, 'prodi_id' => $data['mining']->id]);
+    $before = MataKuliah::orderBy('id')->get()->toArray();
+    $this->artisan('ipk-cpl:apply-overrides')->expectsOutputToContain('Tidak ada master baru dibuat.')->assertSuccessful();
+    expect($data['approved'][2]->fresh()->mata_kuliah_id)->toBe($existing->id)
+        ->and(MataKuliah::orderBy('id')->get()->toArray())->toBe($before);
+});
+
+test('manual overrides reject missing required SKS and do not cross program or CPL boundaries', function () {
+    $data = makeApprovedOverrideFixture();
+    $data['approved'][2]->update(['sks' => null]);
+    $data['approved'][3]->update(['sks' => null]);
+    $this->artisan('ipk-cpl:apply-overrides')->expectsOutputToContain('membutuhkan SKS')->assertFailed();
+    expect(MataKuliah::where('kode_mk', 'TA 601')->exists())->toBeFalse();
+    $overrides = app(CplManualOverrides::class);
+    expect($overrides->decision('KU302', 'Matriks Ruang Vektor', 'CPL 2', $data['mining']))->toBeNull()
+        ->and($overrides->decision('KU302', 'Matriks Ruang Vektor', 'CPL 1', $data['geology']))->toBeNull()
+        ->and($overrides->decision('KU302 (TG)', 'Matriks Ruang Vektor', 'CPL 1', $data['mining']))->toBeNull();
+    $data['targets'][0]->update(['prodi_id' => $data['geology']->id]);
+    expect($overrides->accepted($data['approved'][0]->fresh(), $data['mining']))->toBeFalse();
+});
+
+test('TA601 collision with a geology or differently named master is reported without mutation', function () {
+    $data = makeApprovedOverrideFixture();
+    $collision = MataKuliah::create(['kode_mk' => 'TA 601', 'nama_mk' => 'Tugas Akhir', 'sks' => 6, 'semester' => 8, 'prodi_id' => $data['geology']->id]);
+    $before = $collision->fresh()->toArray();
+    $this->artisan('ipk-cpl:apply-overrides')->expectsOutputToContain('nama/prodi berbeda')->assertFailed();
+    expect($data['approved'][2]->fresh()->mata_kuliah_id)->toBeNull()
+        ->and($data['approved'][3]->fresh()->mata_kuliah_id)->toBeNull()
+        ->and($collision->fresh()->toArray())->toBe($before)
+        ->and(MataKuliah::where('kode_mk', 'TA 601')->count())->toBe(1);
+});
+
+test('full Excel catalog audits 146 mappings as 142 automatic plus four manual after repair', function () {
+    $program = Prodi::create(['kode_prodi' => 'TP', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
+    $importer = app(CplMappingImporter::class);
+    $importer->import(database_path('data/ipkcpl.xlsx'));
+    $overrides = app(CplManualOverrides::class);
+    $mappings = CplMataKuliah::with('cpl')->get();
+    foreach ($mappings->unique('kode_sumber') as $mapping) {
+        $decision = $overrides->decision($mapping->kode_sumber, $mapping->nama_sumber, $mapping->cpl->kode_cpl, $program);
+        $code = $decision['target_code'] ?? $mapping->kode_sumber;
+        $name = $decision['target_name'] ?? $mapping->nama_sumber;
+        MataKuliah::firstOrCreate(['kode_mk' => $code], [
+            'nama_mk' => $name, 'sks' => $mapping->sks, 'semester' => $mapping->semester, 'prodi_id' => $program->id,
+        ]);
+    }
+    $result = $importer->import(database_path('data/ipkcpl.xlsx'));
+    expect($result['mappings'])->toBe(146)->and($result['manual_overrides'])->toBe(4)->and($result['unmatched'])->toBeEmpty();
+    foreach ($mappings as $mapping) {
+        if ($overrides->decision($mapping->kode_sumber, $mapping->nama_sumber, $mapping->cpl->kode_cpl, $program)) {
+            $mapping->refresh()->update(['mata_kuliah_id' => null]);
+        }
+    }
+    $this->artisan('ipk-cpl:audit-mapping')->expectsOutputToContain('Total mapping: 146')
+        ->expectsOutputToContain('Mapping aman: 142')->expectsOutputToContain('Mapping bermasalah: 4')->assertSuccessful();
+    $this->artisan('ipk-cpl:apply-overrides')->expectsOutputToContain('Total mapping: 146')
+        ->expectsOutputToContain('Mapping aman: 142')->expectsOutputToContain('Mapping manual override: 4')
+        ->expectsOutputToContain('Mapping bermasalah: 0')->expectsOutputToContain('Mata kuliah sumber unik bermasalah: 0')->assertSuccessful();
+    $masterCount = MataKuliah::count();
+    $result = $importer->import(database_path('data/ipkcpl.xlsx'));
+    expect($result['manual_overrides'])->toBe(4)->and($result['unmatched'])->toBeEmpty()
+        ->and(CplMataKuliah::count())->toBe(146)->and(MataKuliah::count())->toBe($masterCount);
+});
+
+test('manual mapping endpoint rejects TA301 for an approved TA601 source', function () {
+    $data = makeApprovedOverrideFixture();
+    $wrong = MataKuliah::create(['kode_mk' => 'TA 301', 'nama_mk' => 'MK Pilihan 2', 'sks' => 2, 'semester' => 3, 'prodi_id' => $data['mining']->id]);
+    $this->actingAs($data['admin'])->patch(route('admin.ipk-cpl.mapping.update', [
+        'prodi' => $data['mining'], 'cpl' => $data['secondCpl'], 'mapping' => $data['approved'][2],
+    ]), ['mata_kuliah_id' => $wrong->id])->assertSessionHasErrors('mata_kuliah_id');
+    expect($data['approved'][2]->fresh()->mata_kuliah_id)->toBeNull()
+        ->and($data['approved'][3]->fresh()->mata_kuliah_id)->toBeNull();
+});
+
+test('approved KU106 prefers TP but can use an unambiguous general master', function () {
+    $data = makeApprovedOverrideFixture();
+    $data['targets'][1]->update(['prodi_id' => null]);
+    $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
+    expect($data['approved'][1]->fresh()->mata_kuliah_id)->toBe($data['targets'][1]->id);
+    $preferred = MataKuliah::create(['kode_mk' => 'KU-106 (TP)', 'nama_mk' => 'Pengantar Ilmu Kebumian dan Pertambangan', 'sks' => 2, 'semester' => 1, 'prodi_id' => $data['mining']->id]);
+    $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
+    expect($data['approved'][1]->fresh()->mata_kuliah_id)->toBe($preferred->id);
 });
