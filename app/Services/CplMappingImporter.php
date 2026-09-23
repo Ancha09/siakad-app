@@ -155,6 +155,7 @@ class CplMappingImporter
         $normalizedCode = $this->normalizeBaseCode($code);
         $byCode = $this->selectUnambiguousCandidate(
             $eligible->filter(fn (MataKuliah $course) => $this->normalizeBaseCode($course->kode_mk) === $normalizedCode),
+            $code,
             $name,
             $program
         );
@@ -162,20 +163,25 @@ class CplMappingImporter
             return $byCode;
         }
 
-        $normalizedName = $this->normalizeName($name);
+        $normalizedName = $this->normalizeComparableCourseName($name);
         $sameProgram = $eligible->filter(fn (MataKuliah $course) => (int) $course->prodi_id === (int) $program->id
-            && $this->normalizeName($course->nama_mk) === $normalizedName);
+            && $this->normalizeComparableCourseName($course->nama_mk) === $normalizedName);
         if ($sameProgram->count() === 1) {
             return $sameProgram->first();
         }
 
         $general = $eligible->filter(fn (MataKuliah $course) => $course->prodi_id === null
-            && $this->normalizeName($course->nama_mk) === $normalizedName);
+            && $this->normalizeComparableCourseName($course->nama_mk) === $normalizedName);
 
         return $general->count() === 1 ? $general->first() : null;
     }
 
-    private function selectUnambiguousCandidate(Collection $candidates, string $sourceName, Prodi $program): ?MataKuliah
+    private function selectUnambiguousCandidate(
+        Collection $candidates,
+        string $sourceCode,
+        string $sourceName,
+        Prodi $program
+    ): ?MataKuliah
     {
         if ($candidates->isEmpty()) {
             return null;
@@ -188,13 +194,13 @@ class CplMappingImporter
             ? $programCandidates
             : $candidates->filter(fn (MataKuliah $course) => $course->prodi_id === null);
 
-        if ($preferred->count() === 1) {
+        if (! $this->requiresVerifiedNameAgreement($sourceCode) && $preferred->count() === 1) {
             return $preferred->first();
         }
 
-        $normalizedName = $this->normalizeName($sourceName);
+        $normalizedName = $this->normalizeComparableCourseName($sourceName);
         $sameName = $preferred->filter(
-            fn (MataKuliah $course) => $this->normalizeName($course->nama_mk) === $normalizedName
+            fn (MataKuliah $course) => $this->normalizeComparableCourseName($course->nama_mk) === $normalizedName
         );
 
         return $sameName->count() === 1 ? $sameName->first() : null;
@@ -284,17 +290,28 @@ class CplMappingImporter
             return false;
         }
 
-        return $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode)
-            || $this->normalizeName($course->nama_mk) === $this->normalizeName($sourceName);
+        $codeMatches = $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode);
+        $nameMatches = $this->normalizeComparableCourseName($course->nama_mk)
+            === $this->normalizeComparableCourseName($sourceName);
+
+        return $this->requiresVerifiedNameAgreement($sourceCode)
+            ? $nameMatches
+            : $codeMatches || $nameMatches;
     }
 
     public function matchReason(MataKuliah $course, string $sourceCode, string $sourceName): string
     {
-        if ($this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode)) {
-            return 'Kode sama setelah normalisasi';
+        $codeMatches = $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode);
+        $nameMatches = $this->normalizeComparableCourseName($course->nama_mk)
+            === $this->normalizeComparableCourseName($sourceName);
+
+        if ($codeMatches) {
+            return $nameMatches
+                ? 'Kode dan nama mata kuliah cocok setelah normalisasi'
+                : 'Kode sama setelah normalisasi';
         }
 
-        if ($this->normalizeName($course->nama_mk) === $this->normalizeName($sourceName)) {
+        if ($nameMatches) {
             return 'Nama mata kuliah sama setelah normalisasi';
         }
 
@@ -336,5 +353,34 @@ class CplMappingImporter
         $value = str_replace('&', ' dan ', Str::lower(Str::ascii($this->cleanSourceName((string) $value))));
 
         return (string) preg_replace('/[^a-z0-9]+/', '', $value);
+    }
+
+    /**
+     * Menyamakan variasi nama yang sudah diverifikasi dari sumber CPL TP.
+     * Alias sengaja dibatasi; nama berbeda tidak boleh dianggap cocok hanya
+     * karena kode mata kuliahnya sama.
+     */
+    private function normalizeComparableCourseName(mixed $value): string
+    {
+        $value = preg_replace('/\s*\((?:P|TP|TG)\)\s*$/iu', '', (string) $value);
+        $normalized = $this->normalizeName($value);
+
+        return match ($normalized) {
+            'pendidikankewarganegaraan' => 'kewarganegaraan',
+            'pengantarsisteminformasigeografigis' => 'pengantargis',
+            default => $normalized,
+        };
+    }
+
+    /**
+     * Dua kode pada file CPL diketahui bentrok dengan master TP yang mempunyai
+     * nama berbeda. Untuk pasangan ini kode saja tidak cukup sebagai bukti.
+     */
+    private function requiresVerifiedNameAgreement(string $sourceCode): bool
+    {
+        return in_array($this->normalizeBaseCode($sourceCode), [
+            'GL301',
+            'KU302',
+        ], true);
     }
 }

@@ -131,9 +131,30 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
     ]);
     $nameFallbackCourse = MataKuliah::create([
         'kode_mk' => 'KU 304 (TP)',
-        'nama_mk' => 'Pengantar GIS',
+        'nama_mk' => 'Pengantar Sistem Informasi Geografi (GIS)',
         'sks' => 2,
         'semester' => 4,
+        'prodi_id' => $mining->id,
+    ]);
+    $citizenshipCourse = MataKuliah::create([
+        'kode_mk' => 'KU 206',
+        'nama_mk' => 'Kewarganegaraan',
+        'sks' => 2,
+        'semester' => 2,
+        'prodi_id' => $mining->id,
+    ]);
+    MataKuliah::create([
+        'kode_mk' => 'GL 301 (TP)',
+        'nama_mk' => 'Petrologi (P)',
+        'sks' => 2,
+        'semester' => 3,
+        'prodi_id' => $mining->id,
+    ]);
+    MataKuliah::create([
+        'kode_mk' => 'KU 302 (TP)',
+        'nama_mk' => 'Dasar Komputasi',
+        'sks' => 2,
+        'semester' => 2,
         'prodi_id' => $mining->id,
     ]);
     $courses = MataKuliah::with('prodi')->get();
@@ -151,6 +172,12 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         ->toBe($miningCourse->id)
         ->and($matcher->matchCourse($courses, 'KODE-LAMA (TP)', 'Pengantar   GIS', $mining)?->id)
         ->toBe($nameFallbackCourse->id)
+        ->and($matcher->matchCourse($courses, 'KU 206', 'Pendidikan Kewarganegaraan', $mining)?->id)
+        ->toBe($citizenshipCourse->id)
+        ->and($matcher->matchCourse($courses, 'GL 301', 'Geologi Struktur', $mining))
+        ->toBeNull()
+        ->and($matcher->matchCourse($courses, 'KU 302', 'Matriks Ruang Vektor', $mining))
+        ->toBeNull()
         ->and($matcher->matchCourse($courses, 'KU 302 (TP)', 'Statistika Teknik Geologi', $mining))
         ->toBeNull()
         ->and($matcher->eligibleCourses($courses, $mining)->pluck('prodi_id')->unique()->all())
