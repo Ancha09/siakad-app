@@ -9,13 +9,12 @@
     .ipk-cpl-table thead th { color:#fff;border-bottom-color:var(--navy); }
     .ipk-cpl-table tbody tr:nth-child(even) td { background:#f4f8fc; }
     .ipk-cpl-table tbody tr:hover td { background:#e3eff9; }
-    .cpl-chart-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;margin-bottom:20px; }
+    .cpl-chart-card { margin-bottom:20px; }
     .cpl-chart-canvas { position:relative;width:100%;height:300px;min-height:0;overflow:hidden; }
     .cpl-chart-canvas canvas { display:block;max-width:100%;max-height:300px; }
     .cpl-chart-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;text-align:center; }
     .cpl-chart-empty[hidden] { display:none !important; }
     @media (max-width:720px) {
-        .cpl-chart-grid { grid-template-columns:1fr; }
         .cpl-chart-canvas { height:240px; }
         .cpl-chart-canvas canvas { max-height:240px; }
     }
@@ -122,23 +121,12 @@
     @endforeach
 </div>
 
-<div class="cpl-chart-grid">
-    <div class="page-card">
-        <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>
-        <div class="page-card-body">
-            <div class="cpl-chart-canvas">
-                <canvas id="ipkCplChart" aria-label="Grafik batang IPK CPL"></canvas>
-                <div id="ipkCplChartEmpty" class="cpl-chart-empty" hidden>Belum ada data grafik untuk filter ini.</div>
-            </div>
-        </div>
-    </div>
-    <div class="page-card">
-        <div class="page-card-head"><h2>Kelengkapan Data CPL</h2></div>
-        <div class="page-card-body">
-            <div class="cpl-chart-canvas">
-                <canvas id="cplCompletenessChart" aria-label="Grafik kelengkapan data CPL"></canvas>
-                <div id="cplCompletenessChartEmpty" class="cpl-chart-empty" hidden>Belum ada data grafik untuk filter ini.</div>
-            </div>
+<div class="page-card cpl-chart-card">
+    <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>
+    <div class="page-card-body">
+        <div class="cpl-chart-canvas">
+            <canvas id="ipkCplChart" aria-label="Grafik batang IPK CPL"></canvas>
+            <div id="ipkCplChartEmpty" class="cpl-chart-empty" hidden>Belum ada data IPK CPL untuk filter ini.</div>
         </div>
     </div>
 </div>
@@ -148,7 +136,7 @@
     <div class="page-card-body">
         <div class="table-wrap" style="overflow-x:auto;">
             <table class="ipk-cpl-table">
-                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>MK Bernilai</th><th>SKS Dihitung</th><th>Total SKS</th><th>Kelengkapan</th><th>IPK CPL</th><th>Status</th><th style="width:110px;">Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>MK Bernilai</th><th>SKS Dihitung</th><th>Total SKS</th><th>IPK CPL</th><th style="width:110px;">Aksi</th></tr></thead>
                 <tbody>
                     @forelse($rows as $item)
                         <tr>
@@ -159,9 +147,7 @@
                             <td>{{ $item->mata_kuliah_bernilai }}</td>
                             <td>{{ $item->sks_dihitung }}</td>
                             <td>{{ $item->total_sks }}</td>
-                            <td>{{ number_format($item->kelengkapan_persen, 2) }}%</td>
                             <td><strong>{{ $item->ipk_cpl === null ? '-' : number_format($item->ipk_cpl, 2) }}</strong></td>
-                            <td>{{ $item->status }}</td>
                             <td><a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;" href="{{ route('admin.ipk-cpl.cpl', [
                                 'prodi' => $program,
                                 'cpl' => $item->cpl,
@@ -173,7 +159,7 @@
                             ]) }}">Detail</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="11" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -189,14 +175,12 @@
 (function () {
     'use strict';
 
-    const initIpkCplCharts = function () {
+    const initIpkCplChart = function () {
         const ipkCanvas = document.getElementById('ipkCplChart');
-        const completenessCanvas = document.getElementById('cplCompletenessChart');
         const payloadElement = document.getElementById('ipkCplChartPayload');
 
-        if (!ipkCanvas || !completenessCanvas || !payloadElement) return;
-        if (ipkCanvas.dataset.chartInitialized === 'true'
-            || completenessCanvas.dataset.chartInitialized === 'true') return;
+        if (!ipkCanvas || !payloadElement) return;
+        if (ipkCanvas.dataset.chartInitialized === 'true') return;
 
         let data;
         try {
@@ -211,12 +195,6 @@
             const value = Number(source);
             return source !== null && source !== undefined && Number.isFinite(value) ? value : null;
         });
-        const completenessValues = labels.map(function (_, index) {
-            const source = Array.isArray(data.kelengkapan) ? data.kelengkapan[index] : 0;
-            const value = Number(source);
-            return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0;
-        });
-
         const showEmpty = function (canvas, emptyId) {
             canvas.hidden = true;
             const empty = document.getElementById(emptyId);
@@ -244,17 +222,14 @@
             window[globalKey] = null;
         };
 
-        const renderCharts = function () {
+        const renderChart = function () {
             if (typeof window.Chart === 'undefined') {
                 showEmpty(ipkCanvas, 'ipkCplChartEmpty');
-                showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
                 return;
             }
 
             destroyChart('ipkCplChart', ipkCanvas);
-            destroyChart('ipkCplCompletenessChart', completenessCanvas);
             ipkCanvas.dataset.chartInitialized = 'true';
-            completenessCanvas.dataset.chartInitialized = 'true';
             const commonOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -296,40 +271,20 @@
                 showEmpty(ipkCanvas, 'ipkCplChartEmpty');
             }
 
-            if (labels.length > 0) {
-                showCanvas(completenessCanvas, 'cplCompletenessChartEmpty');
-                window.ipkCplCompletenessChart = new window.Chart(completenessCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [{ label: 'Kelengkapan Data', data: completenessValues, backgroundColor: '#0891b2', borderColor: '#0e7490', borderWidth: 1, borderRadius: 6 }]
-                    },
-                    options: {
-                        ...commonOptions,
-                        scales: {
-                            ...commonOptions.scales,
-                            y: { ...commonOptions.scales.y, beginAtZero: true, max: 100, ticks: { color: '#334155', callback: value => value + '%' } }
-                        }
-                    }
-                });
-            } else {
-                showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
-            }
         };
 
         if (typeof window.Chart !== 'undefined') {
-            renderCharts();
+            renderChart();
             return;
         }
 
         showEmpty(ipkCanvas, 'ipkCplChartEmpty');
-        showEmpty(completenessCanvas, 'cplCompletenessChartEmpty');
     };
 
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initIpkCplCharts, { once: true });
+        document.addEventListener('DOMContentLoaded', initIpkCplChart, { once: true });
     } else {
-        initIpkCplCharts();
+        initIpkCplChart();
     }
 })();
 </script>

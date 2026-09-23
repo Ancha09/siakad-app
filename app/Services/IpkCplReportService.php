@@ -9,6 +9,7 @@ use App\Models\Khs;
 use App\Models\Mahasiswa;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Support\MiningCplCatalog;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +17,10 @@ use Illuminate\Support\Facades\DB;
 class IpkCplReportService
 {
     private const PASSING_SCORE = 60;
+
+    public function __construct(private readonly CplMappingImporter $mappingMatcher)
+    {
+    }
 
     public function cplOverview(Prodi $program, array $filters = [], bool $includeCourseDetails = true): array
     {
@@ -26,21 +31,15 @@ class IpkCplReportService
         $allCpls = Cpl::query()
             ->with(['mappings.mataKuliah'])
             ->where('program_studi_id', $program->id)
+            ->whereIn('kode_cpl', array_keys(MiningCplCatalog::all()))
             ->orderBy('sort_order')
             ->limit(9)
             ->get();
-        $cpls = $allCpls
-            ->when($filters['cpl_id'] ?? null, fn (Collection $items, $cplId) => $items->where('id', (int) $cplId))
-            ->values();
 
-        $rows = $cpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails) {
+        $allRows = $allCpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails, $program) {
             $mappings = $this->filteredMappings($cpl->mappings, $filters);
-            if ($mappings->isEmpty()) {
-                return null;
-            }
-
             $courses = $mappings->map(
-                fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradeStats)
+                fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradeStats, $program)
             )->values();
             $withGrades = $courses->filter(fn (object $course) => $course->rata_bobot !== null && $course->sks > 0);
             $calculatedSks = $withGrades->sum('sks');
@@ -48,7 +47,6 @@ class IpkCplReportService
             $ipkCpl = $calculatedSks > 0
                 ? round($withGrades->sum('mutu_sks') / $calculatedSks, 2)
                 : null;
-            $unmatched = $courses->where('terhubung', false)->count();
 
             return (object) [
                 'cpl' => $cpl,
@@ -57,28 +55,30 @@ class IpkCplReportService
                 'jumlah_mata_kuliah' => $courses->count(),
                 'total_sks' => $totalSks,
                 'sks_dihitung' => $calculatedSks,
-                'kelengkapan_persen' => $totalSks > 0 ? round(($calculatedSks / $totalSks) * 100, 2) : 0,
                 'mata_kuliah_bernilai' => $withGrades->count(),
-                'belum_terhubung' => $unmatched,
                 'ipk_cpl' => $ipkCpl,
-                'status' => match (true) {
-                    $unmatched > 0 => $unmatched.' mata kuliah belum terhubung ke master',
-                    $withGrades->isEmpty() => 'Belum ada nilai',
-                    $withGrades->count() < $courses->count() => $withGrades->count().'/'.$courses->count().' mata kuliah memiliki nilai',
-                    default => 'Data lengkap',
-                },
                 'courses' => $includeCourseDetails ? $courses : collect(),
             ];
-        })->filter()->values();
+        })->values();
+        $rows = $allRows
+            ->when($filters['cpl_id'] ?? null, fn (Collection $items, $cplId) => $items
+                ->where('cpl.id', (int) $cplId))
+            ->values();
 
-        $allMappings = $allCpls->flatMap->mappings->values();
-        $unmatchedMappings = CplMataKuliah::query()
-            ->with('cpl')
-            ->whereNull('mata_kuliah_id')
-            ->whereHas('cpl', fn ($query) => $query->where('program_studi_id', $program->id))
-            ->orderBy('kode_sumber')
-            ->get();
-        $chartRows = $rows->take(9)->values();
+        $allMappings = $allCpls->flatMap(function (Cpl $cpl) {
+            return $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl));
+        })->values();
+        $unmatchedMappings = $allMappings
+            ->reject(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
+                && $this->mappingMatcher->isSafeMatch(
+                    $mapping->mataKuliah,
+                    $mapping->kode_sumber,
+                    $mapping->nama_sumber,
+                    $program
+                ))
+            ->sortBy('kode_sumber', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values();
+        $chartRows = $allRows->take(9)->values();
 
         return [
             'program' => $program,
@@ -86,22 +86,22 @@ class IpkCplReportService
             'chart' => [
                 'labels' => $chartRows->pluck('kode_cpl')->all(),
                 'ipk' => $chartRows->pluck('ipk_cpl')->all(),
-                'kelengkapan' => $chartRows->pluck('kelengkapan_persen')->all(),
             ],
             'mappingSummary' => [
                 'jumlah_cpl' => $allCpls->count(),
                 'jumlah_mapping' => $allMappings->count(),
-                'cocok_master' => $allMappings->whereNotNull('mata_kuliah_id')->count(),
+                'cocok_master' => $allMappings->count() - $unmatchedMappings->count(),
                 'belum_cocok_master' => $unmatchedMappings
-                    ->unique(fn (CplMataKuliah $mapping) => strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '', $mapping->kode_sumber))
-                        .'|'.strtolower(trim($mapping->nama_sumber)))
+                    ->unique(fn (CplMataKuliah $mapping) => $this->mappingMatcher->sourceKey(
+                        $mapping->kode_sumber,
+                        $mapping->nama_sumber
+                    ))
                     ->count(),
             ],
             'unmatchedMappings' => $unmatchedMappings,
             'summary' => [
                 'jumlah_cpl' => $rows->count(),
                 'jumlah_mapping' => $rows->sum('jumlah_mata_kuliah'),
-                'belum_terhubung' => $rows->sum('belum_terhubung'),
                 'cpl_bernilai' => $rows->whereNotNull('ipk_cpl')->count(),
             ],
         ];
@@ -129,6 +129,12 @@ class IpkCplReportService
         abort_if($this->filteredMappings(collect([$mapping]), $filters)->isEmpty(), 404);
 
         $mapping->loadMissing('mataKuliah');
+        abort_if($mapping->mataKuliah === null || ! $this->mappingMatcher->isSafeMatch(
+            $mapping->mataKuliah,
+            $mapping->kode_sumber,
+            $mapping->nama_sumber,
+            $program
+        ), 404, 'Mapping mata kuliah belum cocok dengan master Teknik Pertambangan.');
         $grades = null;
         if ($mapping->mata_kuliah_id !== null) {
             $gradeIds = $this->latestGradeRowsQuery($program, $filters)
@@ -174,7 +180,13 @@ class IpkCplReportService
                 ->pluck('angkatan'),
             'cplOptions' => $cpls,
             'courseOptions' => $cpls->flatMap->mappings
-                ->filter(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id !== null)
+                ->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
+                    && $this->mappingMatcher->isSafeMatch(
+                        $mapping->mataKuliah,
+                        $mapping->kode_sumber,
+                        $mapping->nama_sumber,
+                        $program
+                    ))
                 ->unique('mata_kuliah_id')
                 ->sortBy('kode_sumber')
                 ->values(),
@@ -289,9 +301,15 @@ class IpkCplReportService
             ->values();
     }
 
-    private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats): object
+    private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats, Prodi $program): object
     {
-        $stats = $mapping->mata_kuliah_id === null ? null : $gradeStats->get($mapping->mata_kuliah_id);
+        $isLinked = $mapping->mataKuliah !== null && $this->mappingMatcher->isSafeMatch(
+            $mapping->mataKuliah,
+            $mapping->kode_sumber,
+            $mapping->nama_sumber,
+            $program
+        );
+        $stats = $isLinked ? $gradeStats->get($mapping->mata_kuliah_id) : null;
         $averageWeight = $stats === null ? null : round((float) $stats->average_weight, 2);
         $sks = (int) ($mapping->sks ?? $mapping->mataKuliah?->sks ?? 0);
 
@@ -305,12 +323,7 @@ class IpkCplReportService
             'jumlah_mahasiswa' => (int) ($stats->student_count ?? 0),
             'rata_bobot' => $averageWeight,
             'mutu_sks' => $averageWeight === null ? null : round($averageWeight * $sks, 2),
-            'terhubung' => $mapping->mata_kuliah_id !== null,
-            'status' => match (true) {
-                $mapping->mata_kuliah_id === null => 'Belum terhubung ke master mata kuliah',
-                $averageWeight === null => 'Belum ada nilai',
-                default => 'Ada nilai',
-            },
+            'terhubung' => $isLinked,
         ];
     }
 

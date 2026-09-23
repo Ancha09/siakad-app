@@ -76,12 +76,17 @@ class CplMappingImporter
                 $existing = CplMataKuliah::query()
                     ->where('cpl_id', $currentCpl->id)
                     ->where('kode_sumber', $sourceCode)
-                    ->first();
+                    ->first()
+                    ?? CplMataKuliah::query()
+                        ->where('cpl_id', $currentCpl->id)
+                        ->get()
+                        ->first(fn (CplMataKuliah $mapping) => $this->sourceKey($mapping->kode_sumber, $mapping->nama_sumber)
+                            === $this->sourceKey($sourceCode, $sourceName));
                 $existingCourse = $existing?->mata_kuliah_id
                     ? $courses->firstWhere('id', $existing->mata_kuliah_id)
                     : null;
                 $resolvedCourse = $course
-                    ?? ($existingCourse && $this->isCourseEligible($existingCourse, $program, $sourceCode)
+                    ?? ($existingCourse && $this->isSafeMatch($existingCourse, $sourceCode, $sourceName, $program)
                         ? $existingCourse
                         : null);
 
@@ -93,15 +98,18 @@ class CplMappingImporter
                     $resolvedCourse = null;
                 }
 
-                CplMataKuliah::updateOrCreate(
-                    ['cpl_id' => $currentCpl->id, 'kode_sumber' => $sourceCode],
-                    [
-                        'mata_kuliah_id' => $resolvedCourse?->id,
-                        'nama_sumber' => $sourceName,
-                        'semester' => (int) $row['C'],
-                        'sks' => (int) $row['D'],
-                    ]
-                );
+                $mappingValues = [
+                    'kode_sumber' => $sourceCode,
+                    'mata_kuliah_id' => $resolvedCourse?->id,
+                    'nama_sumber' => $sourceName,
+                    'semester' => (int) $row['C'],
+                    'sks' => (int) $row['D'],
+                ];
+                if ($existing !== null) {
+                    $existing->fill($mappingValues)->save();
+                } else {
+                    CplMataKuliah::create(['cpl_id' => $currentCpl->id] + $mappingValues);
+                }
 
                 $result['mappings']++;
                 if ($resolvedCourse !== null) {
@@ -145,19 +153,51 @@ class CplMappingImporter
     {
         $eligible = $this->eligibleCourses($courses, $program, $code);
         $normalizedCode = $this->normalizeBaseCode($code);
-        $byCode = $eligible->first(fn (MataKuliah $course) => $this->normalizeBaseCode($course->kode_mk) === $normalizedCode);
+        $byCode = $this->selectUnambiguousCandidate(
+            $eligible->filter(fn (MataKuliah $course) => $this->normalizeBaseCode($course->kode_mk) === $normalizedCode),
+            $name,
+            $program
+        );
         if ($byCode !== null) {
             return $byCode;
         }
 
         $normalizedName = $this->normalizeName($name);
-        $sameProgram = $eligible->first(fn (MataKuliah $course) => (int) $course->prodi_id === (int) $program->id
+        $sameProgram = $eligible->filter(fn (MataKuliah $course) => (int) $course->prodi_id === (int) $program->id
+            && $this->normalizeName($course->nama_mk) === $normalizedName);
+        if ($sameProgram->count() === 1) {
+            return $sameProgram->first();
+        }
+
+        $general = $eligible->filter(fn (MataKuliah $course) => $course->prodi_id === null
             && $this->normalizeName($course->nama_mk) === $normalizedName);
 
-        return $sameProgram ?? $eligible->first(
-            fn (MataKuliah $course) => $course->prodi_id === null
-                && $this->normalizeName($course->nama_mk) === $normalizedName
+        return $general->count() === 1 ? $general->first() : null;
+    }
+
+    private function selectUnambiguousCandidate(Collection $candidates, string $sourceName, Prodi $program): ?MataKuliah
+    {
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        $programCandidates = $candidates->filter(
+            fn (MataKuliah $course) => (int) $course->prodi_id === (int) $program->id
         );
+        $preferred = $programCandidates->isNotEmpty()
+            ? $programCandidates
+            : $candidates->filter(fn (MataKuliah $course) => $course->prodi_id === null);
+
+        if ($preferred->count() === 1) {
+            return $preferred->first();
+        }
+
+        $normalizedName = $this->normalizeName($sourceName);
+        $sameName = $preferred->filter(
+            fn (MataKuliah $course) => $this->normalizeName($course->nama_mk) === $normalizedName
+        );
+
+        return $sameName->count() === 1 ? $sameName->first() : null;
     }
 
     public function eligibleCourses(Collection $courses, Prodi $program, ?string $sourceCode = null): Collection
@@ -226,6 +266,39 @@ class CplMappingImporter
     public function sourceKey(string $code, string $name): string
     {
         return $this->normalizeBaseCode($code).'|'.$this->normalizeName($name);
+    }
+
+    public function normalizeCourseCode(mixed $value): string
+    {
+        return $this->normalizeBaseCode($value);
+    }
+
+    public function normalizeCourseName(mixed $value): string
+    {
+        return $this->normalizeName($value);
+    }
+
+    public function isSafeMatch(MataKuliah $course, string $sourceCode, string $sourceName, Prodi $program): bool
+    {
+        if (! $this->isCourseEligible($course, $program, $sourceCode)) {
+            return false;
+        }
+
+        return $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode)
+            || $this->normalizeName($course->nama_mk) === $this->normalizeName($sourceName);
+    }
+
+    public function matchReason(MataKuliah $course, string $sourceCode, string $sourceName): string
+    {
+        if ($this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode)) {
+            return 'Kode sama setelah normalisasi';
+        }
+
+        if ($this->normalizeName($course->nama_mk) === $this->normalizeName($sourceName)) {
+            return 'Nama mata kuliah sama setelah normalisasi';
+        }
+
+        return 'Tidak ada kecocokan exact';
     }
 
     private function cleanSourceName(string $name): string

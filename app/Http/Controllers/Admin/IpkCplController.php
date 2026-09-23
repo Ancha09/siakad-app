@@ -150,22 +150,22 @@ class IpkCplController extends Controller
         $sheets = [
             [
                 'title' => 'Ringkasan CPL',
-                'headings' => ['Kode CPL', 'Deskripsi', 'Turunan Visi-Misi', 'CPL KKNI', 'IPK CPL', 'Total SKS Mapping', 'SKS Dihitung', 'Kelengkapan Data', 'Status'],
+                'headings' => ['Kode CPL', 'Deskripsi', 'Turunan Visi-Misi', 'CPL KKNI', 'IPK CPL', 'Mata Kuliah', 'Mata Kuliah Bernilai', 'Total SKS Mapping', 'SKS Dihitung'],
                 'rows' => $report['rows']->map(fn (object $row) => [
                     $row->kode_cpl,
                     $row->cpl->deskripsi ?: '-',
                     $row->cpl->turunan_visi_misi ?: '-',
                     $row->cpl->cpl_kkni ?: '-',
                     $row->ipk_cpl ?? '-',
+                    $row->jumlah_mata_kuliah,
+                    $row->mata_kuliah_bernilai,
                     $row->total_sks,
                     $row->sks_dihitung,
-                    $row->kelengkapan_persen.'%',
-                    $row->status,
                 ]),
             ],
             [
                 'title' => 'Detail Mata Kuliah',
-                'headings' => ['CPL', 'Kode Mata Kuliah', 'Nama Mata Kuliah', 'Semester', 'SKS', 'Mahasiswa Bernilai', 'Rata-rata Nilai Mutu', 'Mutu x SKS', 'Status Data'],
+                'headings' => ['CPL', 'Kode Mata Kuliah', 'Nama Mata Kuliah', 'Semester', 'SKS', 'Mahasiswa Bernilai', 'Rata-rata Nilai Mutu', 'Mutu x SKS'],
                 'rows' => $report['rows']->flatMap(fn (object $row) => $row->courses->map(fn (object $course) => [
                     $row->kode_cpl,
                     $course->kode_mata_kuliah,
@@ -175,7 +175,6 @@ class IpkCplController extends Controller
                     $course->jumlah_mahasiswa,
                     $course->rata_bobot ?? '-',
                     $course->mutu_sks ?? '-',
-                    $course->status,
                 ])),
             ],
         ];
@@ -183,14 +182,13 @@ class IpkCplController extends Controller
         if ($report['unmatchedMappings']->isNotEmpty()) {
             $sheets[] = [
                 'title' => 'Mapping Belum Cocok',
-                'headings' => ['CPL', 'Kode Excel', 'Nama Mata Kuliah Excel', 'Semester', 'SKS', 'Status'],
+                'headings' => ['CPL', 'Kode Excel', 'Nama Mata Kuliah Excel', 'Semester', 'SKS'],
                 'rows' => $report['unmatchedMappings']->map(fn (CplMataKuliah $mapping) => [
                     $mapping->cpl?->kode_cpl ?? '-',
                     $mapping->kode_sumber,
                     $mapping->nama_sumber,
                     $mapping->semester ?? '-',
                     $mapping->sks ?? '-',
-                    'Belum cocok master',
                 ]),
             ];
         }

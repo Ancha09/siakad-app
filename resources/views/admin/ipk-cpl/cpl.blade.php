@@ -24,11 +24,10 @@
             <div><strong style="color:#0b5b9d;">CPL KKNI</strong><br>{{ $row->cpl->cpl_kkni ?: '-' }}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;">
-            @foreach(['Jumlah Mata Kuliah' => $row->jumlah_mata_kuliah, 'Total SKS Mapping' => $row->total_sks, 'SKS Dihitung' => $row->sks_dihitung, 'Kelengkapan Data' => number_format($row->kelengkapan_persen, 2).'%', 'IPK CPL' => $row->ipk_cpl === null ? '-' : number_format($row->ipk_cpl, 2)] as $label => $value)
+            @foreach(['Jumlah Mata Kuliah' => $row->jumlah_mata_kuliah, 'Mata Kuliah Bernilai' => $row->mata_kuliah_bernilai, 'Total SKS Mapping' => $row->total_sks, 'SKS Dihitung' => $row->sks_dihitung, 'IPK CPL' => $row->ipk_cpl === null ? '-' : number_format($row->ipk_cpl, 2)] as $label => $value)
                 <div style="padding:16px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:24px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
             @endforeach
         </div>
-        <p style="margin:15px 0 0;color:#64748b;">Status: <strong>{{ $row->status }}</strong></p>
     </div>
 </div>
 
@@ -37,7 +36,7 @@
     <div class="page-card-body">
         <div class="table-wrap" style="overflow-x:auto;">
             <table class="ipk-cpl-table">
-                <thead><tr><th>No</th><th>Kode</th><th>Mata Kuliah</th><th>Semester</th><th>SKS</th><th>Mahasiswa</th><th>Rata-rata Nilai Mutu</th><th>Mutu x SKS</th><th>Status</th><th style="width:145px;">Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Kode</th><th>Mata Kuliah</th><th>Semester</th><th>SKS</th><th>Mahasiswa</th><th>Rata-rata Nilai Mutu</th><th>Mutu x SKS</th><th style="width:145px;">Aksi</th></tr></thead>
                 <tbody>
                     @forelse($row->courses as $course)
                         <tr>
@@ -49,7 +48,6 @@
                             <td>{{ $course->jumlah_mahasiswa }}</td>
                             <td>{{ $course->rata_bobot === null ? '-' : number_format($course->rata_bobot, 2) }}</td>
                             <td>{{ $course->mutu_sks === null ? '-' : number_format($course->mutu_sks, 2) }}</td>
-                            <td>{{ $course->status }}</td>
                             <td>
                                 @if($course->terhubung)
                                     <a class="btn-primary" style="display:inline-block;padding:7px 11px;white-space:nowrap;" href="{{ route('admin.ipk-cpl.course', [
@@ -62,12 +60,12 @@
                                         'return_url' => request()->fullUrl(),
                                     ]) }}">Detail Mahasiswa</a>
                                 @else
-                                    <span style="color:#64748b;white-space:nowrap;">Belum terhubung</span>
+                                    <span style="color:#64748b;">-</span>
                                 @endif
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
                     @endforelse
                 </tbody>
             </table>
