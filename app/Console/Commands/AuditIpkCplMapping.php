@@ -61,14 +61,14 @@ class AuditIpkCplMapping extends Command
         $rows = $problemGroups->map(function ($group) use ($courses, $matcher, $program) {
             /** @var CplMataKuliah $mapping */
             $mapping = $group->first();
-            $exactCandidate = $matcher->matchCourse(
+            $safeCandidate = $matcher->matchCourse(
                 $courses,
                 $mapping->kode_sumber,
                 $mapping->nama_sumber,
                 $program
             );
-            $suggestions = $exactCandidate === null
-                ? $matcher->suggestCourses($courses, $mapping->kode_sumber, $mapping->nama_sumber, $program)
+            $exactCodeCandidates = $safeCandidate === null
+                ? $matcher->exactCodeCandidates($courses, $mapping->kode_sumber, $program)
                 : collect();
             $currentMasters = $group->map(fn (CplMataKuliah $item) => $item->mataKuliah
                 ? $item->mataKuliah->kode_mk.' - '.$item->mataKuliah->nama_mk
@@ -76,17 +76,17 @@ class AuditIpkCplMapping extends Command
                 ->unique()
                 ->implode('; ');
 
-            if ($exactCandidate !== null) {
-                $candidate = $exactCandidate->kode_mk.' - '.$exactCandidate->nama_mk;
-                $reason = $matcher->matchReason($exactCandidate, $mapping->kode_sumber, $mapping->nama_sumber)
+            if ($safeCandidate !== null) {
+                $candidate = $safeCandidate->kode_mk.' - '.$safeCandidate->nama_mk;
+                $reason = $matcher->matchReason($safeCandidate, $mapping->kode_sumber, $mapping->nama_sumber)
                     .'; dapat diperbaiki aman dengan command import';
-            } elseif ($suggestions->isNotEmpty()) {
-                $candidate = $suggestions->map(fn (object $item) => $item->course->kode_mk.' - '.$item->course->nama_mk)
+            } elseif ($exactCodeCandidates->isNotEmpty()) {
+                $candidate = $exactCodeCandidates->map(fn (MataKuliah $course) => $course->kode_mk.' - '.$course->nama_mk)
                     ->implode('; ');
-                $reason = 'Tidak ada kode/nama exact; kandidat hanya mirip dan tidak dipasang otomatis';
+                $reason = 'Master berkode exact ditemukan, tetapi nama mata kuliah tidak cocok; tidak dipasang otomatis';
             } else {
                 $candidate = '-';
-                $reason = 'Tidak ada kode atau nama exact pada master Teknik Pertambangan';
+                $reason = 'Tidak ditemukan master dengan kode exact';
             }
 
             return [

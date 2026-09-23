@@ -152,9 +152,8 @@ class CplMappingImporter
     public function matchCourse(Collection $courses, string $code, string $name, Prodi $program): ?MataKuliah
     {
         $eligible = $this->eligibleCourses($courses, $program, $code);
-        $normalizedCode = $this->normalizeBaseCode($code);
         $byCode = $this->selectUnambiguousCandidate(
-            $eligible->filter(fn (MataKuliah $course) => $this->normalizeBaseCode($course->kode_mk) === $normalizedCode),
+            $this->exactCodeCandidates($eligible, $code, $program),
             $code,
             $name,
             $program
@@ -163,17 +162,17 @@ class CplMappingImporter
             return $byCode;
         }
 
-        $normalizedName = $this->normalizeComparableCourseName($name);
-        $sameProgram = $eligible->filter(fn (MataKuliah $course) => (int) $course->prodi_id === (int) $program->id
-            && $this->normalizeComparableCourseName($course->nama_mk) === $normalizedName);
-        if ($sameProgram->count() === 1) {
-            return $sameProgram->first();
+        $reviewedTargetCode = $this->reviewedTargetCode($code, $name);
+        if ($reviewedTargetCode === null) {
+            return null;
         }
 
-        $general = $eligible->filter(fn (MataKuliah $course) => $course->prodi_id === null
-            && $this->normalizeComparableCourseName($course->nama_mk) === $normalizedName);
-
-        return $general->count() === 1 ? $general->first() : null;
+        return $this->selectUnambiguousCandidate(
+            $eligible->filter(fn (MataKuliah $course) => $this->normalizeBaseCode($course->kode_mk) === $reviewedTargetCode),
+            $code,
+            $name,
+            $program
+        );
     }
 
     private function selectUnambiguousCandidate(
@@ -235,37 +234,13 @@ class CplMappingImporter
         return (int) $course->prodi_id === (int) $program->id || $course->prodi_id === null;
     }
 
-    public function suggestCourses(Collection $courses, string $code, string $name, Prodi $program, int $limit = 3): Collection
+    public function exactCodeCandidates(Collection $courses, string $code, Prodi $program): Collection
     {
         $sourceCode = $this->normalizeBaseCode($code);
-        $sourceName = $this->normalizeName($name);
 
         return $this->eligibleCourses($courses, $program, $code)
-            ->map(function (MataKuliah $course) use ($sourceCode, $sourceName) {
-                $candidateCode = $this->normalizeBaseCode($course->kode_mk);
-                $candidateName = $this->normalizeName($course->nama_mk);
-                $codeDistance = levenshtein($sourceCode, $candidateCode);
-                similar_text($sourceName, $candidateName, $nameSimilarity);
-                $samePrefix = substr($sourceCode, 0, 2) === substr($candidateCode, 0, 2);
-                $score = 0;
-                $reason = null;
-
-                if ($sourceCode !== '' && $sourceCode === $candidateCode) {
-                    $score = 100;
-                    $reason = 'Kode sama setelah normalisasi';
-                } elseif ($samePrefix && $codeDistance <= 2) {
-                    $score = 85 - ($codeDistance * 5);
-                    $reason = 'Kode mirip';
-                } elseif ($sourceName !== '' && $nameSimilarity >= 60) {
-                    $score = (int) round($nameSimilarity);
-                    $reason = 'Nama mirip '.number_format($nameSimilarity, 0).'%';
-                }
-
-                return $reason === null ? null : (object) compact('course', 'score', 'reason');
-            })
-            ->filter()
-            ->sortByDesc('score')
-            ->take($limit)
+            ->filter(fn (MataKuliah $course) => $sourceCode !== ''
+                && $this->normalizeBaseCode($course->kode_mk) === $sourceCode)
             ->values();
     }
 
@@ -277,6 +252,18 @@ class CplMappingImporter
     public function normalizeCourseCode(mixed $value): string
     {
         return $this->normalizeBaseCode($value);
+    }
+
+    public function courseCodeParts(mixed $value): ?array
+    {
+        $value = preg_replace('/\s*\((TP|TG)\)\s*$/iu', '', (string) $value);
+        $value = strtoupper(Str::ascii(trim((string) $value)));
+
+        if (! preg_match('/^([A-Z]+)[\s-]*(\d+)$/', $value, $matches)) {
+            return null;
+        }
+
+        return ['prefix' => $matches[1], 'number' => $matches[2]];
     }
 
     public function normalizeCourseName(mixed $value): string
@@ -293,10 +280,17 @@ class CplMappingImporter
         $codeMatches = $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode);
         $nameMatches = $this->normalizeComparableCourseName($course->nama_mk)
             === $this->normalizeComparableCourseName($sourceName);
+        $reviewedTargetCode = $this->reviewedTargetCode($sourceCode, $sourceName);
+        $reviewedAliasMatches = $reviewedTargetCode !== null
+            && $this->normalizeBaseCode($course->kode_mk) === $reviewedTargetCode
+            && $nameMatches;
 
-        return $this->requiresVerifiedNameAgreement($sourceCode)
-            ? $nameMatches
-            : $codeMatches || $nameMatches;
+        if ($reviewedAliasMatches) {
+            return true;
+        }
+
+        return $codeMatches
+            && (! $this->requiresVerifiedNameAgreement($sourceCode) || $nameMatches);
     }
 
     public function matchReason(MataKuliah $course, string $sourceCode, string $sourceName): string
@@ -304,6 +298,13 @@ class CplMappingImporter
         $codeMatches = $this->normalizeBaseCode($course->kode_mk) === $this->normalizeBaseCode($sourceCode);
         $nameMatches = $this->normalizeComparableCourseName($course->nama_mk)
             === $this->normalizeComparableCourseName($sourceName);
+        $reviewedTargetCode = $this->reviewedTargetCode($sourceCode, $sourceName);
+
+        if ($reviewedTargetCode !== null
+            && $this->normalizeBaseCode($course->kode_mk) === $reviewedTargetCode
+            && $nameMatches) {
+            return 'Alias kode kurikulum TP terverifikasi dan nama mata kuliah cocok';
+        }
 
         if ($codeMatches) {
             return $nameMatches
@@ -325,8 +326,12 @@ class CplMappingImporter
 
     private function normalizeBaseCode(mixed $value): string
     {
-        $value = preg_replace('/\s*\((TP|TG)\)\s*$/iu', '', (string) $value);
+        $parts = $this->courseCodeParts($value);
+        if ($parts !== null) {
+            return $parts['prefix'].$parts['number'];
+        }
 
+        $value = preg_replace('/\s*\((TP|TG)\)\s*$/iu', '', (string) $value);
         return strtoupper((string) preg_replace('/[^A-Za-z0-9]+/', '', Str::ascii((string) $value)));
     }
 
@@ -383,5 +388,16 @@ class CplMappingImporter
             'GL401',
             'KU302',
         ], true);
+    }
+
+    private function reviewedTargetCode(string $sourceCode, string $sourceName): ?string
+    {
+        $key = $this->normalizeBaseCode($sourceCode).'|'.$this->normalizeComparableCourseName($sourceName);
+
+        return match ($key) {
+            'GL301|geologistruktur' => 'GL401',
+            'GL401|petrologi' => 'GL301',
+            default => null,
+        };
     }
 }

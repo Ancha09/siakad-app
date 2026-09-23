@@ -150,13 +150,17 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         'semester' => 3,
         'prodi_id' => $mining->id,
     ]);
-    MataKuliah::create([
+    $basicComputingCourse = MataKuliah::create([
         'kode_mk' => 'KU 302 (TP)',
         'nama_mk' => 'Dasar Komputasi',
         'sks' => 2,
         'semester' => 2,
         'prodi_id' => $mining->id,
     ]);
+    MataKuliah::create(['kode_mk' => 'KU 303 (TP)', 'nama_mk' => 'Statistika', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 301', 'nama_mk' => 'Bahan Galian Indonesia', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 401', 'nama_mk' => 'Metode Numerik', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 501', 'nama_mk' => 'Sistem Penambangan', 'sks' => 2, 'semester' => 5, 'prodi_id' => $mining->id]);
     $courses = MataKuliah::with('prodi')->get();
     $matcher = app(CplMappingImporter::class);
 
@@ -164,14 +168,19 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         ->and($matcher->normalizeCourseCode('KU301'))->toBe('KU301')
         ->and($matcher->normalizeCourseCode('KU-301'))->toBe('KU301')
         ->and($matcher->normalizeCourseCode('  KU   301 (TP)  '))->toBe('KU301')
+        ->and($matcher->courseCodeParts('TA-601'))->toBe(['prefix' => 'TA', 'number' => '601'])
+        ->and($matcher->normalizeCourseCode('TA 601'))->toBe('TA601')
+        ->and($matcher->normalizeCourseCode('TA 601'))->not->toBe($matcher->normalizeCourseCode('TA 301'))
         ->and($matcher->matchCourse($courses, 'KU301 (TP)', 'Kimia Analitik', $mining)?->id)
         ->toBe($miningCourse->id)
         ->and($matcher->matchCourse($courses, 'KU-301 (TP)', 'Kimia Analitik', $mining)?->id)
         ->toBe($miningCourse->id)
         ->and($matcher->matchCourse($courses, 'KU   301 (TP)', 'Kimia Analitik', $mining)?->id)
         ->toBe($miningCourse->id)
-        ->and($matcher->matchCourse($courses, 'KODE-LAMA (TP)', 'Pengantar   GIS', $mining)?->id)
+        ->and($matcher->matchCourse($courses, 'KU-304 (TP)', 'Pengantar   GIS', $mining)?->id)
         ->toBe($nameFallbackCourse->id)
+        ->and($matcher->matchCourse($courses, 'KODE-LAMA (TP)', 'Pengantar GIS', $mining))
+        ->toBeNull()
         ->and($matcher->matchCourse($courses, 'KU 206', 'Pendidikan Kewarganegaraan', $mining)?->id)
         ->toBe($citizenshipCourse->id)
         ->and($matcher->matchCourse($courses, 'GL 301', 'Geologi Struktur', $mining))
@@ -180,6 +189,9 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         ->toBeNull()
         ->and($matcher->matchCourse($courses, 'KU 302 (TP)', 'Statistika Teknik Geologi', $mining))
         ->toBeNull()
+        ->and($matcher->exactCodeCandidates($courses, 'KU 302', $mining)->pluck('id')->all())
+        ->toBe([$basicComputingCourse->id])
+        ->and($matcher->exactCodeCandidates($courses, 'TA 601', $mining))->toBeEmpty()
         ->and($matcher->eligibleCourses($courses, $mining)->pluck('prodi_id')->unique()->all())
         ->toBe([$mining->id]);
 });
@@ -401,6 +413,30 @@ test('CPL mapping audit is read only and reports safe exact candidates', functio
 
     expect($unmatched->fresh()->mata_kuliah_id)->toBeNull()
         ->and($candidate->fresh()->kode_mk)->toBe('KU 301 (TP)');
+});
+
+test('CPL mapping audit never recommends courses with a different strict code', function () {
+    $mining = Prodi::create(['kode_prodi' => 'TP', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
+    $cpl = Cpl::create(['program_studi_id' => $mining->id, 'kode_cpl' => 'CPL 1', 'nama_cpl' => 'CPL Audit', 'sort_order' => 1]);
+    CplMataKuliah::create(['cpl_id' => $cpl->id, 'kode_sumber' => 'KU 302', 'nama_sumber' => 'Matriks Ruang Vektor', 'semester' => 2, 'sks' => 2]);
+    CplMataKuliah::create(['cpl_id' => $cpl->id, 'kode_sumber' => 'TA 601', 'nama_sumber' => 'MK Pilihan 2', 'semester' => 6, 'sks' => 2]);
+
+    MataKuliah::create(['kode_mk' => 'KU 302 (TP)', 'nama_mk' => 'Dasar Komputasi', 'sks' => 2, 'semester' => 2, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'KU 301', 'nama_mk' => 'Kimia Analitik (P)', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'KU 303 (TP)', 'nama_mk' => 'Statistika', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 301', 'nama_mk' => 'Bahan Galian Indonesia', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 401', 'nama_mk' => 'Metode Numerik', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'TA 501', 'nama_mk' => 'Sistem Penambangan', 'sks' => 2, 'semester' => 5, 'prodi_id' => $mining->id]);
+
+    $this->artisan('ipk-cpl:audit-mapping')
+        ->expectsOutputToContain('KU 302 (TP) - Dasar Komputasi')
+        ->expectsOutputToContain('Tidak ditemukan master dengan kode exact')
+        ->doesntExpectOutputToContain('KU 301 - Kimia Analitik')
+        ->doesntExpectOutputToContain('KU 303 (TP) - Statistika')
+        ->doesntExpectOutputToContain('TA 301 - Bahan Galian Indonesia')
+        ->doesntExpectOutputToContain('TA 401 - Metode Numerik')
+        ->doesntExpectOutputToContain('TA 501 - Sistem Penambangan')
+        ->assertSuccessful();
 });
 
 test('CPL detail and course detail preserve filters and list only calculated students', function () {
