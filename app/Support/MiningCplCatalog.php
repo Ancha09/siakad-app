@@ -8,10 +8,15 @@ final class MiningCplCatalog
 
     public const REDIRECT_TARGET_CPL = 'CPL 3';
 
-    private const TEMPORARILY_EXCLUDED_MAPPING = [
-        'code' => 'TA601',
-        'name' => 'mkpilihan2',
-        'cpls' => ['CPL 2', 'CPL 7'],
+    private const TEMPORARILY_EXCLUDED_MAPPINGS = [
+        [
+            'code' => 'KU302',
+            'name' => 'matriksruangvektor',
+        ],
+        [
+            'code' => 'TA601',
+            'name' => 'mkpilihan2',
+        ],
     ];
 
     /**
@@ -96,10 +101,11 @@ final class MiningCplCatalog
     }
 
     /**
-     * Keputusan sementara prodi: TA 601 - MK Pilihan 2 tidak dihitung pada
-     * CPL 2/CPL 7. Pengecualian dibuat ketat agar MK Pilihan 3 tidak tersentuh.
+     * Keputusan sementara prodi: mapping yang belum final tidak dihitung pada
+     * laporan. Pengecualian memakai pasangan kode dan nama secara ketat agar
+     * mata kuliah lain (termasuk MK Pilihan 3) tidak ikut dinonaktifkan.
      */
-    public static function isTemporarilyExcludedMapping(string $courseCode, string $courseName, string $cplCode): bool
+    public static function isTemporarilyExcludedMapping(string $courseCode, string $courseName, string $_cplCode): bool
     {
         $normalizedCode = strtoupper(trim($courseCode));
         $normalizedCode = preg_replace('/\(\s*(?:TP|TG)\s*\)$/i', '', $normalizedCode) ?? $normalizedCode;
@@ -107,8 +113,9 @@ final class MiningCplCatalog
         $normalizedName = strtolower(trim($courseName));
         $normalizedName = preg_replace('/[^a-z0-9]+/', '', $normalizedName) ?? $normalizedName;
 
-        return $normalizedCode === self::TEMPORARILY_EXCLUDED_MAPPING['code']
-            && $normalizedName === self::TEMPORARILY_EXCLUDED_MAPPING['name']
-            && in_array(strtoupper(trim($cplCode)), self::TEMPORARILY_EXCLUDED_MAPPING['cpls'], true);
+        return collect(self::TEMPORARILY_EXCLUDED_MAPPINGS)->contains(
+            fn (array $mapping) => $normalizedCode === $mapping['code']
+                && $normalizedName === $mapping['name']
+        );
     }
 }

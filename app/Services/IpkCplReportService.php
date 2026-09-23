@@ -38,7 +38,7 @@ class IpkCplReportService
             ->filter(fn (Cpl $cpl) => MiningCplCatalog::isActive($cpl->kode_cpl))
             ->values();
         $effectiveMappings = $activeCpls->mapWithKeys(fn (Cpl $cpl) => [
-            (string) $cpl->id => $this->effectiveMappingsFor($cpl, $allCpls),
+            (string) $cpl->id => $this->effectiveMappingsFor($cpl, $allCpls, $program),
         ]);
 
         $allRows = $activeCpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails, $program, $effectiveMappings) {
@@ -204,7 +204,7 @@ class IpkCplReportService
                 ->orderByDesc('angkatan')
                 ->pluck('angkatan'),
             'cplOptions' => $cpls,
-            'courseOptions' => $cpls->flatMap(fn (Cpl $cpl) => $this->effectiveMappingsFor($cpl, $allCpls))
+            'courseOptions' => $cpls->flatMap(fn (Cpl $cpl) => $this->effectiveMappingsFor($cpl, $allCpls, $program))
                 ->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
                     && $this->overrides->accepted($mapping, $program))
                 ->unique('mata_kuliah_id')
@@ -325,10 +325,10 @@ class IpkCplReportService
      * CPL 9 tetap tersimpan sebagai histori. Untuk laporan, mapping uniknya
      * dibaca sebagai bagian CPL 3 tanpa menulis atau menghapus record database.
      */
-    private function effectiveMappingsFor(Cpl $cpl, Collection $allCpls): Collection
+    private function effectiveMappingsFor(Cpl $cpl, Collection $allCpls, Prodi $program): Collection
     {
         $mappings = $cpl->mappings
-            ->reject(fn (CplMataKuliah $mapping) => $this->isTemporarilyExcludedMapping($mapping))
+            ->filter(fn (CplMataKuliah $mapping) => $this->isActiveReportMapping($mapping, $program))
             ->values();
         if ($cpl->kode_cpl !== MiningCplCatalog::REDIRECT_TARGET_CPL) {
             return $mappings;
@@ -337,6 +337,9 @@ class IpkCplReportService
         $hiddenMappings = $allCpls
             ->firstWhere('kode_cpl', MiningCplCatalog::HIDDEN_CPL)?->mappings
             ?? collect();
+        $hiddenMappings = $hiddenMappings
+            ->filter(fn (CplMataKuliah $mapping) => $this->isActiveReportMapping($mapping, $program))
+            ->values();
         $existingCourseIds = $mappings->pluck('mata_kuliah_id')->filter()->map(fn ($id) => (int) $id);
         $existingSourceKeys = $mappings->map(fn (CplMataKuliah $mapping) => $this->mappingMatcher
             ->sourceKey($mapping->kode_sumber, $mapping->nama_sumber));
@@ -360,6 +363,13 @@ class IpkCplReportService
             $mapping->nama_sumber,
             (string) $mapping->cpl?->kode_cpl
         );
+    }
+
+    private function isActiveReportMapping(CplMataKuliah $mapping, Prodi $program): bool
+    {
+        return ! $this->isTemporarilyExcludedMapping($mapping)
+            && $mapping->mataKuliah !== null
+            && $this->overrides->accepted($mapping, $program);
     }
 
     private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats, Prodi $program): object

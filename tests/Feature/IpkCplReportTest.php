@@ -378,8 +378,10 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
 
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], ['tahun_akademik' => '2024/2025']);
     $third = $report['rows']->firstWhere('kode_cpl', 'CPL 3');
+    $second = $report['rows']->firstWhere('kode_cpl', 'CPL 2');
     expect($third->courses->pluck('nama_mata_kuliah')->all())->toContain('Pelaporan Teknis Pertambangan')
         ->and($third->ipk_cpl)->toBe(3.0)
+        ->and($second->courses)->toBeEmpty()
         ->and($report['rows']->pluck('kode_cpl')->all())->not->toContain('CPL 9')
         ->and(CplMataKuliah::find($cpl9Mapping->id)?->cpl_id)->toBe($cpl9Mapping->cpl_id);
 
@@ -496,6 +498,11 @@ test('CPL mapping audit never recommends courses with a different strict code', 
     MataKuliah::create(['kode_mk' => 'TA 501', 'nama_mk' => 'Sistem Penambangan', 'sks' => 2, 'semester' => 5, 'prodi_id' => $mining->id]);
 
     $this->artisan('ipk-cpl:audit-mapping')
+        ->expectsOutputToContain('Beberapa mapping dinonaktifkan sementara sesuai arahan prodi.')
+        ->expectsOutputToContain('KU 302')
+        ->expectsOutputToContain('Matriks Ruang Vektor')
+        ->expectsOutputToContain('TA 601')
+        ->expectsOutputToContain('MK Pilihan 2')
         ->expectsOutputToContain('KU 302 (TP) - Dasar Komputasi')
         ->expectsOutputToContain('Tidak ditemukan master dengan kode exact')
         ->doesntExpectOutputToContain('KU 301 - Kimia Analitik')
@@ -653,25 +660,29 @@ test('approved override command updates four mappings idempotently and preserves
         ->and(CplMataKuliah::whereNotIn('id', $data['approved']->pluck('id'))->orderBy('id')->get()->toArray())->toBe($beforeUnrelated);
 });
 
-test('manual targets are used by web PDF Excel and course filters without changing grade values', function () {
+test('temporarily excluded KU 302 is omitted from web PDF Excel and course filters without changing grade values', function () {
     $data = makeApprovedOverrideFixture();
     $lecturer = Dosen::firstOrFail();
-    $grade = createMappedCplGrade($data['studentA'], $data['targets'][0], $lecturer, '2024/2025', 'Ganjil', 80, 'B', 3);
+    createMappedCplGrade($data['studentA'], $data['targets'][0], $lecturer, '2024/2025', 'Ganjil', 80, 'B', 3);
     $beforeGrades = Khs::orderBy('id')->get()->toArray();
     $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
-    $parameters = ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025', 'mata_kuliah_id' => $data['targets'][0]->id];
+    $parameters = ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025'];
     $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.program', $parameters));
-    $response->assertOk()->assertSee('3.00')->assertDontSee('Mapping Manual Override')->assertDontSee('Manual Override Akreditasi')->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
-    expect($response->viewData('rows')->first()->ipk_cpl)->toBe(3.0)
-        ->and($response->viewData('mappingSummary')['manual_override'])->toBe(2)
-        ->and($response->viewData('courseOptions')->pluck('mata_kuliah_id')->all())->toContain($data['targets'][0]->id)
+    $response->assertOk()->assertDontSee('Matriks Ruang Vektor')
+        ->assertDontSee('Mapping Manual Override')->assertDontSee('Manual Override Akreditasi')
+        ->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
+    expect($response->viewData('courseOptions')->pluck('mata_kuliah_id')->all())
+        ->not->toContain($data['targets'][0]->id)
         ->and(substr_count($response->getContent(), '<canvas'))->toBe(1);
-    $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $data['cpl'], 'mapping' => $data['approved'][0], 'tahun_akademik' => '2024/2025']))->assertOk()->assertSee('Mahasiswa Tambang A');
+    $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $data['cpl'], 'mapping' => $data['approved'][0], 'tahun_akademik' => '2024/2025']))
+        ->assertNotFound();
     $this->get(route('admin.ipk-cpl.program.pdf', $parameters))->assertOk()->assertDownload();
     $this->get(route('admin.ipk-cpl.program.excel', $parameters))->assertOk()->assertDownload();
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $parameters);
     $pdfHtml = view('admin.ipk-cpl.pdf', $report + ['filterDescription' => '2024/2025'])->render();
-    expect($pdfHtml)->toContain('3.00')
+    expect($report['rows']->flatMap->courses->pluck('nama_mata_kuliah')->all())
+        ->not->toContain('Matriks Ruang Vektor')
+        ->and($pdfHtml)->not->toContain('Matriks Ruang Vektor')
         ->not->toContain('Dasar Komputasi')
         ->not->toContain('keputusan admin/prodi')
         ->not->toContain('Manual Override')
@@ -680,8 +691,11 @@ test('manual targets are used by web PDF Excel and course filters without changi
     expect(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades);
 });
 
-test('TA 601 MK Pilihan 2 is excluded from CPL 2 and CPL 7 without changing MK Pilihan 3', function () {
+test('temporary KU 302 and TA 601 exclusions apply across CPL without changing MK Pilihan 3', function () {
     $data = makeApprovedOverrideFixture();
+    expect(MiningCplCatalog::isTemporarilyExcludedMapping('KU-302', 'Matriks Ruang Vektor', 'CPL 8'))->toBeTrue()
+        ->and(MiningCplCatalog::isTemporarilyExcludedMapping('TA601', 'MK Pilihan 2', 'CPL 1'))->toBeTrue()
+        ->and(MiningCplCatalog::isTemporarilyExcludedMapping('TA 602', 'MK Pilihan 3', 'CPL 2'))->toBeFalse();
     $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
     $electiveTwo = MataKuliah::where('kode_mk', 'TA 601')->where('nama_mk', 'MK Pilihan 2')->sole();
     $electiveThree = MataKuliah::create([

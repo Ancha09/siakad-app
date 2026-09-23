@@ -121,7 +121,21 @@ class AuditIpkCplMapping extends Command
             $mapping->nama_sumber,
             (string) $mapping->cpl?->kode_cpl
         ));
-        $this->warn('Mapping sementara nonaktif pada laporan: '.$temporarilyExcluded->count().' record TA 601 - MK Pilihan 2 (CPL 2/CPL 7).');
+        $this->warn('Beberapa mapping dinonaktifkan sementara sesuai arahan prodi.');
+        $disabledMappings = $temporarilyExcluded
+            ->concat($problemGroups->flatten(1))
+            ->unique(fn (CplMataKuliah $mapping) => $matcher->sourceKey($mapping->kode_sumber, $mapping->nama_sumber))
+            ->map(fn (CplMataKuliah $mapping) => [
+                $mapping->kode_sumber,
+                $mapping->nama_sumber,
+                $mappings->filter(fn (CplMataKuliah $item) => $matcher->sourceKey($item->kode_sumber, $item->nama_sumber)
+                    === $matcher->sourceKey($mapping->kode_sumber, $mapping->nama_sumber))
+                    ->pluck('cpl.kode_cpl')->filter()->unique()->sort()->implode(', '),
+            ])->values()->all();
+        if ($disabledMappings !== []) {
+            $this->table(['Kode', 'Mata Kuliah', 'CPL'], $disabledMappings);
+        }
+        $this->line('Mapping eksplisit sementara nonaktif: '.$temporarilyExcluded->count().' record.');
         $this->line('Total mapping: '.$mappings->count());
         $notes = $overrides->notes($mappings, $program);
         $this->line('Mapping aman: '.($safeCount - $notes->count()));
