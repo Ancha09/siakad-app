@@ -184,6 +184,77 @@ test('CPL matcher prioritizes mining courses and never maps TP sources to geolog
         ->toBe([$mining->id]);
 });
 
+test('TP import repairs only the five reviewed mappings and leaves ambiguous sources unmatched', function () {
+    $mining = Prodi::create(['kode_prodi' => 'TP', 'nama_prodi' => 'Teknik Pertambangan', 'jenjang' => 'S1']);
+    $geology = Prodi::create(['kode_prodi' => 'TG', 'nama_prodi' => 'Teknik Geologi', 'jenjang' => 'S1']);
+
+    $wrongStructure = MataKuliah::create(['kode_mk' => 'GL 407 (TG)', 'nama_mk' => 'Geologi Struktur', 'sks' => 2, 'semester' => 4, 'prodi_id' => $geology->id]);
+    $wrongSediment = MataKuliah::create(['kode_mk' => 'GL 402', 'nama_mk' => 'Sedimentologi (P)', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    $petrology = MataKuliah::create(['kode_mk' => 'GL 301 (TP)', 'nama_mk' => 'Petrologi (P)', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    $structure = MataKuliah::create(['kode_mk' => 'GL 401 (TP)', 'nama_mk' => 'Geologi Struktur (P)', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    $microscopy = MataKuliah::create(['kode_mk' => 'GL 402 (TP)', 'nama_mk' => 'Mikroskopik Bijih', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    $citizenship = MataKuliah::create(['kode_mk' => 'KU 206', 'nama_mk' => 'Kewarganegaraan', 'sks' => 2, 'semester' => 2, 'prodi_id' => $mining->id]);
+    $chemistry = MataKuliah::create(['kode_mk' => 'KU 301', 'nama_mk' => 'Kimia Analitik (P)', 'sks' => 2, 'semester' => 3, 'prodi_id' => $mining->id]);
+    $gis = MataKuliah::create(['kode_mk' => 'KU 304 (TP)', 'nama_mk' => 'Pengantar Sistem Informasi Geografi (GIS)', 'sks' => 2, 'semester' => 4, 'prodi_id' => $mining->id]);
+    MataKuliah::create(['kode_mk' => 'KU 302 (TP)', 'nama_mk' => 'Dasar Komputasi', 'sks' => 2, 'semester' => 2, 'prodi_id' => $mining->id]);
+
+    $importer = app(CplMappingImporter::class);
+    $importer->import(database_path('data/ipkcpl.xlsx'));
+
+    CplMataKuliah::where('kode_sumber', 'GL 301')->update(['mata_kuliah_id' => $wrongStructure->id]);
+    CplMataKuliah::where('kode_sumber', 'GL 402')->update(['mata_kuliah_id' => $wrongSediment->id]);
+    $geologyCpl = Cpl::create([
+        'program_studi_id' => $geology->id,
+        'kode_cpl' => 'CPL 1',
+        'nama_cpl' => 'CPL Teknik Geologi',
+        'sort_order' => 1,
+    ]);
+    $geologyMapping = CplMataKuliah::create([
+        'cpl_id' => $geologyCpl->id,
+        'mata_kuliah_id' => $wrongStructure->id,
+        'kode_sumber' => 'GL 301',
+        'nama_sumber' => 'Geologi Struktur',
+        'semester' => 3,
+        'sks' => 2,
+    ]);
+
+    $importer->import(database_path('data/ipkcpl.xlsx'));
+
+    foreach ([
+        'GL 301' => $structure->id,
+        'GL 402' => $microscopy->id,
+        'KU 206' => $citizenship->id,
+        'KU 301' => $chemistry->id,
+        'KU 304' => $gis->id,
+    ] as $sourceCode => $expectedCourseId) {
+        $mappings = CplMataKuliah::query()
+            ->where('kode_sumber', $sourceCode)
+            ->whereHas('cpl', fn ($query) => $query->where('program_studi_id', $mining->id))
+            ->get();
+
+        expect($mappings, $sourceCode)->not->toBeEmpty();
+        expect($mappings->pluck('mata_kuliah_id')->map(fn ($id) => (int) $id)->unique()->values()->all(), $sourceCode)
+            ->toBe([$expectedCourseId]);
+    }
+
+    foreach (['KU 302', 'TA 601'] as $sourceCode) {
+        $mappings = CplMataKuliah::query()
+            ->where('kode_sumber', $sourceCode)
+            ->whereHas('cpl', fn ($query) => $query->where('program_studi_id', $mining->id))
+            ->get();
+
+        expect($mappings)->not->toBeEmpty()
+            ->and($mappings->every(fn (CplMataKuliah $mapping) => $mapping->mata_kuliah_id === null))->toBeTrue();
+    }
+
+    expect(CplMataKuliah::query()
+        ->where('kode_sumber', 'GL 401')
+        ->whereHas('cpl', fn ($query) => $query->where('program_studi_id', $mining->id))
+        ->get()
+        ->every(fn (CplMataKuliah $mapping) => (int) $mapping->mata_kuliah_id === $petrology->id))->toBeTrue();
+    expect($geologyMapping->fresh()->mata_kuliah_id)->toBe($wrongStructure->id);
+});
+
 test('admin CPL report uses weighted SKS averages latest grades and mining students only', function () {
     $data = makeMappedCplFixture();
     $courseWithoutGrade = MataKuliah::create([

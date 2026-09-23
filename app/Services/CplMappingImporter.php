@@ -380,6 +380,7 @@ class CplMappingImporter
     {
         return in_array($this->normalizeBaseCode($sourceCode), [
             'GL301',
+            'GL401',
             'KU302',
         ], true);
     }
