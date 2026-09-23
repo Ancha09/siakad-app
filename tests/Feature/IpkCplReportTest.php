@@ -11,6 +11,7 @@ use App\Models\Prodi;
 use App\Models\User;
 use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
+use App\Services\IpkCplChartRenderer;
 use App\Services\IpkCplReportService;
 use App\Support\MiningCplCatalog;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -584,15 +585,19 @@ test('admin can download filtered CPL reports as PDF and Excel', function () {
     $filters = ['tahun_akademik' => '2024/2025', 'cpl_id' => $data['cpl']->id];
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $filters);
     $webRow = $report['rows']->firstOrFail();
+    $chartTitle = 'Grafik IPK CPL Tahun Akademik 2024/2025';
     $pdfHtml = view('admin.ipk-cpl.pdf', $report + [
         'filters' => $filters,
         'filterDescription' => 'Tahun Akademik 2024/2025',
+        'chartTitle' => $chartTitle,
+        'chartImage' => app(IpkCplChartRenderer::class)->dataUri($report['chart'], $chartTitle),
     ])->render();
 
     expect($pdfHtml)->toContain(number_format($webRow->ipk_cpl, 2))
         ->toContain((string) $webRow->total_sks)
         ->toContain((string) $webRow->sks_dihitung);
     expect($pdfHtml)
+        ->toContain('data:image/png;base64,')
         ->not->toContain('Kelengkapan')
         ->not->toContain('MK Bernilai')
         ->not->toContain('Mahasiswa Bernilai')
@@ -692,7 +697,12 @@ test('temporarily excluded KU 302 is omitted from web PDF Excel and course filte
     $this->get(route('admin.ipk-cpl.program.pdf', $parameters))->assertOk()->assertDownload();
     $this->get(route('admin.ipk-cpl.program.excel', $parameters))->assertOk()->assertDownload();
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $parameters);
-    $pdfHtml = view('admin.ipk-cpl.pdf', $report + ['filterDescription' => '2024/2025'])->render();
+    $chartTitle = 'Grafik IPK CPL Tahun Akademik 2024/2025';
+    $pdfHtml = view('admin.ipk-cpl.pdf', $report + [
+        'filterDescription' => '2024/2025',
+        'chartTitle' => $chartTitle,
+        'chartImage' => app(IpkCplChartRenderer::class)->dataUri($report['chart'], $chartTitle),
+    ])->render();
     expect($report['mappingSummary']['jumlah_mapping'])->toBe($report['mappingSummary']['aman'])
         ->and($report['mappingSummary']['manual_override'])->toBeGreaterThan(0)
         ->and($report['mappingSummary']['bermasalah'])->toBe(0)

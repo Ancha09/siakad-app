@@ -9,6 +9,7 @@ use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
+use App\Services\IpkCplChartRenderer;
 use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
 use App\Services\ReportExporter;
@@ -156,13 +157,23 @@ class IpkCplController extends Controller
         Request $request,
         Prodi $prodi,
         IpkCplReportService $reports,
+        IpkCplChartRenderer $chartRenderer,
         ReportExporter $exporter
     ) {
         $this->ensureMiningProgram($prodi);
         $filters = $this->validatedCplFilters($request);
         $filters['tahun_akademik'] ??= $reports->latestAcademicYear($prodi);
         $report = $reports->cplOverview($prodi, $filters);
-        $sheets = [
+        $chartTitle = 'Grafik IPK CPL Tahun Akademik '.($filters['tahun_akademik'] ?? 'Semua Periode');
+        $chartPng = $chartRenderer->png($report['chart'], $chartTitle);
+        $sheets = [];
+        if ($chartPng !== null) {
+            $sheets[] = [
+                'title' => 'Grafik IPK CPL',
+                'image_png' => $chartPng,
+            ];
+        }
+        $sheets = array_merge($sheets, [
             [
                 'title' => 'Ringkasan CPL',
                 'headings' => ['Kode CPL', 'Deskripsi', 'Turunan Visi-Misi', 'CPL KKNI', 'IPK CPL', 'Mata Kuliah', 'Total SKS Mapping', 'SKS Dihitung'],
@@ -190,7 +201,7 @@ class IpkCplController extends Controller
                     $course->mutu_sks ?? '-',
                 ])),
             ],
-        ];
+        ]);
 
         if ($report['unmatchedMappings']->isNotEmpty()) {
             $sheets[] = [
@@ -214,16 +225,24 @@ class IpkCplController extends Controller
         );
     }
 
-    public function cplPdf(Request $request, Prodi $prodi, IpkCplReportService $reports)
-    {
+    public function cplPdf(
+        Request $request,
+        Prodi $prodi,
+        IpkCplReportService $reports,
+        IpkCplChartRenderer $chartRenderer
+    ) {
         $this->ensureMiningProgram($prodi);
         $filters = $this->validatedCplFilters($request);
         $filters['tahun_akademik'] ??= $reports->latestAcademicYear($prodi);
         $report = $reports->cplOverview($prodi, $filters);
+        $chartTitle = 'Grafik IPK CPL Tahun Akademik '.($filters['tahun_akademik'] ?? 'Semua Periode');
+        $chartImage = $chartRenderer->dataUri($report['chart'], $chartTitle);
 
         return Pdf::loadView('admin.ipk-cpl.pdf', $report + [
             'filters' => $filters,
             'filterDescription' => $this->cplFilterDescription($prodi, $filters),
+            'chartTitle' => $chartTitle,
+            'chartImage' => $chartImage,
         ])->setPaper('a4', 'landscape')
             ->download('laporan-ipk-cpl-teknik-pertambangan-'.now()->format('Ymd-His').'.pdf');
     }

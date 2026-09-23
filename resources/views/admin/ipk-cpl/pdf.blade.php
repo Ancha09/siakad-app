@@ -12,6 +12,15 @@
     @endphp
     @include('admin.reports.pdf-header')
 
+    <h2>{{ $chartTitle }}</h2>
+    <div style="padding:8px;border:1px solid #dbe6f1;text-align:center;page-break-inside:avoid;">
+        @if($chartImage)
+            <img src="{{ $chartImage }}" alt="{{ $chartTitle }}" style="width:100%;height:auto;">
+        @else
+            <div style="padding:90px 0;color:#64748b;">Grafik tidak dapat dirender pada server ini.</div>
+        @endif
+    </div>
+
     <h2>Ringkasan CPL</h2>
     <table class="data">
         <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>SKS Dihitung</th><th>Total SKS</th><th>IPK CPL</th></tr></thead>
