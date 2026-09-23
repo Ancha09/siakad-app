@@ -10,13 +10,13 @@
     .ipk-cpl-table tbody tr:nth-child(even) td { background:#f4f8fc; }
     .ipk-cpl-table tbody tr:hover td { background:#e3eff9; }
     .cpl-chart-card { margin-bottom:20px; }
-    .cpl-chart-canvas { position:relative;width:100%;height:300px;min-height:0;overflow:hidden; }
-    .cpl-chart-canvas canvas { display:block;max-width:100%;max-height:300px; }
+    .cpl-chart-canvas { position:relative;width:100%;height:390px;min-height:0;overflow:hidden; }
+    .cpl-chart-canvas canvas { display:block;width:100% !important;height:100% !important;max-width:none;max-height:none; }
     .cpl-chart-empty { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#64748b;text-align:center; }
     .cpl-chart-empty[hidden] { display:none !important; }
+    .cpl-multi-badge { display:inline-block;margin-left:6px;padding:3px 7px;border-radius:999px;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:700;white-space:nowrap; }
     @media (max-width:720px) {
-        .cpl-chart-canvas { height:240px; }
-        .cpl-chart-canvas canvas { max-height:240px; }
+        .cpl-chart-canvas { height:320px; }
     }
 </style>
 @endpush
@@ -116,10 +116,44 @@
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
+<<<<<<< HEAD
     @foreach(['CPL Terimport' => $mappingSummary['jumlah_cpl'], 'Mapping Terimport' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
+=======
+    @foreach(['CPL Terimport' => $mappingSummary['jumlah_cpl'], 'Mapping Terimport' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['cocok_master'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['mapping_bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
+>>>>>>> a802f55 (Improve IPK CPL chart proportions)
         <div style="padding:17px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:26px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
     @endforeach
 </div>
+
+@if($manualOverrides->isNotEmpty())
+    <div class="page-card" style="margin-bottom:20px;">
+        <div class="page-card-head"><h2>Manual Override Akreditasi</h2></div>
+        <div class="page-card-body">
+            <div class="table-wrap" style="overflow-x:auto;">
+                <table class="ipk-cpl-table">
+                    <thead><tr><th>No</th><th>Sumber CPL</th><th>Master Tujuan</th><th>CPL</th><th>Master Baru</th><th>Catatan</th></tr></thead>
+                    <tbody>
+                        @foreach($manualOverrides as $override)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td><strong>{{ $override->kode_sumber }}</strong> - {{ $override->nama_sumber }}</td>
+                                <td>{{ $override->master?->kode_mk ?? '-' }} - {{ $override->master?->nama_mk ?? '-' }}</td>
+                                <td>
+                                    {{ $override->cpls ?: '-' }}
+                                    @if(str_contains((string) $override->cpls, ','))
+                                        <span class="cpl-multi-badge">Multi-CPL</span>
+                                    @endif
+                                </td>
+                                <td>{{ $override->master_created ? 'Ya' : 'Tidak' }}</td>
+                                <td>{{ $override->note ?: '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+@endif
 
 <div class="page-card cpl-chart-card">
     <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>
@@ -240,12 +274,23 @@
                     legend: {
                         display: true,
                         position: 'bottom',
-                        labels: { color: '#334155', boxWidth: 14 }
+                        labels: {
+                            color: '#334155',
+                            boxWidth: 14,
+                            padding: 18,
+                            font: { size: 13, weight: '600' }
+                        }
                     }
                 },
                 scales: {
-                    x: { ticks: { color: '#334155' }, grid: { display: false } },
-                    y: { ticks: { color: '#334155' }, grid: { color: '#e2e8f0' } }
+                    x: {
+                        ticks: { color: '#334155', padding: 8, font: { size: 13, weight: '600' } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        ticks: { color: '#334155', padding: 8, font: { size: 12 } },
+                        grid: { color: '#e2e8f0' }
+                    }
                 }
             };
 
@@ -257,13 +302,28 @@
                     type: 'bar',
                     data: {
                         labels: labels,
-                        datasets: [{ label: 'IPK CPL', data: ipkValues, backgroundColor: '#0b5b9d', borderColor: '#063b65', borderWidth: 1, borderRadius: 6 }]
+                        datasets: [{
+                            label: 'IPK CPL',
+                            data: ipkValues,
+                            backgroundColor: '#0b5b9d',
+                            borderColor: '#063b65',
+                            borderWidth: 1,
+                            borderRadius: 6,
+                            barPercentage: 0.72,
+                            categoryPercentage: 0.72,
+                            maxBarThickness: 52
+                        }]
                     },
                     options: {
                         ...commonOptions,
                         scales: {
                             ...commonOptions.scales,
-                            y: { ...commonOptions.scales.y, beginAtZero: true, max: 4, ticks: { color: '#334155', stepSize: 0.5 } }
+                            y: {
+                                ...commonOptions.scales.y,
+                                beginAtZero: true,
+                                max: 4,
+                                ticks: { color: '#334155', stepSize: 0.5, padding: 8, font: { size: 12 } }
+                            }
                         }
                     }
                 });
