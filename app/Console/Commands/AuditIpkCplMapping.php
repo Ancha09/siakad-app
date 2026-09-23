@@ -7,6 +7,7 @@ use App\Models\MataKuliah;
 use App\Models\Prodi;
 use App\Services\CplManualOverrides;
 use App\Services\CplMappingImporter;
+use App\Support\MiningCplCatalog;
 use Illuminate\Console\Command;
 
 class AuditIpkCplMapping extends Command
@@ -102,6 +103,19 @@ class AuditIpkCplMapping extends Command
         })->values()->all();
 
         $this->info('Program studi: '.$program->nama_prodi);
+        $hiddenMappings = $mappings->filter(fn (CplMataKuliah $mapping) => $mapping->cpl?->kode_cpl === MiningCplCatalog::HIDDEN_CPL);
+        $targetMappings = $mappings->filter(fn (CplMataKuliah $mapping) => $mapping->cpl?->kode_cpl === MiningCplCatalog::REDIRECT_TARGET_CPL);
+        $targetCourseIds = $targetMappings->pluck('mata_kuliah_id')->filter()->map(fn ($id) => (int) $id);
+        $targetSourceKeys = $targetMappings->map(fn (CplMataKuliah $mapping) => $matcher
+            ->sourceKey($mapping->kode_sumber, $mapping->nama_sumber));
+        $redirectedCount = $hiddenMappings->reject(fn (CplMataKuliah $mapping) => ($mapping->mata_kuliah_id !== null
+            && $targetCourseIds->contains((int) $mapping->mata_kuliah_id))
+            || $targetSourceKeys->contains($matcher->sourceKey($mapping->kode_sumber, $mapping->nama_sumber)))
+            ->count();
+        $this->line('CPL aktif laporan: '.implode(', ', MiningCplCatalog::activeCodes()));
+        $this->warn(MiningCplCatalog::HIDDEN_CPL.' disembunyikan sementara sebagai CPL terpisah.');
+        $this->line('Mapping '.MiningCplCatalog::HIDDEN_CPL.' dialihkan ke '.MiningCplCatalog::REDIRECT_TARGET_CPL.': '.$redirectedCount.' mapping unik.');
+        $this->line('Pilihan Teknik Geologi disembunyikan sementara dari fitur IPK CPL.');
         $this->line('Total mapping: '.$mappings->count());
         $notes = $overrides->notes($mappings, $program);
         $this->line('Mapping aman: '.($safeCount - $notes->count()));

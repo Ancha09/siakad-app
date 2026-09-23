@@ -12,6 +12,7 @@ use App\Services\CplMappingImporter;
 use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
 use App\Services\ReportExporter;
+use App\Support\MiningCplCatalog;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -27,9 +28,11 @@ class IpkCplController extends Controller
     {
         $programs = Prodi::query()->orderBy('nama_prodi')->get();
         $mining = $programs->first(fn (Prodi $program) => str_contains(Str::lower($program->nama_prodi), 'pertambangan'));
-        $geology = $programs->first(fn (Prodi $program) => str_contains(Str::lower($program->nama_prodi), 'geologi'));
+        $activeMiningCplCount = $mining?->cpls()
+            ->whereIn('kode_cpl', MiningCplCatalog::activeCodes())
+            ->count() ?? 0;
 
-        return view('admin.ipk-cpl.index', compact('mining', 'geology'));
+        return view('admin.ipk-cpl.index', compact('mining', 'activeMiningCplCount'));
     }
 
     public function program(
@@ -58,6 +61,7 @@ class IpkCplController extends Controller
         LegacyListNavigation $navigation
     ) {
         $this->ensureMiningProgram($prodi);
+        $this->ensureActiveCpl($cpl);
         abort_unless((int) $cpl->program_studi_id === (int) $prodi->id
             && (int) $mapping->cpl_id === (int) $cpl->id, 404);
 
@@ -116,6 +120,7 @@ class IpkCplController extends Controller
         LegacyListNavigation $navigation
     ) {
         $this->ensureMiningProgram($prodi);
+        $this->ensureActiveCpl($cpl);
         $filters = $this->validatedCplFilters($request);
         $filters['tahun_akademik'] ??= $reports->latestAcademicYear($prodi);
 
@@ -134,6 +139,7 @@ class IpkCplController extends Controller
         LegacyListNavigation $navigation
     ) {
         $this->ensureMiningProgram($prodi);
+        $this->ensureActiveCpl($cpl);
         $filters = $this->validatedCplFilters($request);
         $filters['tahun_akademik'] ??= $reports->latestAcademicYear($prodi);
 
@@ -195,6 +201,17 @@ class IpkCplController extends Controller
                 'rows' => $report['manualOverrides']->map(fn (array $note) => array_values($note)),
             ];
         }
+
+        $sheets[] = [
+            'title' => 'Catatan Konfigurasi',
+            'headings' => ['Pengaturan', 'Keterangan'],
+            'rows' => collect([
+                ['CPL aktif', implode(', ', $report['reportConfiguration']['active_cpls'])],
+                ['CPL disembunyikan', $report['reportConfiguration']['hidden_cpl'].' disembunyikan sementara dari laporan'],
+                ['Pengalihan mapping', $report['reportConfiguration']['redirected_mapping_count'].' mapping unik '.$report['reportConfiguration']['hidden_cpl'].' dialihkan ke '.$report['reportConfiguration']['redirect_target_cpl']],
+                ['Teknik Geologi', 'Pilihan IPK CPL Teknik Geologi disembunyikan sementara'],
+            ]),
+        ];
 
         if ($report['unmatchedMappings']->isNotEmpty()) {
             $sheets[] = [
@@ -315,7 +332,16 @@ class IpkCplController extends Controller
 
     private function ensureMiningProgram(Prodi $program): void
     {
-        abort_unless(str_contains(Str::lower($program->nama_prodi), 'pertambangan'), 404);
+        abort_unless(
+            str_contains(Str::lower($program->nama_prodi), 'pertambangan'),
+            404,
+            'Fitur IPK CPL Teknik Geologi belum tersedia.'
+        );
+    }
+
+    private function ensureActiveCpl(Cpl $cpl): void
+    {
+        abort_unless(MiningCplCatalog::isActive($cpl->kode_cpl), 404, 'CPL tersebut tidak aktif pada laporan IPK CPL.');
     }
 
     private function cplFilterDescription(Prodi $program, array $filters): string

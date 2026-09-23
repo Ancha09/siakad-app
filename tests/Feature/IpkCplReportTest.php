@@ -78,7 +78,7 @@ function makeMappedCplFixture(): array
     $geologyGrade = createMappedCplGrade($studentGeology, $courseA, $lecturer, '2024/2025', 'Ganjil', 95, 'A', 4);
 
     return compact(
-        'admin', 'studentUser', 'lecturerUser', 'mining', 'geology', 'studentA', 'studentB',
+        'admin', 'studentUser', 'lecturerUser', 'lecturer', 'mining', 'geology', 'studentA', 'studentB',
         'courseA', 'courseB', 'cpl', 'secondCpl', 'mappingA', 'mappingB', 'oldDuplicate',
         'latestA', 'latestB', 'courseBGrade', 'geologyGrade'
     );
@@ -278,6 +278,15 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
         'semester' => 4,
         'prodi_id' => $data['mining']->id,
     ]);
+    $courseFromCpl9 = MataKuliah::create([
+        'kode_mk' => 'TP-CPL-REPORT-9',
+        'nama_mk' => 'Pelaporan Teknis Pertambangan',
+        'sks' => 2,
+        'semester' => 8,
+        'prodi_id' => $data['mining']->id,
+    ]);
+    createMappedCplGrade($data['studentA'], $courseFromCpl9, $data['lecturer'], '2024/2025', 'Genap', 80, 'B', 3);
+    $cpl9Mapping = null;
     foreach (range(3, 9) as $number) {
         $extraCpl = Cpl::create([
             'program_studi_id' => $data['mining']->id,
@@ -285,14 +294,29 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
             'nama_cpl' => 'CPL tambahan '.$number,
             'sort_order' => $number,
         ] + MiningCplCatalog::forCode('CPL '.$number));
-        CplMataKuliah::create([
+        $mapping = CplMataKuliah::create([
             'cpl_id' => $extraCpl->id,
-            'mata_kuliah_id' => $number === 3 ? $courseWithoutGrade->id : null,
-            'kode_sumber' => $number === 3 ? 'TP-CPL-NILAI-KOSONG' : 'TP-CPL-BELUM-'.$number,
-            'nama_sumber' => $number === 3 ? 'Mata Kuliah Tanpa Nilai' : 'Belum Ada '.$number,
+            'mata_kuliah_id' => match ($number) {
+                3 => $courseWithoutGrade->id,
+                9 => $courseFromCpl9->id,
+                default => null,
+            },
+            'kode_sumber' => match ($number) {
+                3 => 'TP-CPL-NILAI-KOSONG',
+                9 => 'TP-CPL-REPORT-9',
+                default => 'TP-CPL-BELUM-'.$number,
+            },
+            'nama_sumber' => match ($number) {
+                3 => 'Mata Kuliah Tanpa Nilai',
+                9 => 'Pelaporan Teknis Pertambangan',
+                default => 'Belum Ada '.$number,
+            },
             'semester' => $number,
             'sks' => 2,
         ]);
+        if ($number === 9) {
+            $cpl9Mapping = $mapping;
+        }
     }
     $wrongGeologyCourse = MataKuliah::create([
         'kode_mk' => 'TP-CPL-BELUM-4 (TG)',
@@ -307,8 +331,9 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
     $landing = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.index'));
     $landing->assertOk()
         ->assertSee('CPL Teknik Pertambangan')
-        ->assertSee('CPL Teknik Geologi')
-        ->assertSee('Data CPL Teknik Geologi belum tersedia.');
+        ->assertSee('8 CPL aktif')
+        ->assertDontSee('CPL Teknik Geologi')
+        ->assertDontSee('Data CPL Teknik Geologi belum tersedia.');
 
     $program = $this->get(route('admin.ipk-cpl.program', [
         'prodi' => $data['mining'],
@@ -320,7 +345,7 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
         ->assertDontSee('Kelengkapan Data CPL')
         ->assertDontSee('cplCompletenessChart', false)
         ->assertDontSee('<th>Status</th>', false)
-        ->assertSee('CPL Terimport')
+        ->assertSee('CPL Aktif')
         ->assertDontSee('Aksi Mapping Manual')
         ->assertSee('ipkCplChartPayload', false)
         ->assertSee('chartInitialized', false)
@@ -339,13 +364,31 @@ test('admin CPL report uses weighted SKS averages latest grades and mining stude
     expect($first->ipk_cpl)->toBe(2.9)
         ->and($first->sks_dihitung)->toBe(5)
         ->and($first->courses)->toBeEmpty()
-        ->and($program->viewData('mappingSummary')['cocok_master'])->toBe(3);
+        ->and($program->viewData('mappingSummary')['cocok_master'])->toBe(4)
+        ->and($program->viewData('mappingSummary')['jumlah_cpl'])->toBe(8)
+        ->and($program->viewData('reportConfiguration')['redirected_mapping_count'])->toBe(1);
     expect(array_keys($program->viewData('chart')))->toBe(['labels', 'ipk'])
         ->and($program->viewData('chart')['labels'])->toBe([
-            'CPL 1', 'CPL 2', 'CPL 3', 'CPL 4', 'CPL 5', 'CPL 6', 'CPL 7', 'CPL 8', 'CPL 9',
+            'CPL 1', 'CPL 2', 'CPL 3', 'CPL 4', 'CPL 5', 'CPL 6', 'CPL 7', 'CPL 8',
         ])
         ->and($program->viewData('chart')['ipk'][0])->toBe(2.9)
         ->and(substr_count($program->getContent(), '<canvas'))->toBe(1);
+
+    $report = app(IpkCplReportService::class)->cplOverview($data['mining'], ['tahun_akademik' => '2024/2025']);
+    $third = $report['rows']->firstWhere('kode_cpl', 'CPL 3');
+    expect($third->courses->pluck('nama_mata_kuliah')->all())->toContain('Pelaporan Teknis Pertambangan')
+        ->and($third->ipk_cpl)->toBe(3.0)
+        ->and($report['rows']->pluck('kode_cpl')->all())->not->toContain('CPL 9')
+        ->and(CplMataKuliah::find($cpl9Mapping->id)?->cpl_id)->toBe($cpl9Mapping->cpl_id);
+
+    $cpl3 = Cpl::where('program_studi_id', $data['mining']->id)->where('kode_cpl', 'CPL 3')->firstOrFail();
+    $this->get(route('admin.ipk-cpl.cpl', ['prodi' => $data['mining'], 'cpl' => $cpl3, 'tahun_akademik' => '2024/2025']))
+        ->assertOk()->assertSee('Pelaporan Teknis Pertambangan')->assertSee('Dialihkan dari CPL 9');
+    $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $cpl3, 'mapping' => $cpl9Mapping, 'tahun_akademik' => '2024/2025']))
+        ->assertOk()->assertSee('Mahasiswa Tambang A');
+    $cpl9 = Cpl::where('program_studi_id', $data['mining']->id)->where('kode_cpl', 'CPL 9')->firstOrFail();
+    $this->get(route('admin.ipk-cpl.cpl', ['prodi' => $data['mining'], 'cpl' => $cpl9]))
+        ->assertNotFound();
 
     $defaultYear = $this->get(route('admin.ipk-cpl.program', ['prodi' => $data['mining']]));
     $defaultYear->assertOk();
@@ -396,6 +439,23 @@ test('admin can manually connect an unmatched CPL mapping only to a mining cours
     expect($anotherUnmatched->fresh()->mata_kuliah_id)->toBeNull();
 });
 
+test('CPL 9 report override does not duplicate a course already mapped to CPL 3', function () {
+    $data = makeMappedCplFixture();
+    $cpl3 = Cpl::create(['program_studi_id' => $data['mining']->id, 'kode_cpl' => 'CPL 3', 'nama_cpl' => 'Pelaporan teknis', 'sort_order' => 3] + MiningCplCatalog::forCode('CPL 3'));
+    $cpl9 = Cpl::create(['program_studi_id' => $data['mining']->id, 'kode_cpl' => 'CPL 9', 'nama_cpl' => 'CPL historis', 'sort_order' => 9] + MiningCplCatalog::forCode('CPL 9'));
+    $course = MataKuliah::create(['kode_mk' => 'TP-REDIRECT', 'nama_mk' => 'Pelaporan Tambang', 'sks' => 2, 'semester' => 8, 'prodi_id' => $data['mining']->id]);
+    CplMataKuliah::create(['cpl_id' => $cpl3->id, 'mata_kuliah_id' => $course->id, 'kode_sumber' => 'TP-REDIRECT', 'nama_sumber' => $course->nama_mk, 'semester' => 8, 'sks' => 2]);
+    CplMataKuliah::create(['cpl_id' => $cpl9->id, 'mata_kuliah_id' => $course->id, 'kode_sumber' => 'TP-REDIRECT', 'nama_sumber' => $course->nama_mk, 'semester' => 8, 'sks' => 2]);
+
+    $report = app(IpkCplReportService::class)->cplOverview($data['mining'], ['tahun_akademik' => '2024/2025']);
+    $third = $report['rows']->firstWhere('kode_cpl', 'CPL 3');
+
+    expect($third->courses)->toHaveCount(1)
+        ->and($report['reportConfiguration']['redirected_mapping_count'])->toBe(0)
+        ->and($report['reportConfiguration']['duplicate_mapping_count'])->toBe(1)
+        ->and($report['rows']->pluck('kode_cpl')->all())->not->toContain('CPL 9');
+});
+
 test('CPL mapping audit is read only and reports safe exact candidates', function () {
     $data = makeMappedCplFixture();
     $candidate = MataKuliah::create([
@@ -409,6 +469,9 @@ test('CPL mapping audit is read only and reports safe exact candidates', functio
     $unmatched->update(['kode_sumber' => 'KU-301 (TP)', 'nama_sumber' => 'Kimia Analitik']);
 
     $this->artisan('ipk-cpl:audit-mapping')
+        ->expectsOutputToContain('CPL aktif laporan: CPL 1, CPL 2, CPL 3, CPL 4, CPL 5, CPL 6, CPL 7, CPL 8')
+        ->expectsOutputToContain('CPL 9 disembunyikan sementara')
+        ->expectsOutputToContain('Pilihan Teknik Geologi disembunyikan sementara')
         ->expectsOutputToContain('Mapping bermasalah: 1')
         ->expectsOutputToContain('dapat diperbaiki aman dengan command import')
         ->assertSuccessful();

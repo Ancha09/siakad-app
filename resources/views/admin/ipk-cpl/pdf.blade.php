@@ -15,7 +15,8 @@
     <table class="summary">
         <tr>
             <td><span>CPL Ditampilkan</span><strong>{{ $rows->count() }}</strong></td>
-            <td><span>Mapping Terimport</span><strong>{{ $mappingSummary['jumlah_mapping'] }}</strong></td>
+            <td><span>Mapping Aktif</span><strong>{{ $mappingSummary['jumlah_mapping'] }}</strong></td>
+            <td><span>Mapping CPL 9 ke CPL 3</span><strong>{{ $mappingSummary['dialihkan_cpl9'] }}</strong></td>
             <td><span>Mapping Aman</span><strong>{{ $mappingSummary['aman'] }}</strong></td>
             <td><span>Manual Override</span><strong>{{ $mappingSummary['manual_override'] }}</strong></td>
             <td><span>Mapping Bermasalah</span><strong>{{ $mappingSummary['bermasalah'] }}</strong></td>
@@ -23,6 +24,13 @@
             <td><span>CPL Memiliki Nilai</span><strong>{{ $summary['cpl_bernilai'] }}</strong></td>
         </tr>
     </table>
+
+    <p class="muted" style="font-size:9px;">
+        Konfigurasi laporan: CPL aktif {{ implode(', ', $reportConfiguration['active_cpls']) }}.
+        {{ $reportConfiguration['hidden_cpl'] }} disembunyikan sementara dan
+        {{ $reportConfiguration['redirected_mapping_count'] }} mapping uniknya dialihkan ke
+        {{ $reportConfiguration['redirect_target_cpl'] }} sesuai arahan prodi. Pilihan Teknik Geologi disembunyikan sementara.
+    </p>
 
     <h2>Ringkasan CPL</h2>
     <table class="data">

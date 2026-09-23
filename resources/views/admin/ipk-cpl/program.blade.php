@@ -67,6 +67,13 @@
     </div>
 @endif
 
+<div style="background:#eff6ff;color:#1e3a8a;border:1px solid #bfdbfe;padding:13px 16px;border-radius:10px;margin-bottom:18px;line-height:1.55;">
+    Konfigurasi laporan prodi: CPL aktif {{ implode(', ', $reportConfiguration['active_cpls']) }}.
+    {{ $reportConfiguration['hidden_cpl'] }} disembunyikan sementara dan
+    {{ $reportConfiguration['redirected_mapping_count'] }} mapping uniknya dialihkan ke
+    {{ $reportConfiguration['redirect_target_cpl'] }}. Pilihan Teknik Geologi disembunyikan sementara.
+</div>
+
 <div class="page-card" style="margin-bottom:20px;">
     <div class="page-card-head"><h2>Filter CPL Teknik Pertambangan</h2></div>
     <div class="page-card-body">
@@ -133,7 +140,7 @@
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
-    @foreach(['CPL Terimport' => $mappingSummary['jumlah_cpl'], 'Mapping Terimport' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
+    @foreach(['CPL Aktif' => $mappingSummary['jumlah_cpl'], 'Mapping Aktif' => $mappingSummary['jumlah_mapping'], 'Mapping CPL 9 ke CPL 3' => $mappingSummary['dialihkan_cpl9'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
         <div style="padding:17px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:26px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
     @endforeach
 </div>
@@ -235,7 +242,7 @@
             data = {};
         }
 
-        const labels = Array.isArray(data.labels) ? data.labels.slice(0, 9) : [];
+        const labels = Array.isArray(data.labels) ? data.labels.slice(0, 8) : [];
         const ipkValues = labels.map(function (_, index) {
             const source = Array.isArray(data.ipk) ? data.ipk[index] : null;
             const value = Number(source);

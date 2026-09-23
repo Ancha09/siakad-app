@@ -31,12 +31,18 @@ class IpkCplReportService
             ->where('program_studi_id', $program->id)
             ->whereIn('kode_cpl', array_keys(MiningCplCatalog::all()))
             ->orderBy('sort_order')
-            ->limit(9)
             ->get();
+        $allCpls->each(fn (Cpl $cpl) => $cpl->mappings
+            ->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl)));
+        $activeCpls = $allCpls
+            ->filter(fn (Cpl $cpl) => MiningCplCatalog::isActive($cpl->kode_cpl))
+            ->values();
+        $effectiveMappings = $activeCpls->mapWithKeys(fn (Cpl $cpl) => [
+            (string) $cpl->id => $this->effectiveMappingsFor($cpl, $allCpls),
+        ]);
 
-        $allRows = $allCpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails, $program) {
-            $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl));
-            $mappings = $this->filteredMappings($cpl->mappings, $filters);
+        $allRows = $activeCpls->map(function (Cpl $cpl) use ($gradeStats, $filters, $includeCourseDetails, $program, $effectiveMappings) {
+            $mappings = $this->filteredMappings($effectiveMappings->get((string) $cpl->id, collect()), $filters);
             $courses = $mappings->map(
                 fn (CplMataKuliah $mapping) => $this->mappingResult($mapping, $gradeStats, $program)
             )->values();
@@ -64,16 +70,28 @@ class IpkCplReportService
                 ->where('cpl.id', (int) $cplId))
             ->values();
 
-        $allMappings = $allCpls->flatMap(function (Cpl $cpl) {
-            return $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl));
-        })->values();
+        $allMappings = $effectiveMappings->flatten(1)->values();
         $unmatchedMappings = $allMappings
             ->reject(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
                 && $this->overrides->accepted($mapping, $program))
             ->sortBy('kode_sumber', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
-        $chartRows = $allRows->take(9)->values();
+        $chartRows = $allRows->values();
         $manualNotes = $this->overrides->notes($allMappings, $program);
+        $hiddenCpl = $allCpls->firstWhere('kode_cpl', MiningCplCatalog::HIDDEN_CPL);
+        $redirectedMappings = $effectiveMappings
+            ->get((string) ($activeCpls->firstWhere('kode_cpl', MiningCplCatalog::REDIRECT_TARGET_CPL)?->id ?? ''), collect())
+            ->filter(fn (CplMataKuliah $mapping) => $mapping->cpl?->kode_cpl === MiningCplCatalog::HIDDEN_CPL)
+            ->values();
+        $configuration = [
+            'active_cpls' => MiningCplCatalog::activeCodes(),
+            'hidden_cpl' => MiningCplCatalog::HIDDEN_CPL,
+            'redirect_target_cpl' => MiningCplCatalog::REDIRECT_TARGET_CPL,
+            'historical_mapping_count' => $hiddenCpl?->mappings->count() ?? 0,
+            'redirected_mapping_count' => $redirectedMappings->count(),
+            'duplicate_mapping_count' => max(0, ($hiddenCpl?->mappings->count() ?? 0) - $redirectedMappings->count()),
+            'geology_hidden' => true,
+        ];
 
         return [
             'program' => $program,
@@ -83,8 +101,9 @@ class IpkCplReportService
                 'ipk' => $chartRows->pluck('ipk_cpl')->all(),
             ],
             'mappingSummary' => [
-                'jumlah_cpl' => $allCpls->count(),
+                'jumlah_cpl' => $activeCpls->count(),
                 'jumlah_mapping' => $allMappings->count(),
+                'dialihkan_cpl9' => $redirectedMappings->count(),
                 'manual_override' => $manualNotes->count(),
                 'aman' => $allMappings->count() - $unmatchedMappings->count() - $manualNotes->count(),
                 'bermasalah' => $unmatchedMappings->count(),
@@ -98,6 +117,7 @@ class IpkCplReportService
             ],
             'manualOverrides' => $manualNotes,
             'unmatchedMappings' => $unmatchedMappings,
+            'reportConfiguration' => $configuration,
             'summary' => [
                 'jumlah_cpl' => $rows->count(),
                 'jumlah_mapping' => $rows->sum('jumlah_mata_kuliah'),
@@ -123,11 +143,15 @@ class IpkCplReportService
         CplMataKuliah $mapping,
         array $filters = []
     ): array {
+        $mapping->loadMissing(['cpl', 'mataKuliah']);
+        $isDirectMapping = (int) $mapping->cpl_id === (int) $cpl->id;
+        $isRedirectedMapping = $cpl->kode_cpl === MiningCplCatalog::REDIRECT_TARGET_CPL
+            && $mapping->cpl?->kode_cpl === MiningCplCatalog::HIDDEN_CPL
+            && (int) $mapping->cpl?->program_studi_id === (int) $program->id;
         abort_unless((int) $cpl->program_studi_id === (int) $program->id
-            && (int) $mapping->cpl_id === (int) $cpl->id, 404);
+            && ($isDirectMapping || $isRedirectedMapping), 404);
         abort_if($this->filteredMappings(collect([$mapping]), $filters)->isEmpty(), 404);
 
-        $mapping->loadMissing('mataKuliah');
         abort_if($mapping->mataKuliah === null || ! $this->overrides->accepted($mapping, $program), 404, 'Mapping mata kuliah belum cocok dengan master Teknik Pertambangan.');
         $grades = null;
         if ($mapping->mata_kuliah_id !== null) {
@@ -158,11 +182,17 @@ class IpkCplReportService
 
     public function cplFilterOptions(Prodi $program): array
     {
-        $cpls = Cpl::query()
+        $allCpls = Cpl::query()
             ->with('mappings.mataKuliah')
             ->where('program_studi_id', $program->id)
+            ->whereIn('kode_cpl', array_keys(MiningCplCatalog::all()))
             ->orderBy('sort_order')
             ->get();
+        $allCpls->each(fn (Cpl $cpl) => $cpl->mappings
+            ->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl)));
+        $cpls = $allCpls
+            ->filter(fn (Cpl $cpl) => MiningCplCatalog::isActive($cpl->kode_cpl))
+            ->values();
 
         return [
             'tahunAkademiks' => $this->academicYears($program),
@@ -173,7 +203,7 @@ class IpkCplReportService
                 ->orderByDesc('angkatan')
                 ->pluck('angkatan'),
             'cplOptions' => $cpls,
-            'courseOptions' => $cpls->flatMap(fn (Cpl $cpl) => $cpl->mappings->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl)))
+            'courseOptions' => $cpls->flatMap(fn (Cpl $cpl) => $this->effectiveMappingsFor($cpl, $allCpls))
                 ->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
                     && $this->overrides->accepted($mapping, $program))
                 ->unique('mata_kuliah_id')
@@ -290,6 +320,36 @@ class IpkCplReportService
             ->values();
     }
 
+    /**
+     * CPL 9 tetap tersimpan sebagai histori. Untuk laporan, mapping uniknya
+     * dibaca sebagai bagian CPL 3 tanpa menulis atau menghapus record database.
+     */
+    private function effectiveMappingsFor(Cpl $cpl, Collection $allCpls): Collection
+    {
+        $mappings = $cpl->mappings->values();
+        if ($cpl->kode_cpl !== MiningCplCatalog::REDIRECT_TARGET_CPL) {
+            return $mappings;
+        }
+
+        $hiddenMappings = $allCpls
+            ->firstWhere('kode_cpl', MiningCplCatalog::HIDDEN_CPL)?->mappings
+            ?? collect();
+        $existingCourseIds = $mappings->pluck('mata_kuliah_id')->filter()->map(fn ($id) => (int) $id);
+        $existingSourceKeys = $mappings->map(fn (CplMataKuliah $mapping) => $this->mappingMatcher
+            ->sourceKey($mapping->kode_sumber, $mapping->nama_sumber));
+
+        $redirected = $hiddenMappings->reject(function (CplMataKuliah $mapping) use ($existingCourseIds, $existingSourceKeys) {
+            $sameCourseExists = $mapping->mata_kuliah_id !== null
+                && $existingCourseIds->contains((int) $mapping->mata_kuliah_id);
+            $sameSourceExists = $existingSourceKeys->contains($this->mappingMatcher
+                ->sourceKey($mapping->kode_sumber, $mapping->nama_sumber));
+
+            return $sameCourseExists || $sameSourceExists;
+        });
+
+        return $mappings->concat($redirected)->values();
+    }
+
     private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats, Prodi $program): object
     {
         $isLinked = $mapping->mataKuliah !== null && $this->overrides->accepted($mapping, $program);
@@ -308,6 +368,9 @@ class IpkCplReportService
             'rata_bobot' => $averageWeight,
             'mutu_sks' => $averageWeight === null ? null : round($averageWeight * $sks, 2),
             'terhubung' => $isLinked,
+            'dialihkan_dari_cpl' => $mapping->cpl?->kode_cpl === MiningCplCatalog::HIDDEN_CPL
+                ? MiningCplCatalog::HIDDEN_CPL
+                : null,
         ];
     }
 

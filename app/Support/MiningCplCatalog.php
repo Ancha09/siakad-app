@@ -4,6 +4,10 @@ namespace App\Support;
 
 final class MiningCplCatalog
 {
+    public const HIDDEN_CPL = 'CPL 9';
+
+    public const REDIRECT_TARGET_CPL = 'CPL 3';
+
     /**
      * @return array<string, array{deskripsi:string,turunan_visi_misi:string,cpl_kkni:string}>
      */
@@ -64,5 +68,24 @@ final class MiningCplCatalog
     public static function forCode(string $code): ?array
     {
         return self::all()[strtoupper(trim($code))] ?? null;
+    }
+
+    /**
+     * CPL yang aktif pada laporan Teknik Pertambangan. CPL 9 tetap disimpan
+     * sebagai data historis, tetapi tidak ditampilkan sebagai CPL terpisah.
+     *
+     * @return array<int, string>
+     */
+    public static function activeCodes(): array
+    {
+        return array_values(array_filter(
+            array_keys(self::all()),
+            fn (string $code) => $code !== self::HIDDEN_CPL
+        ));
+    }
+
+    public static function isActive(string $code): bool
+    {
+        return in_array(strtoupper(trim($code)), self::activeCodes(), true);
     }
 }
