@@ -71,9 +71,12 @@ class IpkCplReportService
             ->values();
 
         $allMappings = $effectiveMappings->flatten(1)->values();
-        $unmatchedMappings = $allMappings
-            ->reject(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
+        $safeMappings = $allMappings
+            ->filter(fn (CplMataKuliah $mapping) => $mapping->mataKuliah !== null
                 && $this->overrides->accepted($mapping, $program))
+            ->values();
+        $unmatchedMappings = $allMappings
+            ->reject(fn (CplMataKuliah $mapping) => $safeMappings->contains('id', $mapping->id))
             ->sortBy('kode_sumber', SORT_NATURAL | SORT_FLAG_CASE)
             ->values();
         $chartRows = $allRows->values();
@@ -105,9 +108,10 @@ class IpkCplReportService
                 'jumlah_mapping' => $allMappings->count(),
                 'dialihkan_cpl9' => $redirectedMappings->count(),
                 'manual_override' => $manualNotes->count(),
-                'aman' => $allMappings->count() - $unmatchedMappings->count() - $manualNotes->count(),
+                // Manual override yang sudah divalidasi tetap merupakan mapping aman.
+                'aman' => $safeMappings->count(),
                 'bermasalah' => $unmatchedMappings->count(),
-                'cocok_master' => $allMappings->count() - $unmatchedMappings->count(),
+                'cocok_master' => $safeMappings->count(),
                 'belum_cocok_master' => $unmatchedMappings
                     ->unique(fn (CplMataKuliah $mapping) => $this->mappingMatcher->sourceKey(
                         $mapping->kode_sumber,

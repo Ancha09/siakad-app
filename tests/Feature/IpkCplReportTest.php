@@ -680,7 +680,11 @@ test('temporarily excluded KU 302 is omitted from web PDF Excel and course filte
     $this->get(route('admin.ipk-cpl.program.excel', $parameters))->assertOk()->assertDownload();
     $report = app(IpkCplReportService::class)->cplOverview($data['mining'], $parameters);
     $pdfHtml = view('admin.ipk-cpl.pdf', $report + ['filterDescription' => '2024/2025'])->render();
-    expect($report['rows']->flatMap->courses->pluck('nama_mata_kuliah')->all())
+    expect($report['mappingSummary']['jumlah_mapping'])->toBe($report['mappingSummary']['aman'])
+        ->and($report['mappingSummary']['manual_override'])->toBeGreaterThan(0)
+        ->and($report['mappingSummary']['bermasalah'])->toBe(0)
+        ->and($report['mappingSummary']['belum_cocok_master'])->toBe(0)
+        ->and($report['rows']->flatMap->courses->pluck('nama_mata_kuliah')->all())
         ->not->toContain('Matriks Ruang Vektor')
         ->and($pdfHtml)->not->toContain('Matriks Ruang Vektor')
         ->not->toContain('Dasar Komputasi')

@@ -18,7 +18,7 @@
             <td><span>Mapping Aktif</span><strong>{{ $mappingSummary['jumlah_mapping'] }}</strong></td>
             <td><span>Mapping Aman</span><strong>{{ $mappingSummary['aman'] }}</strong></td>
             <td><span>Mapping Bermasalah</span><strong>{{ $mappingSummary['bermasalah'] }}</strong></td>
-<td><span>Sumber Unik Bermasalah</span><strong>{{ $mappingSummary['belum_cocok_master'] }}</strong></td>
+            <td><span>Belum Cocok Master</span><strong>{{ $mappingSummary['belum_cocok_master'] }}</strong></td>
             <td><span>CPL Memiliki Nilai</span><strong>{{ $summary['cpl_bernilai'] }}</strong></td>
         </tr>
     </table>
