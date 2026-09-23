@@ -165,7 +165,7 @@ class IpkCplController extends Controller
         $sheets = [
             [
                 'title' => 'Ringkasan CPL',
-                'headings' => ['Kode CPL', 'Deskripsi', 'Turunan Visi-Misi', 'CPL KKNI', 'IPK CPL', 'Mata Kuliah', 'Mata Kuliah Bernilai', 'Total SKS Mapping', 'SKS Dihitung'],
+                'headings' => ['Kode CPL', 'Deskripsi', 'Turunan Visi-Misi', 'CPL KKNI', 'IPK CPL', 'Mata Kuliah', 'Total SKS Mapping', 'SKS Dihitung'],
                 'rows' => $report['rows']->map(fn (object $row) => [
                     $row->kode_cpl,
                     $row->cpl->deskripsi ?: '-',
@@ -173,21 +173,19 @@ class IpkCplController extends Controller
                     $row->cpl->cpl_kkni ?: '-',
                     $row->ipk_cpl ?? '-',
                     $row->jumlah_mata_kuliah,
-                    $row->mata_kuliah_bernilai,
                     $row->total_sks,
                     $row->sks_dihitung,
                 ]),
             ],
             [
                 'title' => 'Detail Mata Kuliah',
-                'headings' => ['CPL', 'Kode Mata Kuliah', 'Nama Mata Kuliah', 'Semester', 'SKS', 'Mahasiswa Bernilai', 'Rata-rata Nilai Mutu', 'Mutu x SKS'],
+                'headings' => ['CPL', 'Kode Mata Kuliah', 'Nama Mata Kuliah', 'Semester', 'SKS', 'Rata-rata Nilai Mutu', 'Mutu x SKS'],
                 'rows' => $report['rows']->flatMap(fn (object $row) => $row->courses->map(fn (object $course) => [
                     $row->kode_cpl,
                     $course->kode_mata_kuliah,
                     $course->nama_mata_kuliah,
                     $course->semester ?? '-',
                     $course->sks,
-                    $course->jumlah_mahasiswa,
                     $course->rata_bobot ?? '-',
                     $course->mutu_sks ?? '-',
                 ])),
@@ -243,7 +241,7 @@ class IpkCplController extends Controller
                 'title' => 'Rekap Mata Kuliah',
                 'headings' => [
                     'Tahun Akademik', 'Semester Akademik', 'Program Studi', 'Semester Angka', 'Kode MK', 'Mata Kuliah', 'Dosen',
-                    'Mahasiswa', 'Rata Nilai', 'Rata Bobot', 'A', 'B', 'C', 'D', 'E', 'Kelulusan', 'Keterangan',
+                    'Rata Nilai', 'Rata Bobot', 'A', 'B', 'C', 'D', 'E', 'Kelulusan', 'Keterangan',
                 ],
                 'rows' => $report['rows']->map(fn (object $row) => [
                     $row->tahun_akademik,
@@ -253,7 +251,6 @@ class IpkCplController extends Controller
                     $row->kode_mata_kuliah,
                     $row->nama_mata_kuliah,
                     $row->dosen,
-                    $row->jumlah_mahasiswa,
                     $row->rata_nilai ?? '-',
                     $row->rata_bobot ?? '-',
                     $row->nilai_a,

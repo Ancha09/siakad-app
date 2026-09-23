@@ -114,12 +114,6 @@
     </div>
 </div>
 
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
-    @foreach(['CPL Aktif' => $mappingSummary['jumlah_cpl'], 'Mapping Aktif' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
-        <div style="padding:17px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:26px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
-    @endforeach
-</div>
-
 <div class="page-card cpl-chart-card">
     <div class="page-card-head"><h2>Grafik IPK CPL Tahun Akademik {{ $filters['tahun_akademik'] ?? 'Belum dipilih' }}</h2></div>
     <div class="page-card-body">
@@ -135,7 +129,7 @@
     <div class="page-card-body">
         <div class="table-wrap" style="overflow-x:auto;">
             <table class="ipk-cpl-table">
-                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>MK Bernilai</th><th>SKS Dihitung</th><th>Total SKS</th><th>IPK CPL</th><th style="width:110px;">Aksi</th></tr></thead>
+                <thead><tr><th>No</th><th>Kode CPL</th><th>Nama CPL</th><th>Mata Kuliah</th><th>SKS Dihitung</th><th>Total SKS</th><th>IPK CPL</th><th style="width:110px;">Aksi</th></tr></thead>
                 <tbody>
                     @forelse($rows as $item)
                         <tr>
@@ -143,7 +137,6 @@
                             <td><strong>{{ $item->kode_cpl }}</strong></td>
                             <td style="min-width:260px;">{{ $item->nama_cpl }}</td>
                             <td>{{ $item->jumlah_mata_kuliah }}</td>
-                            <td>{{ $item->mata_kuliah_bernilai }}</td>
                             <td>{{ $item->sks_dihitung }}</td>
                             <td>{{ $item->total_sks }}</td>
                             <td><strong>{{ $item->ipk_cpl === null ? '-' : number_format($item->ipk_cpl, 2) }}</strong></td>
@@ -158,7 +151,7 @@
                             ]) }}">Detail</a></td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;padding:36px;color:#64748b;">Belum ada data untuk filter yang dipilih.</td></tr>
                     @endforelse
                 </tbody>
             </table>

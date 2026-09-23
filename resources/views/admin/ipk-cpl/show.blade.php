@@ -19,7 +19,6 @@
                 'Semester Akademik' => $filters['semester_akademik'],
                 'Semester Angka' => $summary?->semester_angka ? 'Semester '.$summary->semester_angka : '-',
                 'Program Studi' => $summary?->prodi ?? '-',
-                'Jumlah Mahasiswa' => $summary?->jumlah_mahasiswa ?? 0,
                 'Rata-rata Nilai' => $summary?->rata_nilai === null ? '-' : number_format($summary->rata_nilai, 2),
                 'Rata-rata Bobot' => $summary?->rata_bobot === null ? '-' : number_format($summary->rata_bobot, 2),
             ] as $label => $value)
