@@ -27,6 +27,23 @@
         ->only(['tahun_akademik', 'angkatan', 'tahun_studi', 'cpl_id', 'mata_kuliah_id'])
         ->filter(fn ($value) => filled($value))
         ->all();
+    $manualOverrideGroups = $manualOverrides
+        ->groupBy(fn (array $item) => implode('|', [
+            $item['source'] ?? '-',
+            $item['target'] ?? '-',
+            $item['reason'] ?? '-',
+        ]))
+        ->map(function ($items) {
+            $first = $items->first();
+
+            return [
+                'source' => $first['source'] ?? '-',
+                'target' => $first['target'] ?? '-',
+                'reason' => $first['reason'] ?? '-',
+                'cpls' => $items->pluck('cpl')->filter()->unique()->sort()->implode(', '),
+            ];
+        })
+        ->values();
 @endphp
 <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
     <a href="{{ route('admin.ipk-cpl.index') }}" class="btn-outline">Kembali ke Pilihan Program Studi</a>
@@ -116,36 +133,31 @@
 </div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
-<<<<<<< HEAD
     @foreach(['CPL Terimport' => $mappingSummary['jumlah_cpl'], 'Mapping Terimport' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['aman'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
-=======
-    @foreach(['CPL Terimport' => $mappingSummary['jumlah_cpl'], 'Mapping Terimport' => $mappingSummary['jumlah_mapping'], 'Mapping Aman' => $mappingSummary['cocok_master'], 'Mapping Manual Override' => $mappingSummary['manual_override'], 'Mapping Bermasalah' => $mappingSummary['mapping_bermasalah'], 'Belum Cocok Master' => $mappingSummary['belum_cocok_master']] as $label => $value)
->>>>>>> a802f55 (Improve IPK CPL chart proportions)
         <div style="padding:17px;border:1px solid #dbe6f1;background:#f4f8fc;border-radius:10px;"><small style="color:#64748b;">{{ $label }}</small><div style="font-size:26px;font-weight:700;color:#0b5b9d;">{{ $value }}</div></div>
     @endforeach
 </div>
 
-@if($manualOverrides->isNotEmpty())
+@if($manualOverrideGroups->isNotEmpty())
     <div class="page-card" style="margin-bottom:20px;">
         <div class="page-card-head"><h2>Manual Override Akreditasi</h2></div>
         <div class="page-card-body">
             <div class="table-wrap" style="overflow-x:auto;">
                 <table class="ipk-cpl-table">
-                    <thead><tr><th>No</th><th>Sumber CPL</th><th>Master Tujuan</th><th>CPL</th><th>Master Baru</th><th>Catatan</th></tr></thead>
+                    <thead><tr><th>No</th><th>Sumber CPL</th><th>Master Tujuan</th><th>CPL</th><th>Catatan</th></tr></thead>
                     <tbody>
-                        @foreach($manualOverrides as $override)
+                        @foreach($manualOverrideGroups as $override)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td><strong>{{ $override->kode_sumber }}</strong> - {{ $override->nama_sumber }}</td>
-                                <td>{{ $override->master?->kode_mk ?? '-' }} - {{ $override->master?->nama_mk ?? '-' }}</td>
+                                <td>{{ $override['source'] }}</td>
+                                <td>{{ $override['target'] }}</td>
                                 <td>
-                                    {{ $override->cpls ?: '-' }}
-                                    @if(str_contains((string) $override->cpls, ','))
+                                    {{ $override['cpls'] ?: '-' }}
+                                    @if(str_contains($override['cpls'], ','))
                                         <span class="cpl-multi-badge">Multi-CPL</span>
                                     @endif
                                 </td>
-                                <td>{{ $override->master_created ? 'Ya' : 'Tidak' }}</td>
-                                <td>{{ $override->note ?: '-' }}</td>
+                                <td>{{ $override['reason'] }}</td>
                             </tr>
                         @endforeach
                     </tbody>
