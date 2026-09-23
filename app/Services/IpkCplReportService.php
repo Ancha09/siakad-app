@@ -144,6 +144,7 @@ class IpkCplReportService
         array $filters = []
     ): array {
         $mapping->loadMissing(['cpl', 'mataKuliah']);
+        abort_if($this->isTemporarilyExcludedMapping($mapping), 404, 'Mapping mata kuliah sedang tidak aktif pada laporan IPK CPL.');
         $isDirectMapping = (int) $mapping->cpl_id === (int) $cpl->id;
         $isRedirectedMapping = $cpl->kode_cpl === MiningCplCatalog::REDIRECT_TARGET_CPL
             && $mapping->cpl?->kode_cpl === MiningCplCatalog::HIDDEN_CPL
@@ -326,7 +327,9 @@ class IpkCplReportService
      */
     private function effectiveMappingsFor(Cpl $cpl, Collection $allCpls): Collection
     {
-        $mappings = $cpl->mappings->values();
+        $mappings = $cpl->mappings
+            ->reject(fn (CplMataKuliah $mapping) => $this->isTemporarilyExcludedMapping($mapping))
+            ->values();
         if ($cpl->kode_cpl !== MiningCplCatalog::REDIRECT_TARGET_CPL) {
             return $mappings;
         }
@@ -348,6 +351,15 @@ class IpkCplReportService
         });
 
         return $mappings->concat($redirected)->values();
+    }
+
+    private function isTemporarilyExcludedMapping(CplMataKuliah $mapping): bool
+    {
+        return MiningCplCatalog::isTemporarilyExcludedMapping(
+            $mapping->kode_sumber,
+            $mapping->nama_sumber,
+            (string) $mapping->cpl?->kode_cpl
+        );
     }
 
     private function mappingResult(CplMataKuliah $mapping, Collection $gradeStats, Prodi $program): object

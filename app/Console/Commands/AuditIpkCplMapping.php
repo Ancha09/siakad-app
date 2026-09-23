@@ -116,6 +116,12 @@ class AuditIpkCplMapping extends Command
         $this->warn(MiningCplCatalog::HIDDEN_CPL.' disembunyikan sementara sebagai CPL terpisah.');
         $this->line('Mapping '.MiningCplCatalog::HIDDEN_CPL.' dialihkan ke '.MiningCplCatalog::REDIRECT_TARGET_CPL.': '.$redirectedCount.' mapping unik.');
         $this->line('Pilihan Teknik Geologi disembunyikan sementara dari fitur IPK CPL.');
+        $temporarilyExcluded = $mappings->filter(fn (CplMataKuliah $mapping) => MiningCplCatalog::isTemporarilyExcludedMapping(
+            $mapping->kode_sumber,
+            $mapping->nama_sumber,
+            (string) $mapping->cpl?->kode_cpl
+        ));
+        $this->warn('Mapping sementara nonaktif pada laporan: '.$temporarilyExcluded->count().' record TA 601 - MK Pilihan 2 (CPL 2/CPL 7).');
         $this->line('Total mapping: '.$mappings->count());
         $notes = $overrides->notes($mappings, $program);
         $this->line('Mapping aman: '.($safeCount - $notes->count()));

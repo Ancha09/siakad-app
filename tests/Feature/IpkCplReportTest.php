@@ -663,7 +663,7 @@ test('manual targets are used by web PDF Excel and course filters without changi
     $response = $this->actingAs($data['admin'])->get(route('admin.ipk-cpl.program', $parameters));
     $response->assertOk()->assertSee('3.00')->assertDontSee('Mapping Manual Override')->assertDontSee('Manual Override Akreditasi')->assertDontSee('Status CPL')->assertDontSee('Kelengkapan Data CPL');
     expect($response->viewData('rows')->first()->ipk_cpl)->toBe(3.0)
-        ->and($response->viewData('mappingSummary')['manual_override'])->toBe(4)
+        ->and($response->viewData('mappingSummary')['manual_override'])->toBe(2)
         ->and($response->viewData('courseOptions')->pluck('mata_kuliah_id')->all())->toContain($data['targets'][0]->id)
         ->and(substr_count($response->getContent(), '<canvas'))->toBe(1);
     $this->get(route('admin.ipk-cpl.course', ['prodi' => $data['mining'], 'cpl' => $data['cpl'], 'mapping' => $data['approved'][0], 'tahun_akademik' => '2024/2025']))->assertOk()->assertSee('Mahasiswa Tambang A');
@@ -678,6 +678,66 @@ test('manual targets are used by web PDF Excel and course filters without changi
         ->not->toContain('Status CPL')
         ->not->toContain('Kelengkapan Data CPL');
     expect(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades);
+});
+
+test('TA 601 MK Pilihan 2 is excluded from CPL 2 and CPL 7 without changing MK Pilihan 3', function () {
+    $data = makeApprovedOverrideFixture();
+    $this->artisan('ipk-cpl:apply-overrides')->assertSuccessful();
+    $electiveTwo = MataKuliah::where('kode_mk', 'TA 601')->where('nama_mk', 'MK Pilihan 2')->sole();
+    $electiveThree = MataKuliah::create([
+        'kode_mk' => 'TA 602',
+        'nama_mk' => 'MK Pilihan 3',
+        'sks' => 2,
+        'semester' => 6,
+        'prodi_id' => $data['mining']->id,
+    ]);
+    $electiveThreeMapping = CplMataKuliah::create([
+        'cpl_id' => $data['secondCpl']->id,
+        'mata_kuliah_id' => $electiveThree->id,
+        'kode_sumber' => 'TA 602',
+        'nama_sumber' => 'MK Pilihan 3',
+        'semester' => 6,
+        'sks' => 2,
+    ]);
+    createMappedCplGrade($data['studentA'], $electiveTwo, $data['lecturer'], '2024/2025', 'Genap', 90, 'A', 4);
+    createMappedCplGrade($data['studentA'], $electiveThree, $data['lecturer'], '2024/2025', 'Genap', 60, 'C', 2);
+    $beforeCourse = $electiveThree->fresh()->toArray();
+    $beforeMapping = $electiveThreeMapping->fresh()->toArray();
+    $beforeGrades = Khs::orderBy('id')->get()->toArray();
+
+    $service = app(IpkCplReportService::class);
+    $report = $service->cplOverview($data['mining'], ['tahun_akademik' => '2024/2025']);
+    $second = $report['rows']->firstWhere('kode_cpl', 'CPL 2');
+    $seventh = $report['rows']->firstWhere('kode_cpl', 'CPL 7');
+    $courseOptions = $service->cplFilterOptions($data['mining'])['courseOptions'];
+
+    expect($second->courses->pluck('nama_mata_kuliah')->all())
+        ->toContain('MK Pilihan 3')
+        ->not->toContain('MK Pilihan 2')
+        ->and($second->ipk_cpl)->toBe(2.0)
+        ->and($seventh->courses)->toBeEmpty()
+        ->and($seventh->ipk_cpl)->toBeNull()
+        ->and($courseOptions->pluck('mata_kuliah_id')->all())->toContain($electiveThree->id)
+        ->not->toContain($electiveTwo->id);
+
+    $this->actingAs($data['admin'])
+        ->get(route('admin.ipk-cpl.cpl', ['prodi' => $data['mining'], 'cpl' => $data['secondCpl'], 'tahun_akademik' => '2024/2025']))
+        ->assertOk()->assertSee('MK Pilihan 3')->assertDontSee('MK Pilihan 2');
+    $this->get(route('admin.ipk-cpl.course', [
+        'prodi' => $data['mining'],
+        'cpl' => $data['secondCpl'],
+        'mapping' => $data['approved'][2],
+        'tahun_akademik' => '2024/2025',
+    ]))->assertNotFound();
+    $this->get(route('admin.ipk-cpl.program.pdf', ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025']))
+        ->assertOk()->assertDownload();
+    $this->get(route('admin.ipk-cpl.program.excel', ['prodi' => $data['mining'], 'tahun_akademik' => '2024/2025']))
+        ->assertOk()->assertDownload();
+
+    expect($electiveThree->fresh()->toArray())->toBe($beforeCourse)
+        ->and($electiveThreeMapping->fresh()->toArray())->toBe($beforeMapping)
+        ->and(Khs::orderBy('id')->get()->toArray())->toBe($beforeGrades)
+        ->and(MataKuliah::whereKey($electiveTwo->id)->exists())->toBeTrue();
 });
 
 test('TA601 uses an existing normalized TP master and never selects a different elective or final project', function () {

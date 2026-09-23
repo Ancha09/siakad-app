@@ -8,6 +8,12 @@ final class MiningCplCatalog
 
     public const REDIRECT_TARGET_CPL = 'CPL 3';
 
+    private const TEMPORARILY_EXCLUDED_MAPPING = [
+        'code' => 'TA601',
+        'name' => 'mkpilihan2',
+        'cpls' => ['CPL 2', 'CPL 7'],
+    ];
+
     /**
      * @return array<string, array{deskripsi:string,turunan_visi_misi:string,cpl_kkni:string}>
      */
@@ -87,5 +93,22 @@ final class MiningCplCatalog
     public static function isActive(string $code): bool
     {
         return in_array(strtoupper(trim($code)), self::activeCodes(), true);
+    }
+
+    /**
+     * Keputusan sementara prodi: TA 601 - MK Pilihan 2 tidak dihitung pada
+     * CPL 2/CPL 7. Pengecualian dibuat ketat agar MK Pilihan 3 tidak tersentuh.
+     */
+    public static function isTemporarilyExcludedMapping(string $courseCode, string $courseName, string $cplCode): bool
+    {
+        $normalizedCode = strtoupper(trim($courseCode));
+        $normalizedCode = preg_replace('/\(\s*(?:TP|TG)\s*\)$/i', '', $normalizedCode) ?? $normalizedCode;
+        $normalizedCode = preg_replace('/[^A-Z0-9]+/', '', $normalizedCode) ?? $normalizedCode;
+        $normalizedName = strtolower(trim($courseName));
+        $normalizedName = preg_replace('/[^a-z0-9]+/', '', $normalizedName) ?? $normalizedName;
+
+        return $normalizedCode === self::TEMPORARILY_EXCLUDED_MAPPING['code']
+            && $normalizedName === self::TEMPORARILY_EXCLUDED_MAPPING['name']
+            && in_array(strtoupper(trim($cplCode)), self::TEMPORARILY_EXCLUDED_MAPPING['cpls'], true);
     }
 }
