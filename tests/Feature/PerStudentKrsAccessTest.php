@@ -203,7 +203,7 @@ function seedKrsLimitHistory(array $data, float $ipk, array $currentSks): void
         Krs::create([
             'mahasiswa_id' => $data['student']->id,
             'jadwal_id' => $schedule->id,
-            'status' => 'Disetujui',
+            'status' => 'Draft',
             'tahun_akademik' => '2026/2027',
             'semester_akademik' => 'Ganjil',
             'is_manual' => false,
@@ -232,7 +232,7 @@ test('students with IPK below 3.5 can reach 22 SKS when the period permits it', 
     $this->assertDatabaseHas('krs', [
         'mahasiswa_id' => $data['student']->id,
         'jadwal_id' => $data['schedule']->id,
-        'status' => 'Menunggu',
+        'status' => 'Draft',
     ]);
     $this->get(route('mahasiswa.krs'))
         ->assertOk()
@@ -241,6 +241,84 @@ test('students with IPK below 3.5 can reach 22 SKS when the period permits it', 
     $this->assertSame($ipk, app(MahasiswaNilaiService::class)
         ->ringkasanMahasiswa($data['student']->id)['ipk_aktual']);
 })->with([3.14, 2.80]);
+
+test('student KRS stays draft until submitted and only then enters advisor queue', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $otherSchedule = makeAcademicParitySchedule($data, 3, 'Ganjil');
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('success');
+    $draft = Krs::where('mahasiswa_id', $data['student']->id)->firstOrFail();
+    expect($draft->status)->toBe('Draft');
+
+    $this->actingAs($data['lecturerUser'])->get(route('dosen.krs'))
+        ->assertOk()->assertDontSee('Mahasiswa Akses A');
+    $this->get(route('dosen.krs.show', [
+        'mahasiswa' => $data['student'],
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]))->assertNotFound();
+    $this->put(route('dosen.krs.setujui', $draft))->assertSessionHas('error');
+    expect($draft->fresh()->status)->toBe('Draft');
+
+    $this->actingAs($data['otherStudentUser'])
+        ->delete(route('mahasiswa.krs.destroy', $draft))->assertNotFound();
+    $this->actingAs($data['studentUser'])
+        ->delete(route('mahasiswa.krs.destroy', $draft))->assertSessionHas('success');
+    $this->assertDatabaseMissing('krs', ['id' => $draft->id]);
+
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('success');
+    $this->post(route('mahasiswa.krs.ajukan'))->assertSessionHas('success');
+    $submitted = Krs::where('mahasiswa_id', $data['student']->id)->firstOrFail();
+    $this->assertDatabaseHas('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+        'status' => 'Menunggu',
+    ]);
+
+    $this->actingAs($data['lecturerUser'])->get(route('dosen.krs'))
+        ->assertOk()->assertSee('Mahasiswa Akses A');
+    $this->actingAs($data['studentUser'])
+        ->delete(route('mahasiswa.krs.destroy', $submitted))->assertSessionHas('error');
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $otherSchedule->id])
+        ->assertSessionHas('error', 'KRS sudah diajukan atau diproses. Pilihan mata kuliah tidak dapat diubah.');
+    $this->assertDatabaseMissing('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $otherSchedule->id,
+    ]);
+
+    // Lindungi juga keadaan campuran lama/admin: satu draft tidak boleh dihapus
+    // ketika periode yang sama sudah memiliki KRS yang diajukan.
+    $mixedDraft = Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $otherSchedule->id,
+        'status' => 'Draft',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Ganjil',
+    ]);
+    $this->delete(route('mahasiswa.krs.destroy', $mixedDraft))->assertSessionHas('error');
+    expect($mixedDraft->fresh())->not->toBeNull();
+});
+
+test('empty draft cannot be submitted and one student may add several draft courses', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    $otherSchedule = makeAcademicParitySchedule($data, 3, 'Ganjil');
+
+    $this->actingAs($data['studentUser'])->post(route('mahasiswa.krs.ajukan'))
+        ->assertSessionHas('error', 'Pilih minimal satu mata kuliah sebelum mengajukan KRS.');
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('success');
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $otherSchedule->id])
+        ->assertSessionHas('success');
+    $this->assertDatabaseCount('krs', 2);
+    $this->post(route('mahasiswa.krs.ajukan'))->assertSessionHas('success');
+    expect(Krs::where('mahasiswa_id', $data['student']->id)->pluck('status')->unique()->all())
+        ->toBe(['Menunggu']);
+});
 
 test('student KRS rejects 23 SKS even when period limit is higher', function () {
     $data = makePerStudentKrsAccessData();
@@ -849,7 +927,7 @@ test('all valid scheduled courses survive staged KRS filters without hardcoded c
     Krs::create([
         'mahasiswa_id' => $data['student']->id,
         'jadwal_id' => $takenSchedule->id,
-        'status' => 'Menunggu',
+        'status' => 'Draft',
         'tahun_akademik' => '2026/2027',
         'semester_akademik' => 'Ganjil',
     ]);

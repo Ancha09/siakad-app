@@ -223,6 +223,14 @@
                 <div style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:16px;border-radius:8px;margin-bottom:25px;">
                     <strong>{{ $pesanAksesKrs }}</strong>
                 </div>
+            @elseif($krsSudahDiajukan)
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:16px;border-radius:8px;margin-bottom:25px;">
+                    {{ $krsMenungguPersetujuan ? 'KRS sedang menunggu persetujuan dosen wali.' : 'KRS periode ini sudah diproses.' }} Pilihan mata kuliah tidak dapat diubah.
+                </div>
+            @elseif($draftKrs->isNotEmpty())
+                <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:16px;border-radius:8px;margin-bottom:25px;">
+                    {{ $draftKrs->count() }} mata kuliah tersimpan sebagai draft. Anda masih bisa menambah atau membatalkan pilihan sebelum mengajukan.
+                </div>
             @endif
 
         @else
@@ -564,6 +572,8 @@
                                     Status
                                 </th>
 
+                                <th style="width:110px;text-align:center;">Aksi</th>
+
                             </tr>
 
                         </thead>
@@ -764,6 +774,16 @@
 
 
                                         {{-- =====================
+                                             DRAFT
+                                        ====================== --}}
+
+                                        @elseif($item->status === 'Draft')
+
+                                            <span class="badge" style="display:inline-flex;background:#dbeafe;color:#1e40af;padding:6px 12px;">
+                                                Draft
+                                            </span>
+
+                                        {{-- =====================
                                              MENUNGGU
                                         ====================== --}}
 
@@ -832,6 +852,18 @@
 
                                     </td>
 
+                                    <td style="text-align:center;">
+                                        @if($item->status === 'Draft' && $draftDapatDiubah && $periodeKrs && $item->tahun_akademik === $periodeKrs->tahun_akademik && $item->semester_akademik === $periodeKrs->semester)
+                                            <form action="{{ route('mahasiswa.krs.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Batalkan pilihan mata kuliah ini dari draft KRS?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn-outline" style="padding:6px 10px;font-size:12px;color:#b91c1c;border-color:#fca5a5;">Batalkan</button>
+                                            </form>
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
+
                                 </tr>
 
 
@@ -840,7 +872,7 @@
                                 <tr>
 
                                     <td
-                                        colspan="8"
+                                        colspan="9"
                                         style="
                                             text-align:center;
                                             padding:40px;
@@ -882,6 +914,15 @@
                     </table>
 
                 </div>
+
+                @if($draftDapatDiubah && $draftKrs->isNotEmpty())
+                    <form action="{{ route('mahasiswa.krs.ajukan') }}" method="POST" style="margin-top:18px;text-align:right;" onsubmit="return confirm('Ajukan seluruh draft KRS kepada dosen wali? Setelah diajukan, pilihan tidak dapat diubah.')">
+                        @csrf
+                        <button type="submit" class="btn-primary icon-button">
+                            <x-layout-icon name="file-check" /> Ajukan KRS
+                        </button>
+                    </form>
+                @endif
 
             </div>
 
@@ -971,6 +1012,12 @@
                         <div class="empty-state-icon" style="margin-bottom:10px;"><x-layout-icon name="lock" /></div>
                         <strong style="display:block;font-size:16px;">Akses KRS Anda belum dibuka</strong>
                         <p style="margin-top:8px;font-size:13px;">{{ $pesanAksesKrs }}</p>
+                    </div>
+
+                @elseif($krsSudahDiajukan)
+
+                    <div style="text-align:center;padding:35px 20px;color:#1e40af;">
+                        KRS sudah diajukan. Mata kuliah tidak dapat ditambah atau dibatalkan.
                     </div>
 
                 @elseif($jadwalsBySemester->isEmpty())
@@ -1093,11 +1140,11 @@
 
                                                         @if(
                                                             $periodeKrs &&
-                                                            $aksesKrsDibuka &&
+                                                            $draftDapatDiubah &&
                                                             ($totalSks + ($jadwal->mataKuliah->sks ?? 0)) <= $batasSks
                                                         )
                                                             <button type="submit" class="btn-primary icon-button" style="padding:6px 12px;font-size:11px;">
-                                                                <x-layout-icon name="plus" /> Ambil
+                                                                <x-layout-icon name="plus" /> Simpan Draft
                                                             </button>
                                                         @else
                                                             <button

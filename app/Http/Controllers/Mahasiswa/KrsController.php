@@ -15,6 +15,7 @@ use App\Services\MahasiswaNilaiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class KrsController extends Controller
@@ -95,6 +96,12 @@ class KrsController extends Controller
                 fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
             )
             : collect();
+        $draftKrs = $krsPeriodeAktif->where('status', 'Draft');
+        $krsMenungguPersetujuan = $krsPeriodeAktif->contains(
+            fn (Krs $item) => in_array($item->status, ['Menunggu', 'Diambil'], true)
+        );
+        $krsSudahDiajukan = $krsPeriodeAktif->contains(fn (Krs $item) => $item->status !== 'Draft');
+        $draftDapatDiubah = $aksesKrsDibuka && ! $krsSudahDiajukan;
 
         // ===================== JADWAL YANG SUDAH DIAMBIL =====================
 
@@ -132,7 +139,7 @@ class KrsController extends Controller
         $jadwals = collect();
         $jadwalsBySemester = collect();
 
-        if ($periodeKrs && $aksesKrsDibuka) {
+        if ($periodeKrs && $draftDapatDiubah) {
 
             $jadwals = $scheduleService->forStudent(
                 $mahasiswa,
@@ -190,7 +197,11 @@ class KrsController extends Controller
                 'batasSks',
                 'periodeKartuKrs',
                 'aksesKrsDibuka',
-                'pesanAksesKrs'
+                'pesanAksesKrs',
+                'draftKrs',
+                'krsMenungguPersetujuan',
+                'krsSudahDiajukan',
+                'draftDapatDiubah'
             )
         );
     }
@@ -240,16 +251,15 @@ class KrsController extends Controller
         KrsSksLimit $sksLimit
     )
     {
-        $mahasiswa = Mahasiswa::where(
-            'user_id',
-            Auth::id()
-        )->firstOrFail();
-
         // ===================== VALIDASI =====================
 
         $request->validate([
             'jadwal_id' => 'required|exists:jadwals,id',
         ]);
+
+        return DB::transaction(function () use ($request, $scheduleService, $sksLimit) {
+        // Kunci mahasiswa agar tambah/hapus/ajukan tidak saling mendahului.
+        $mahasiswa = Mahasiswa::where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
 
         // ===================== CEK PERIODE KRS =====================
 
@@ -286,6 +296,10 @@ class KrsController extends Controller
             ->filter(
                 fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
             );
+
+        if ($krsPeriodeAktif->contains(fn (Krs $item) => $item->status !== 'Draft')) {
+            return back()->with('error', 'KRS sudah diajukan atau diproses. Pilihan mata kuliah tidak dapat diubah.');
+        }
 
         // Duplikasi hanya diperiksa pada periode aktif, bukan seluruh riwayat KRS.
         $sudahAda = $krsPeriodeAktif->contains(
@@ -374,10 +388,10 @@ class KrsController extends Controller
             'jadwal_id' => $jadwal->id,
 
             // ==============================
-            // MENUNGGU PERSETUJUAN DOSEN
+            // DRAFT BELUM MASUK ANTREAN DOSEN WALI
             // ==============================
 
-            'status' => 'Menunggu',
+            'status' => 'Draft',
 
             'alasan_penolakan' => null,
 
@@ -391,8 +405,88 @@ class KrsController extends Controller
             ->route('mahasiswa.krs')
             ->with(
                 'success',
-                'Mata kuliah berhasil diajukan. Menunggu persetujuan Dosen Wali.'
+                'Mata kuliah tersimpan sebagai draft. Klik Ajukan KRS setelah pilihan selesai.'
             );
+        });
+    }
+
+    public function destroy(int $id, AvailableKrsScheduleService $scheduleService)
+    {
+        return DB::transaction(function () use ($id, $scheduleService) {
+            $mahasiswa = Mahasiswa::where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
+            $periodeKrs = $this->periodeKrsTerbaru();
+            $pesanPenolakan = $this->pesanPenolakanKrs($periodeKrs, $mahasiswa);
+
+            if ($pesanPenolakan !== null) {
+                return redirect()->route('mahasiswa.krs')->with('error', $pesanPenolakan);
+            }
+
+            $krs = Krs::where('id', $id)
+                ->where('mahasiswa_id', $mahasiswa->id)
+                ->where('is_manual', false)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (! $scheduleService->matchesPeriod($krs, $periodeKrs) || $krs->status !== 'Draft') {
+                return redirect()->route('mahasiswa.krs')
+                    ->with('error', 'Hanya mata kuliah dalam draft periode aktif yang dapat dibatalkan.');
+            }
+
+            $adaKrsDiajukan = Krs::where('mahasiswa_id', $mahasiswa->id)
+                ->where(fn ($query) => $query->where('is_manual', false)->orWhereNull('is_manual'))
+                ->lockForUpdate()
+                ->get()
+                ->contains(fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs)
+                    && $item->status !== 'Draft');
+
+            if ($adaKrsDiajukan) {
+                return redirect()->route('mahasiswa.krs')
+                    ->with('error', 'KRS sudah diajukan atau diproses. Pilihan mata kuliah tidak dapat diubah.');
+            }
+
+            if ($krs->khs()->exists() || $krs->kuesioner()->exists() || $krs->presensis()->exists()) {
+                return redirect()->route('mahasiswa.krs')
+                    ->with('error', 'KRS ini sudah memiliki data akademik terkait dan tidak dapat dibatalkan.');
+            }
+
+            $krs->delete();
+
+            return redirect()->route('mahasiswa.krs')->with('success', 'Mata kuliah dihapus dari draft KRS.');
+        });
+    }
+
+    public function ajukan(AvailableKrsScheduleService $scheduleService)
+    {
+        return DB::transaction(function () use ($scheduleService) {
+            $mahasiswa = Mahasiswa::where('user_id', Auth::id())->lockForUpdate()->firstOrFail();
+            $periodeKrs = $this->periodeKrsTerbaru();
+            $pesanPenolakan = $this->pesanPenolakanKrs($periodeKrs, $mahasiswa);
+
+            if ($pesanPenolakan !== null) {
+                return redirect()->route('mahasiswa.krs')->with('error', $pesanPenolakan);
+            }
+
+            $krsPeriode = Krs::where('mahasiswa_id', $mahasiswa->id)
+                ->where(fn ($query) => $query->where('is_manual', false)->orWhereNull('is_manual'))
+                ->lockForUpdate()
+                ->get()
+                ->filter(fn (Krs $item) => $scheduleService->matchesPeriod($item, $periodeKrs));
+
+            if ($krsPeriode->isEmpty()) {
+                return redirect()->route('mahasiswa.krs')
+                    ->with('error', 'Pilih minimal satu mata kuliah sebelum mengajukan KRS.');
+            }
+
+            if ($krsPeriode->contains(fn (Krs $item) => $item->status !== 'Draft')) {
+                return redirect()->route('mahasiswa.krs')
+                    ->with('error', 'KRS periode ini sudah diajukan atau diproses.');
+            }
+
+            Krs::whereKey($krsPeriode->modelKeys())->update(['status' => 'Menunggu']);
+
+            return redirect()->route('mahasiswa.krs')
+                ->with('success', 'KRS berhasil diajukan. Menunggu persetujuan Dosen Wali.');
+        });
     }
 
     // =========================================================
