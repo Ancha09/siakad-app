@@ -1151,13 +1151,7 @@
                     {{ $batasSks }} SKS
                 </strong>.
 
-                @if($jumlahKuesionerTertunda > 0)
-                    IPK kumulatif disembunyikan sampai seluruh kuesioner dosen selesai diisi.
-                @elseif($ipkTerlihat !== null)
-                    Ketentuan ini dihitung berdasarkan IPK {{ number_format($ipkTerlihat, 2) }}.
-                @else
-                    Ketentuan ini menggunakan batas akademik awal karena belum ada nilai.
-                @endif
+                Batas sementara adalah {{ \App\Services\KrsSksLimit::DEFAULT_MAX_SKS }} SKS; jika periode KRS menetapkan batas lebih kecil, batas periode yang berlaku.
 
                 @if($periodeKrs->minimal_sks > 0)
 

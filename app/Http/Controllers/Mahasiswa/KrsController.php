@@ -10,6 +10,7 @@ use App\Models\Mahasiswa;
 use App\Models\PeriodeKrs;
 use App\Services\AvailableKrsScheduleService;
 use App\Services\KrsCardService;
+use App\Services\KrsSksLimit;
 use App\Services\MahasiswaNilaiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -25,7 +26,8 @@ class KrsController extends Controller
     public function index(
         MahasiswaNilaiService $nilaiService,
         AvailableKrsScheduleService $scheduleService,
-        KrsCardService $cards
+        KrsCardService $cards,
+        KrsSksLimit $sksLimit
     )
     {
         // ===================== DATA MAHASISWA =====================
@@ -45,35 +47,15 @@ class KrsController extends Controller
         // =========================================================
 
         $ringkasanNilai = $nilaiService->ringkasanMahasiswa($mahasiswa->id);
-        $ipk = $ringkasanNilai['ipk_aktual'];
         $ipkTerlihat = $ringkasanNilai['ipk_terlihat'];
         $jumlahKuesionerTertunda = $ringkasanNilai['kuesioner_tertunda'];
         $jumlahNilai = $ringkasanNilai['jumlah_nilai'];
 
         // =========================================================
-        // TENTUKAN BATAS SKS BERDASARKAN IPK
+        // BATAS SKS SEMENTARA: 22 ATAU BATAS PERIODE JIKA LEBIH KECIL
         // =========================================================
 
-        $batasSksIpk = $this->tentukanBatasSks($ipk);
-
-        // =========================================================
-        // BATAS SKS FINAL
-        //
-        // Tidak boleh melebihi batas maksimal periode KRS.
-        // =========================================================
-
-        if ($periodeKrs) {
-
-            $batasSks = min(
-                $batasSksIpk,
-                $periodeKrs->maksimal_sks
-            );
-
-        } else {
-
-            $batasSks = $batasSksIpk;
-
-        }
+        $batasSks = $sksLimit->forPeriod($periodeKrs);
 
         // ===================== KRS MAHASISWA =====================
 
@@ -254,8 +236,8 @@ class KrsController extends Controller
 
     public function store(
         Request $request,
-        MahasiswaNilaiService $nilaiService,
-        AvailableKrsScheduleService $scheduleService
+        AvailableKrsScheduleService $scheduleService,
+        KrsSksLimit $sksLimit
     )
     {
         $mahasiswa = Mahasiswa::where(
@@ -283,28 +265,10 @@ class KrsController extends Controller
         }
 
         // =========================================================
-        // HITUNG IPK
+        // BATAS SKS SAMA DENGAN YANG DITAMPILKAN DI HALAMAN KRS
         // =========================================================
 
-        $ipk = $nilaiService->ringkasanMahasiswa($mahasiswa->id)['ipk_aktual'];
-
-        // =========================================================
-        // TENTUKAN BATAS SKS BERDASARKAN IPK
-        // =========================================================
-
-        $batasSksIpk = $this->tentukanBatasSks(
-            $ipk
-        );
-
-        // =========================================================
-        // BATAS FINAL
-        // Tidak boleh melebihi maksimal SKS periode.
-        // =========================================================
-
-        $batasSks = min(
-            $batasSksIpk,
-            $periodeKrs->maksimal_sks
-        );
+        $batasSks = $sksLimit->forPeriod($periodeKrs);
 
         // ===================== AMBIL JADWAL =====================
 
@@ -385,7 +349,7 @@ class KrsController extends Controller
             $totalSks + $sksMataKuliah;
 
         // =========================================================
-        // CEK MAKSIMAL SKS BERDASARKAN IPK
+        // CEK MAKSIMAL SKS PERIODE
         // =========================================================
 
         if (
@@ -397,7 +361,7 @@ class KrsController extends Controller
                 'error',
                 'Mata kuliah tidak dapat diambil karena total SKS melebihi batas maksimal Anda, yaitu '.
                 $batasSks.
-                ' SKS berdasarkan ketentuan akademik dan IPK yang tersimpan.'
+                ' SKS.'
             );
         }
 
@@ -532,28 +496,6 @@ class KrsController extends Controller
                 'success',
                 'KRS berhasil diajukan kembali. Menunggu persetujuan Dosen Wali.'
             );
-    }
-
-    // =========================================================
-    // TENTUKAN BATAS SKS BERDASARKAN IPK
-    // =========================================================
-
-    private function tentukanBatasSks(float $ipk): int
-    {
-        // IPK >= 3.50
-        if ($ipk >= 3.50) {
-
-            return 24;
-        }
-
-        // IPK >= 3.25
-        if ($ipk >= 3.25) {
-
-            return 22;
-        }
-
-        // IPK < 3.25
-        return 20;
     }
 
     private function schedulesOverlap(Jadwal $left, Jadwal $right): bool

@@ -90,6 +90,10 @@
                         required
                     >
 
+                    <small style="color:#64748b;">
+                        Batas efektif mahasiswa sementara paling tinggi {{ \App\Services\KrsSksLimit::DEFAULT_MAX_SKS }} SKS; angka periode yang lebih kecil tetap berlaku.
+                    </small>
+
                 </div>
 
 

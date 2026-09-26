@@ -2,6 +2,7 @@
 
 use App\Models\Dosen;
 use App\Models\Jadwal;
+use App\Models\Khs;
 use App\Models\Kelas;
 use App\Models\Krs;
 use App\Models\Kurikulum;
@@ -11,6 +12,7 @@ use App\Models\PeriodeKrs;
 use App\Models\Prodi;
 use App\Models\Ruangan;
 use App\Models\User;
+use App\Services\MahasiswaNilaiService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -136,6 +138,142 @@ function makeAcademicParitySchedule(
         'semester_akademik' => $academicSemester,
     ]);
 }
+
+function seedKrsLimitHistory(array $data, float $ipk, array $currentSks): void
+{
+    $historicalCourse = MataKuliah::create([
+        'kode_mk' => 'HIST-IPK-KRS',
+        'nama_mk' => 'Nilai Historis untuk Batas KRS',
+        'sks' => 2,
+        'semester' => 2,
+        'prodi_id' => $data['prodi']->id,
+    ]);
+    $historicalKrs = Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'mata_kuliah_id' => $historicalCourse->id,
+        'status' => 'Disetujui',
+        'tahun_akademik' => '2025/2026',
+        'semester_akademik' => 'Genap',
+        'is_manual' => true,
+    ]);
+    Khs::create([
+        'krs_id' => $historicalKrs->id,
+        'nilai_angka' => 80,
+        'nilai_huruf' => 'B',
+        'bobot' => $ipk,
+        'sks' => 2,
+        'tahun_akademik' => '2025/2026',
+        'semester_akademik' => 'Genap',
+        'is_manual' => true,
+    ]);
+    DB::table('kuesioners')->insert([
+        'krs_id' => $historicalKrs->id,
+        'penguasaan_materi' => 4,
+        'kejelasan_penyampaian' => 4,
+        'kesesuaian_rps' => 4,
+        'ketepatan_waktu' => 4,
+        'kesempatan_bertanya' => 4,
+        'objektivitas_penilaian' => 4,
+        'penggunaan_media' => 4,
+        'motivasi_belajar' => 4,
+        'submitted_at' => now(),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    foreach ($currentSks as $index => $sks) {
+        $course = MataKuliah::create([
+            'kode_mk' => 'KRS-LIMIT-'.$index,
+            'nama_mk' => 'Mata Kuliah Batas '.$index,
+            'sks' => $sks,
+            'semester' => 1,
+            'prodi_id' => $data['prodi']->id,
+        ]);
+        $schedule = Jadwal::create([
+            'mata_kuliah_id' => $course->id,
+            'dosen_id' => $data['dosen']->id,
+            'ruangan_id' => $data['room']->id,
+            'kelas_id' => $data['kelas']->id,
+            'hari' => 'Selasa',
+            'jam_mulai' => sprintf('%02d:00:00', 7 + $index),
+            'jam_selesai' => sprintf('%02d:00:00', 8 + $index),
+            'tahun_akademik' => '2026/2027',
+            'semester_akademik' => 'Ganjil',
+        ]);
+        Krs::create([
+            'mahasiswa_id' => $data['student']->id,
+            'jadwal_id' => $schedule->id,
+            'status' => 'Disetujui',
+            'tahun_akademik' => '2026/2027',
+            'semester_akademik' => 'Ganjil',
+            'is_manual' => false,
+        ]);
+    }
+}
+
+test('students with IPK below 3.5 can reach 22 SKS when the period permits it', function (float $ipk) {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    seedKrsLimitHistory($data, $ipk, [4, 4, 4, 4, 3]);
+
+    $this->assertSame($ipk, app(MahasiswaNilaiService::class)
+        ->ringkasanMahasiswa($data['student']->id)['ipk_aktual']);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertViewHas('batasSks', 22)
+        ->assertViewHas('sisaSks', 3)
+        ->assertSee(number_format($ipk, 2));
+
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('success');
+    $this->assertDatabaseHas('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+        'status' => 'Menunggu',
+    ]);
+    $this->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertViewHas('totalSks', 22)
+        ->assertViewHas('batasSks', 22);
+    $this->assertSame($ipk, app(MahasiswaNilaiService::class)
+        ->ringkasanMahasiswa($data['student']->id)['ipk_aktual']);
+})->with([3.14, 2.80]);
+
+test('student KRS rejects 23 SKS even when period limit is higher', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all']);
+    seedKrsLimitHistory($data, 3.14, [4, 4, 4, 4, 4]);
+
+    $this->actingAs($data['studentUser'])
+        ->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('error', 'Mata kuliah tidak dapat diambil karena total SKS melebihi batas maksimal Anda, yaitu 22 SKS.');
+    $this->assertDatabaseMissing('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+    ]);
+});
+
+test('student KRS respects a lower period limit of 20 SKS', function () {
+    $data = makePerStudentKrsAccessData();
+    $data['period']->update(['access_mode' => 'all', 'maksimal_sks' => 20]);
+    seedKrsLimitHistory($data, 3.14, [4, 4, 4, 4, 2]);
+
+    $this->actingAs($data['studentUser'])
+        ->get(route('mahasiswa.krs'))
+        ->assertOk()
+        ->assertViewHas('batasSks', 20)
+        ->assertViewHas('sisaSks', 2);
+
+    $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $data['schedule']->id])
+        ->assertSessionHas('error', 'Mata kuliah tidak dapat diambil karena total SKS melebihi batas maksimal Anda, yaitu 20 SKS.');
+    $this->assertDatabaseMissing('krs', [
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['schedule']->id,
+    ]);
+});
 
 test('admin opens and closes one student KRS access without affecting another student', function () {
     $data = makePerStudentKrsAccessData();

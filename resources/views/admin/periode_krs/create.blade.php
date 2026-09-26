@@ -209,14 +209,14 @@
                         type="number"
                         name="maksimal_sks"
                         class="form-control"
-                        value="{{ old('maksimal_sks', 24) }}"
+                        value="{{ old('maksimal_sks', \App\Services\KrsSksLimit::DEFAULT_MAX_SKS) }}"
                         min="1"
                         max="30"
                         required
                     >
 
                     <small style="color:#64748b;">
-                        Batas maksimal SKS yang dapat diambil mahasiswa.
+                        Batas efektif mahasiswa sementara paling tinggi {{ \App\Services\KrsSksLimit::DEFAULT_MAX_SKS }} SKS; angka periode yang lebih kecil tetap berlaku.
                     </small>
 
                 </div>
