@@ -111,12 +111,10 @@
             <x-sidebar-item route="mahasiswa.kurikulum" :active="request()->routeIs('mahasiswa.kurikulum', 'mahasiswa.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.krs" :active="request()->routeIs('mahasiswa.krs', 'mahasiswa.krs.*')" icon="file-check">KRS</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.jadwal" :active="request()->routeIs('mahasiswa.jadwal', 'mahasiswa.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
+            <x-sidebar-item route="mahasiswa.presensi" :active="request()->routeIs('mahasiswa.presensi')" icon="attendance">Absen Mahasiswa</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.khs" :active="request()->routeIs('mahasiswa.khs', 'mahasiswa.khs.*')" icon="file-chart">KHS &amp; Transkrip</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.kuesioner" :active="request()->routeIs('mahasiswa.kuesioner', 'mahasiswa.kuesioner.*')" icon="clipboard">Kuesioner Dosen</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.skripsi" :active="request()->routeIs('mahasiswa.skripsi', 'mahasiswa.skripsi.*')" icon="graduation">Pengajuan Skripsi</x-sidebar-item>
-
-            <div class="nav-section-label">Layanan</div>
-            <x-sidebar-item route="mahasiswa.keuangan" :active="request()->routeIs('mahasiswa.keuangan', 'mahasiswa.keuangan.*')" icon="wallet">Keuangan</x-sidebar-item>
 
             <div class="nav-section-label">Informasi Kampus</div>
             <x-sidebar-item route="mahasiswa.pemberitahuan" :active="request()->routeIs('mahasiswa.pemberitahuan*')" icon="bell">Pemberitahuan</x-sidebar-item>
@@ -247,17 +245,6 @@
 
                         <p>
                             Kurikulum dan silabus perkuliahan
-                        </p>
-
-
-                    @elseif(request()->routeIs('mahasiswa.keuangan'))
-
-                        <h1>
-                            Keuangan
-                        </h1>
-
-                        <p>
-                            Informasi pembayaran SPP dan UKT
                         </p>
 
 

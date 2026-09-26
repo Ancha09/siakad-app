@@ -276,6 +276,39 @@
                 </div>
 
 
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label for="materi_kuliah">
+                        Materi Kuliah <span style="color:#dc2626;" aria-hidden="true">*</span>
+                    </label>
+
+                    <textarea
+                        id="materi_kuliah"
+                        name="materi_kuliah"
+                        class="form-control"
+                        rows="3"
+                        maxlength="2000"
+                        required
+                        placeholder="Tuliskan materi yang dibahas pada pertemuan ini"
+                    >{{ old('materi_kuliah') }}</textarea>
+                </div>
+
+                <div class="form-group" style="margin-bottom:20px;">
+                    <label for="keterangan">
+                        Keterangan <span style="color:#dc2626;" aria-hidden="true">*</span>
+                    </label>
+
+                    <textarea
+                        id="keterangan"
+                        name="keterangan"
+                        class="form-control"
+                        rows="3"
+                        maxlength="2000"
+                        required
+                        placeholder="Tuliskan keterangan pelaksanaan perkuliahan"
+                    >{{ old('keterangan') }}</textarea>
+                </div>
+
+
                 {{-- ===================== FOTO ===================== --}}
 
                 <div
@@ -284,9 +317,9 @@
                 >
 
                     <label>
-                        📷 Foto Dokumentasi
+                        Foto Absen
                         <span style="color:#64748b;">
-                            (Opsional)
+                            (Wajib)
                         </span>
                     </label>
 
@@ -295,6 +328,7 @@
                         name="foto"
                         class="form-control"
                         accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                        required
                     >
 
                     <small
@@ -318,7 +352,7 @@
                 >
 
                     <label>
-                        📚 Materi Perkuliahan
+                        File Materi
                         <span style="color:#64748b;">
                             (Opsional)
                         </span>
@@ -544,6 +578,17 @@
 
 
                 <div style="margin-bottom:12px;">
+                    <strong>Materi Kuliah:</strong>
+                    <div style="margin-top:5px;white-space:pre-line;">{{ $pertemuanAktif->materi_kuliah ?: '-' }}</div>
+                </div>
+
+                <div style="margin-bottom:12px;">
+                    <strong>Keterangan:</strong>
+                    <div style="margin-top:5px;white-space:pre-line;">{{ $pertemuanAktif->keterangan ?: '-' }}</div>
+                </div>
+
+
+                <div style="margin-bottom:12px;">
 
                     <strong>
                         Foto:
@@ -574,7 +619,7 @@
                 <div>
 
                     <strong>
-                        Materi:
+                        File Materi:
                     </strong>
 
                     @if($pertemuanAktif->materi)

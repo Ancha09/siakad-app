@@ -112,7 +112,27 @@
             </div><!-- / row 1 -->
 
             <!-- Baris 2 -->
-            <div class="hero-menu-row cols-1">
+            <div class="hero-menu-row cols-2">
+
+              <!-- Absen Dosen -->
+            <a href="{{ route('dosen.presensi') }}" class="hero-menu-card">
+
+    <div class="hero-card-icon">
+        <svg viewBox="0 0 24 24">
+            <rect x="4" y="5" width="16" height="16" rx="2"/>
+            <path d="M8 3v4M16 3v4M4 10h16M8 15l2 2 5-5"/>
+        </svg>
+    </div>
+
+    <div class="hero-card-title">
+        Absen Dosen
+    </div>
+
+    <div class="hero-card-desc">
+        Catat pertemuan dan presensi mahasiswa
+    </div>
+
+</a>
 
               <!-- Penelitian -->
             <a href="{{ route('dosen.penelitian') }}" class="hero-menu-card">

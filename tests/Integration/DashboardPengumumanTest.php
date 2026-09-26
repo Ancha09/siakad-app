@@ -217,13 +217,14 @@ class DashboardPengumumanTest extends TestCase
             ->assertOk()
             ->assertSee('Khusus mahasiswa')
             ->assertDontSee('Khusus dosen')
-            ->assertDontSee('Presensi &amp; Agenda', false);
+            ->assertSee('Absen Mahasiswa')
+            ->assertDontSee('Keuangan');
         $this->actingAs($this->account('dosen'))
             ->get(route('dosen.dashboard'))
             ->assertOk()
             ->assertSee('Khusus dosen')
             ->assertDontSee('Khusus mahasiswa')
-            ->assertDontSee('Absensi Mahasiswa');
+            ->assertSee('Absen Dosen');
     }
 
     public function test_schedule_uses_jakarta_time_and_becomes_visible_without_a_job(): void

@@ -29,6 +29,7 @@ class PresensiController extends Controller
             'mataKuliah',
             'ruangan',
             'kelas',
+            'presensiPertemuans' => fn ($query) => $query->orderByDesc('pertemuan'),
         ])
         ->where(
             'dosen_id',
@@ -224,6 +225,20 @@ class PresensiController extends Controller
     public function store(
         Request $request
     ) {
+        $identity = $request->validate([
+            'jadwal_id' => 'required|exists:jadwals,id',
+            'pertemuan' => 'required|integer|min:1|max:16',
+        ]);
+
+        // Foto dan catatan perkuliahan wajib hanya ketika dosen membuat sesi baru.
+        // Saat sesi sudah ada, dosen tetap dapat memperbaiki status mahasiswa
+        // tanpa dipaksa mengunggah ulang dokumentasi lama.
+        $pertemuan = PresensiPertemuan::where('jadwal_id', $identity['jadwal_id'])
+            ->where('pertemuan', $identity['pertemuan'])
+            ->first();
+
+        $requiredOnCreate = $pertemuan ? 'nullable' : 'required';
+
         // =====================================================
         // VALIDASI
         // =====================================================
@@ -251,13 +266,31 @@ class PresensiController extends Controller
             'tanggal' =>
                 'required|date',
 
+            'materi_kuliah' =>
+                [$requiredOnCreate, 'string', 'max:2000'],
+
+            'keterangan' =>
+                [$requiredOnCreate, 'string', 'max:2000'],
+
             'foto' =>
-                'nullable|image|mimes:jpg,jpeg,png|max:2048',
+                [$requiredOnCreate, 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
 
             'materi' =>
                 'nullable|file|mimes:pdf,ppt,pptx,doc,docx,xls,xlsx|max:10240',
 
         ], [
+
+            'materi_kuliah.required' =>
+                'Materi kuliah wajib diisi.',
+
+            'keterangan.required' =>
+                'Keterangan wajib diisi.',
+
+            'foto.required' =>
+                'Foto absen wajib diunggah.',
+
+            'foto.image' =>
+                'Foto absen harus berupa gambar.',
 
             'foto.max' =>
                 'Foto maksimal 2 MB.',
@@ -337,18 +370,6 @@ class PresensiController extends Controller
         if (Presensi::whereIn('krs_id', $request->krs_id)->where('pertemuan', $request->pertemuan)->where('is_manual', true)->exists()) {
             return back()->with('error', 'Absensi lama/manual hanya dapat dikoreksi oleh admin.')->withInput();
         }
-
-        $pertemuan =
-            PresensiPertemuan::where(
-                'jadwal_id',
-                $jadwal->id
-            )
-            ->where(
-                'pertemuan',
-                $request->pertemuan
-            )
-            ->first();
-
 
         // =====================================================
         // JIKA PERTEMUAN SUDAH ADA
@@ -461,6 +482,12 @@ class PresensiController extends Controller
 
                     'tanggal' =>
                         $request->tanggal,
+
+                    'materi_kuliah' =>
+                        $request->materi_kuliah,
+
+                    'keterangan' =>
+                        $request->keterangan,
 
                     'foto' =>
                         $fotoPath,

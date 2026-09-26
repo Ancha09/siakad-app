@@ -88,13 +88,7 @@
                         |
                         */
 
-                        $sesiPresensi =
-                            \App\Models\PresensiPertemuan::where(
-                                'jadwal_id',
-                                $jadwal->id
-                            )
-                            ->orderByDesc('pertemuan')
-                            ->get();
+                        $sesiPresensi = $jadwal->presensiPertemuans;
 
 
                         $jumlahSesi =

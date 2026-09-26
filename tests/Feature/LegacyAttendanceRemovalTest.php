@@ -34,7 +34,7 @@ test('archived controller cannot write attendance even through stale routes', fu
     expect(array_filter($queries, fn ($query) => preg_match('/^\s*(insert|update|delete)\b/i', $query)))->toBeEmpty();
 });
 
-test('regular attendance pages remain accessible and legacy input is not linked', function (string $role, string $route) {
+test('regular attendance pages remain accessible and legacy input is not linked', function (string $role, string $route, string $menu) {
     $user = User::factory()->create(['role' => $role]);
     if ($role === 'dosen') {
         Dosen::create(['nidn' => 'REG001', 'nama' => 'Dosen Reguler', 'user_id' => $user->id, 'is_active' => true]);
@@ -43,6 +43,7 @@ test('regular attendance pages remain accessible and legacy input is not linked'
     }
 
     $this->actingAs($user)->get(route($route))->assertOk()
+        ->assertSee($menu)
         ->assertDontSee('Input Absensi Lama')
         ->assertDontSee('/admin/presensi-manual', false);
     $this->get('/admin/presensi-manual')->assertNotFound();
@@ -52,7 +53,27 @@ test('regular attendance pages remain accessible and legacy input is not linked'
     $this->put('/admin/presensi-manual/1', ['status' => 'Alpha'])->assertNotFound();
     $this->delete('/admin/presensi-manual/1')->assertNotFound();
 })->with([
-    ['admin', 'admin.presensi'],
-    ['dosen', 'dosen.presensi'],
-    ['mahasiswa', 'mahasiswa.presensi'],
+    ['admin', 'admin.presensi', 'Monitoring Absensi'],
+    ['dosen', 'dosen.presensi', 'Absen Dosen'],
+    ['mahasiswa', 'mahasiswa.presensi', 'Absen Mahasiswa'],
 ]);
+
+test('student finance feature is not exposed by route or navigation', function () {
+    expect(Route::has('mahasiswa.keuangan'))->toBeFalse();
+
+    $user = User::factory()->create(['role' => 'mahasiswa']);
+    Mahasiswa::create([
+        'nim' => 'REG-FIN-001',
+        'nama' => 'Mahasiswa Tanpa Keuangan',
+        'user_id' => $user->id,
+        'is_active' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('mahasiswa.dashboard'))
+        ->assertOk()
+        ->assertSee('Absen Mahasiswa')
+        ->assertDontSee('Keuangan');
+
+    $this->get('/mahasiswa/keuangan')->assertNotFound();
+});

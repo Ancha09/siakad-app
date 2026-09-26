@@ -89,18 +89,16 @@
             <!-- Baris 2: 3 kartu (sesuai gambar referensi) -->
             <div class="hero-menu-row cols-2">
 
-              <!-- Keuangan -->
-              <a href="{{ route('mahasiswa.keuangan') }}" class="hero-menu-card">
+              <!-- Absen Mahasiswa -->
+              <a href="{{ route('mahasiswa.presensi') }}" class="hero-menu-card">
                 <div class="hero-card-icon">
                   <svg viewBox="0 0 24 24">
-                    <rect x="2" y="7" width="20" height="14" rx="2"/>
-                    <path d="M16 3H5a2 2 0 00-2 2v2"/>
-                    <circle cx="12" cy="14" r="2"/>
-                    <path d="M6 14h.01M18 14h.01"/>
+                    <rect x="4" y="5" width="16" height="16" rx="2"/>
+                    <path d="M8 3v4M16 3v4M4 10h16M8 15l2 2 5-5"/>
                   </svg>
                 </div>
-                <div class="hero-card-title">Keuangan (SPP/UKT)</div>
-                <div class="hero-card-desc">Informasi &amp; riwayat bayar</div>
+                <div class="hero-card-title">Absen Mahasiswa</div>
+                <div class="hero-card-desc">Riwayat kehadiran perkuliahan</div>
               </a>
 
               <a href="{{ route('mahasiswa.kuesioner') }}" class="hero-menu-card" @if($kuesionerTertunda > 0) style="box-shadow:0 0 0 2px #fbbf24,0 12px 28px rgba(15,23,42,.18);" @endif>

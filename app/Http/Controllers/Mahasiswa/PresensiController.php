@@ -60,6 +60,8 @@ class PresensiController extends Controller
                     return (object) [
                         'pertemuan' => $pertemuan->pertemuan,
                         'tanggal' => $pertemuan->tanggal,
+                        'materi_kuliah' => $pertemuan->materi_kuliah,
+                        'keterangan' => $pertemuan->keterangan,
                         'foto' => $pertemuan->foto,
                         'materi' => $pertemuan->materi,
                         'presensi' => $presensiPerPertemuan->get($pertemuan->pertemuan),
@@ -72,6 +74,8 @@ class PresensiController extends Controller
                 ->map(fn ($presensi) => (object) [
                     'pertemuan' => $presensi->pertemuan,
                     'tanggal' => $presensi->tanggal,
+                    'materi_kuliah' => null,
+                    'keterangan' => $presensi->keterangan,
                     'foto' => null,
                     'materi' => null,
                     'presensi' => $presensi,

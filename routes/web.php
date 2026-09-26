@@ -196,10 +196,6 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
         Route::get('/kurikulum/silabus/{item}', [KurikulumViewerController::class, 'downloadMahasiswa'])->name('mahasiswa.kurikulum.silabus');
     });
 
-    // ===================== KEUANGAN =====================
-
-    Route::get('/keuangan', [MahasiswaDashboardController::class, 'keuangan'])->name('mahasiswa.keuangan');
-
     // ===================== PRESENSI =====================
 
     Route::get('/presensi', [MahasiswaPresensiController::class, 'index'])

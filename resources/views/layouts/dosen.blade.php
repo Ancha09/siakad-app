@@ -84,6 +84,7 @@
             <div class="nav-section-label">Perkuliahan</div>
             <x-sidebar-item route="dosen.matakuliah" :active="request()->routeIs('dosen.matakuliah', 'dosen.matakuliah.*')" icon="book" badge="Baru">Mata Kuliah Ampu</x-sidebar-item>
             <x-sidebar-item route="dosen.jadwal" :active="request()->routeIs('dosen.jadwal', 'dosen.jadwal.*')" icon="calendar">Jadwal Mengajar</x-sidebar-item>
+            <x-sidebar-item route="dosen.presensi" :active="request()->routeIs('dosen.presensi', 'dosen.presensi.*', 'dosen.absensi')" icon="attendance">Absen Dosen</x-sidebar-item>
             <x-sidebar-item route="dosen.nilai" :active="request()->routeIs('dosen.nilai', 'dosen.nilai.*') && ! request()->routeIs('dosen.nilai.rekap')" icon="file-check">Input Nilai</x-sidebar-item>
             <x-sidebar-item route="dosen.nilai.rekap" :active="request()->routeIs('dosen.nilai.rekap', 'dosen.nilai.rekap.*')" icon="chart">Rekap Nilai</x-sidebar-item>
             <x-sidebar-item route="dosen.evaluasi" :active="request()->routeIs('dosen.evaluasi', 'dosen.evaluasi.*')" icon="clipboard">Evaluasi Saya</x-sidebar-item>

@@ -12,6 +12,8 @@ class PresensiPertemuan extends Model
         'jadwal_id',
         'pertemuan',
         'tanggal',
+        'materi_kuliah',
+        'keterangan',
         'foto',
         'materi',
     ];

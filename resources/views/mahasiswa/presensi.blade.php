@@ -130,13 +130,14 @@
                     <summary>Lihat riwayat pertemuan ({{ $item->riwayat->count() }})</summary>
                     <div class="table-wrap history">
                         <table>
-                            <thead><tr><th>Pertemuan</th><th>Tanggal</th><th>Materi</th><th>Status</th><th>Keterangan</th></tr></thead>
+                            <thead><tr><th>Pertemuan</th><th>Tanggal</th><th>Materi Kuliah</th><th>File Materi</th><th>Status</th><th>Keterangan</th></tr></thead>
                             <tbody>
                                 @forelse($item->riwayat as $riwayat)
                                     @php($status = $riwayat->presensi?->status)
                                     <tr>
                                         <td>{{ $riwayat->pertemuan }}</td>
                                         <td>{{ $riwayat->tanggal ? \Carbon\Carbon::parse($riwayat->tanggal)->format('d/m/Y') : '-' }}</td>
+                                        <td>{{ $riwayat->materi_kuliah ?: '-' }}</td>
                                         <td>
                                             @if($riwayat->materi)
                                                 <a class="btn-outline" style="padding:4px 9px;font-size:10px;" href="{{ asset('storage/'.$riwayat->materi) }}" target="_blank" rel="noopener">Lihat Materi</a>
@@ -151,10 +152,10 @@
                                                 <span class="badge badge-gray">Belum dicatat</span>
                                             @endif
                                         </td>
-                                        <td>{{ $riwayat->presensi?->keterangan ?: '-' }}</td>
+                                        <td>{{ $riwayat->keterangan ?: ($riwayat->presensi?->keterangan ?: '-') }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="empty-state">Belum ada pertemuan yang dicatat dosen.</td></tr>
+                                    <tr><td colspan="6" class="empty-state">Belum ada pertemuan yang dicatat dosen.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
