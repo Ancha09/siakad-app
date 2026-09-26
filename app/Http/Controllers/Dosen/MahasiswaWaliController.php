@@ -33,6 +33,7 @@ class MahasiswaWaliController extends Controller
                     ->where(fn ($regular) => $regular
                         ->where('is_manual', false)
                         ->orWhereNull('is_manual'))
+                    ->where('status', '!=', 'Draft')
                     ->latest('id'),
             ])
             ->where('dosen_wali_id', $dosen->id)
@@ -132,6 +133,7 @@ class MahasiswaWaliController extends Controller
             ->where(fn (Builder $query) => $query
                 ->where('is_manual', false)
                 ->orWhereNull('is_manual'))
+            ->where('status', '!=', 'Draft')
             ->orderByDesc('tahun_akademik')
             ->orderByDesc('semester_akademik')
             ->orderBy('id')

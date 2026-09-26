@@ -169,6 +169,10 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
 
     Route::post('/krs', [MahasiswaKrsController::class, 'store'])->name('mahasiswa.krs.store');
 
+    Route::post('/krs/ajukan', [MahasiswaKrsController::class, 'ajukan'])->name('mahasiswa.krs.ajukan');
+
+    Route::delete('/krs/{id}', [MahasiswaKrsController::class, 'destroy'])->name('mahasiswa.krs.destroy');
+
     Route::post('/krs/{id}/ajukan-kembali', [MahasiswaKrsController::class, 'ajukanKembali'])->name('mahasiswa.krs.ajukan-kembali');
 
     // ===================== JADWAL =====================

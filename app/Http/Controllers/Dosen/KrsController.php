@@ -31,6 +31,7 @@ class KrsController extends Controller
 
         $baseQuery = Krs::query()
             ->where('krs.is_manual', false)
+            ->where('krs.status', '!=', 'Draft')
             ->whereHas('jadwal.mataKuliah')
             ->whereHas('mahasiswa', function (Builder $student) use ($dosen, $filters) {
                 $student->where('dosen_wali_id', $dosen->id)
@@ -73,6 +74,7 @@ class KrsController extends Controller
 
         $tahunAkademiks = Krs::query()
             ->where('is_manual', false)
+            ->where('status', '!=', 'Draft')
             ->whereHas('mahasiswa', fn (Builder $student) => $student
                 ->where('dosen_wali_id', $dosen->id))
             ->whereNotNull('tahun_akademik')
@@ -114,6 +116,7 @@ class KrsController extends Controller
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('is_manual', false)
+            ->where('status', '!=', 'Draft')
             ->whereHas('jadwal.mataKuliah')
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
