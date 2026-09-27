@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
 use App\Http\Controllers\Admin\PresensiExportController;
 use App\Http\Controllers\Admin\ProdiController;
 use App\Http\Controllers\Admin\RuanganController;
+use App\Http\Controllers\Admin\StudentCplAssessmentController as AdminStudentCplAssessmentController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\EvaluasiController as DosenEvaluasiController;
 // ===================== DOSEN =====================
@@ -33,6 +34,7 @@ use App\Http\Controllers\Dosen\NilaiController;
 use App\Http\Controllers\Dosen\PenelitianController as DosenPenelitianController;
 use App\Http\Controllers\Dosen\PresensiController;
 use App\Http\Controllers\Dosen\ProfileController as DosenProfileController;
+use App\Http\Controllers\Dosen\StudentCplAssessmentController as DosenStudentCplAssessmentController;
 use App\Http\Controllers\KurikulumViewerController;
 use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardController;
 // ===================== MAHASISWA =====================
@@ -42,6 +44,7 @@ use App\Http\Controllers\Mahasiswa\KrsController as MahasiswaKrsController;
 use App\Http\Controllers\Mahasiswa\KuesionerController as MahasiswaKuesionerController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\ProfileController as MahasiswaProfileController;
+use App\Http\Controllers\Mahasiswa\StudentAssessmentController as MahasiswaStudentAssessmentController;
 use App\Http\Controllers\PengumumanController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Middleware\SkripsiRole;
@@ -78,6 +81,9 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
     Route::get('/mahasiswa-wali', [DosenMahasiswaWaliController::class, 'index'])->name('mahasiswa-wali');
 
     Route::get('/mahasiswa-wali/{mahasiswa}', [DosenMahasiswaWaliController::class, 'show'])->name('mahasiswa-wali.show');
+
+    Route::get('/penilaian-mahasiswa', [DosenStudentCplAssessmentController::class, 'index'])->name('penilaian-mahasiswa.index');
+    Route::get('/penilaian-mahasiswa/{mahasiswa}', [DosenStudentCplAssessmentController::class, 'show'])->name('penilaian-mahasiswa.show');
 
     // ===================== JADWAL MENGAJAR =====================
 
@@ -184,6 +190,8 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
     Route::get('/khs', [MahasiswaKhsController::class, 'index'])->name('mahasiswa.khs');
 
     Route::get('/khs/transkrip/pdf', [MahasiswaKhsController::class, 'transkripPdf'])->name('mahasiswa.transkrip.pdf');
+
+    Route::get('/penilaian-mahasiswa', [MahasiswaStudentAssessmentController::class, 'index'])->name('mahasiswa.penilaian');
 
     // ===================== KUESIONER EVALUASI DOSEN =====================
 
@@ -447,6 +455,9 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::patch('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}/mapping/{mapping}', [IpkCplController::class, 'updateMapping'])->name('admin.ipk-cpl.mapping.update');
     Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}', [IpkCplController::class, 'cpl'])->name('admin.ipk-cpl.cpl');
     Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}/mapping/{mapping}', [IpkCplController::class, 'course'])->name('admin.ipk-cpl.course');
+
+    Route::get('/penilaian-cpl-mahasiswa', [AdminStudentCplAssessmentController::class, 'index'])->name('admin.penilaian-cpl-mahasiswa.index');
+    Route::get('/penilaian-cpl-mahasiswa/{mahasiswa}', [AdminStudentCplAssessmentController::class, 'show'])->name('admin.penilaian-cpl-mahasiswa.show');
 });
 
 // =========================================================

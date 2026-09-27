@@ -222,6 +222,32 @@ class IpkCplReportService
         return $this->academicYears($program)->first();
     }
 
+    /**
+     * Mapping efektif yang juga dipakai laporan IPK CPL. Method read-only ini
+     * menjadi satu sumber aturan untuk profil kemampuan per mahasiswa.
+     *
+     * @return Collection<int, object{cpl:Cpl,mappings:Collection<int, CplMataKuliah>}>
+     */
+    public function activeMappingsForStudentAssessment(Prodi $program): Collection
+    {
+        $allCpls = Cpl::query()
+            ->with(['mappings.mataKuliah'])
+            ->where('program_studi_id', $program->id)
+            ->whereIn('kode_cpl', array_keys(MiningCplCatalog::all()))
+            ->orderBy('sort_order')
+            ->get();
+        $allCpls->each(fn (Cpl $cpl) => $cpl->mappings
+            ->each(fn (CplMataKuliah $mapping) => $mapping->setRelation('cpl', $cpl)));
+
+        return $allCpls
+            ->filter(fn (Cpl $cpl) => MiningCplCatalog::isActive($cpl->kode_cpl))
+            ->map(fn (Cpl $cpl) => (object) [
+                'cpl' => $cpl,
+                'mappings' => $this->effectiveMappingsFor($cpl, $allCpls, $program),
+            ])
+            ->values();
+    }
+
     private function academicYears(Prodi $program): Collection
     {
         return DB::table('khs')

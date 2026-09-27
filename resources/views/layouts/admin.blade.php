@@ -166,6 +166,7 @@
             <x-sidebar-item route="admin.kuesioner" :active="request()->routeIs('admin.kuesioner', 'admin.kuesioner.*')" icon="clipboard">Evaluasi Dosen</x-sidebar-item>
             <x-sidebar-item route="admin.laporan.index" :active="request()->routeIs('admin.laporan.*')" icon="file">Laporan Akademik</x-sidebar-item>
             <x-sidebar-item route="admin.ipk-cpl.index" :active="request()->routeIs('admin.ipk-cpl.*')" icon="chart">IPK CPL</x-sidebar-item>
+            <x-sidebar-item route="admin.penilaian-cpl-mahasiswa.index" :active="request()->routeIs('admin.penilaian-cpl-mahasiswa.*')" icon="star">Penilaian CPL Mahasiswa</x-sidebar-item>
 
             <div class="nav-section-label">Informasi</div>
             <x-sidebar-item route="admin.pengumuman.index" :active="request()->routeIs('admin.pengumuman.*')" icon="bell">Kelola Pengumuman</x-sidebar-item>
