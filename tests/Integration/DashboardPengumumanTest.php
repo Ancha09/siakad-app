@@ -51,6 +51,11 @@ class DashboardPengumumanTest extends TestCase
                     $t->unsignedBigInteger('mahasiswa_id');
                     $t->unsignedBigInteger('jadwal_id');
                     $t->string('status');
+                    $t->string('semester_akademik')->nullable();
+                    $t->boolean('is_manual')->default(false);
+                }
+                if ($table === 'periode_krs') {
+                    $t->string('semester')->nullable();
                 }
                 if (in_array($table, ['jadwals', 'krs', 'khs', 'periode_krs'])) {
                     $t->string('tahun_akademik');
@@ -72,6 +77,8 @@ class DashboardPengumumanTest extends TestCase
                 }
             });
         }
+        (require database_path('migrations/2026_09_16_020000_create_periode_krs_mahasiswas_table.php'))->up();
+        (require database_path('migrations/2026_09_27_010000_add_krs_admin_revision_and_targeted_announcements.php'))->up();
         (require database_path('migrations/2026_09_13_000000_create_template_bimbingans_table.php'))->up();
     }
 

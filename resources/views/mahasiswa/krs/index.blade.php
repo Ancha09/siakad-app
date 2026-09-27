@@ -229,7 +229,11 @@
                 </div>
             @elseif($draftKrs->isNotEmpty())
                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:16px;border-radius:8px;margin-bottom:25px;">
-                    {{ $draftKrs->count() }} mata kuliah tersimpan sebagai draft. Anda masih bisa menambah atau membatalkan pilihan sebelum mengajukan.
+                    @if($krsPerluRevisi)
+                        Persetujuan KRS dikembalikan oleh admin. Periksa pilihan mata kuliah Anda, lakukan koreksi bila perlu, lalu klik Ajukan KRS agar dosen wali dapat meninjau ulang.
+                    @else
+                        {{ $draftKrs->count() }} mata kuliah tersimpan sebagai draft. Anda masih bisa menambah atau membatalkan pilihan sebelum mengajukan.
+                    @endif
                 </div>
             @endif
 
@@ -853,7 +857,7 @@
                                     </td>
 
                                     <td style="text-align:center;">
-                                        @if($item->status === 'Draft' && $draftDapatDiubah && $periodeKrs && $item->tahun_akademik === $periodeKrs->tahun_akademik && $item->semester_akademik === $periodeKrs->semester)
+                                        @if(($item->status === 'Draft' || $item->admin_revision_open) && $draftDapatDiubah && $periodeKrs && $item->tahun_akademik === $periodeKrs->tahun_akademik && $item->semester_akademik === $periodeKrs->semester)
                                             <form action="{{ route('mahasiswa.krs.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Batalkan pilihan mata kuliah ini dari draft KRS?')">
                                                 @csrf
                                                 @method('DELETE')

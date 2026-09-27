@@ -9,7 +9,7 @@ class Pengumuman extends Model
 {
     protected $table = 'pengumumans';
 
-    protected $fillable = ['judul', 'isi', 'penerima', 'tautan', 'penting', 'status', 'terbit_pada', 'berakhir_pada'];
+    protected $fillable = ['penulis_id', 'judul', 'isi', 'penerima', 'tautan', 'penting', 'status', 'terbit_pada', 'berakhir_pada', 'target_type', 'target_user_id', 'target_periode_krs_id', 'target_prodi_id', 'target_angkatan'];
 
     protected function casts(): array
     {
@@ -31,7 +31,34 @@ class Pengumuman extends Model
         return $query->where('status', 'terbit')
             ->where('terbit_pada', '<=', now())
             ->where(fn ($q) => $q->whereNull('berakhir_pada')->orWhere('berakhir_pada', '>', now()))
-            ->when($user->role !== 'admin', fn ($q) => $q->where('penerima', $user->role));
+            ->when($user->role !== 'admin', function ($q) use ($user) {
+                $student = $user->role === 'mahasiswa' ? $user->mahasiswa : null;
+                $periodIds = $student ? PeriodeKrs::query()
+                    ->where(function ($periods) use ($student) {
+                        $periods->whereHas('aksesMahasiswa', fn ($access) => $access
+                            ->where('mahasiswa_id', $student->id)
+                            ->where('status_akses', true))
+                            ->orWhereExists(fn ($krs) => $krs->selectRaw('1')->from('krs')
+                                ->whereColumn('krs.tahun_akademik', 'periode_krs.tahun_akademik')
+                                ->whereColumn('krs.semester_akademik', 'periode_krs.semester')
+                                ->where('krs.mahasiswa_id', $student->id)
+                                ->where('krs.is_manual', false));
+                    })->pluck('id') : collect();
+
+                $q->where('penerima', $user->role)
+                    ->where(function ($target) use ($user, $student, $periodIds) {
+                        $target->where('target_type', 'all')
+                            ->orWhere(fn ($specific) => $specific->where('target_type', 'student')->where('target_user_id', $user->id));
+
+                        if ($student) {
+                            $target->orWhere(fn ($program) => $program->where('target_type', 'prodi')->where('target_prodi_id', $student->prodi_id))
+                                ->orWhere(fn ($cohort) => $cohort->where('target_type', 'angkatan')->where('target_angkatan', $student->angkatan));
+                            if ($periodIds->isNotEmpty()) {
+                                $target->orWhere(fn ($period) => $period->where('target_type', 'period')->whereIn('target_periode_krs_id', $periodIds));
+                            }
+                        }
+                    });
+            });
     }
 
     public function scopeDenganStatusBaca(Builder $query, User $user): Builder
@@ -41,9 +68,16 @@ class Pengumuman extends Model
 
     public function getLabelStatusAttribute(): string
     {
-        if ($this->status === 'draft') return 'Draft';
-        if ($this->berakhir_pada?->isPast()) return 'Berakhir';
-        if ($this->terbit_pada?->isFuture()) return 'Terjadwal';
+        if ($this->status === 'draft') {
+            return 'Draft';
+        }
+        if ($this->berakhir_pada?->isPast()) {
+            return 'Berakhir';
+        }
+        if ($this->terbit_pada?->isFuture()) {
+            return 'Terjadwal';
+        }
+
         return 'Terbit';
     }
 }

@@ -32,6 +32,7 @@ class KrsController extends Controller
         $baseQuery = Krs::query()
             ->where('krs.is_manual', false)
             ->where('krs.status', '!=', 'Draft')
+            ->where('krs.admin_revision_open', false)
             ->whereHas('jadwal.mataKuliah')
             ->whereHas('mahasiswa', function (Builder $student) use ($dosen, $filters) {
                 $student->where('dosen_wali_id', $dosen->id)
@@ -75,6 +76,7 @@ class KrsController extends Controller
         $tahunAkademiks = Krs::query()
             ->where('is_manual', false)
             ->where('status', '!=', 'Draft')
+            ->where('admin_revision_open', false)
             ->whereHas('mahasiswa', fn (Builder $student) => $student
                 ->where('dosen_wali_id', $dosen->id))
             ->whereNotNull('tahun_akademik')
@@ -117,6 +119,7 @@ class KrsController extends Controller
             ->where('mahasiswa_id', $mahasiswa->id)
             ->where('is_manual', false)
             ->where('status', '!=', 'Draft')
+            ->where('admin_revision_open', false)
             ->whereHas('jadwal.mataKuliah')
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
@@ -171,6 +174,7 @@ class KrsController extends Controller
             $period['semester_akademik'],
             true
         );
+        abort_if($data['krsRecords']->contains(fn (Krs $item) => $item->admin_revision_open), 404, 'KRS masih dalam revisi mahasiswa.');
         abort_if($data['printableRecords']->isEmpty(), 404, 'Tidak ada KRS yang dapat dicetak pada periode tersebut.');
 
         return Pdf::loadView('krs.card-pdf', $data)
@@ -189,10 +193,17 @@ class KrsController extends Controller
                 ->with('error', 'KRS ini tidak dapat disetujui karena statusnya sudah diproses.');
         }
 
-        $krs->update([
-            'status' => 'Disetujui',
-            'alasan_penolakan' => null,
-        ]);
+        $changed = Krs::whereKey($krs->id)
+            ->where('admin_revision_open', false)
+            ->whereIn('status', ['Menunggu', 'Diambil'])
+            ->update([
+                'status' => 'Disetujui',
+                'alasan_penolakan' => null,
+            ]);
+
+        if (! $changed) {
+            return redirect()->to($returnUrl)->with('error', 'KRS sedang direvisi atau sudah diproses.');
+        }
 
         return redirect()->to($returnUrl)
             ->with('success', 'KRS mahasiswa berhasil disetujui.');
@@ -219,10 +230,17 @@ class KrsController extends Controller
                 ->with('error', 'KRS ini tidak dapat ditolak karena statusnya sudah diproses.');
         }
 
-        $krs->update([
-            'status' => 'Ditolak',
-            'alasan_penolakan' => $data['alasan_penolakan'],
-        ]);
+        $changed = Krs::whereKey($krs->id)
+            ->where('admin_revision_open', false)
+            ->whereIn('status', ['Menunggu', 'Diambil'])
+            ->update([
+                'status' => 'Ditolak',
+                'alasan_penolakan' => $data['alasan_penolakan'],
+            ]);
+
+        if (! $changed) {
+            return redirect()->to($returnUrl)->with('error', 'KRS sedang direvisi atau sudah diproses.');
+        }
 
         return redirect()->to($returnUrl)
             ->with('success', 'KRS mahasiswa berhasil ditolak dan alasan penolakan telah disimpan.');
@@ -237,6 +255,7 @@ class KrsController extends Controller
     {
         return Krs::where('id', $id)
             ->where('is_manual', false)
+            ->where('admin_revision_open', false)
             ->whereHas('mahasiswa', fn (Builder $student) => $student
                 ->where('dosen_wali_id', $dosen->id))
             ->firstOrFail();

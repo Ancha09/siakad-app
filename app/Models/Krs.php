@@ -19,6 +19,7 @@ class Krs extends Model
         'angkatan',
         'semester',
         'status',
+        'admin_revision_open',
         'alasan_penolakan',
         'tahun_akademik',
         'semester_akademik',
@@ -28,7 +29,7 @@ class Krs extends Model
 
     protected function casts(): array
     {
-        return ['is_manual' => 'boolean'];
+        return ['is_manual' => 'boolean', 'admin_revision_open' => 'boolean'];
     }
 
     // Relasi ke Mahasiswa

@@ -130,6 +130,13 @@
 
 
                 {{-- ANGKATAN --}}
+                <div class="form-group" style="grid-column:1 / -1;">
+                    <label>Alamat</label>
+                    <textarea name="alamat" class="form-control" rows="3" maxlength="1000" placeholder="Alamat mahasiswa (opsional)">{{ old('alamat') }}</textarea>
+                </div>
+
+
+                {{-- ANGKATAN --}}
                 <div class="form-group">
 
                     <label>Angkatan</label>

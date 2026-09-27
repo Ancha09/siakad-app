@@ -9,7 +9,9 @@ use App\Models\Fakultas;
 use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\Krs;
+use App\Models\KrsApprovalReset;
 use App\Models\Mahasiswa;
+use App\Models\PeriodeKrs;
 use App\Models\Prodi;
 use App\Services\KrsCardService;
 use App\Services\LegacyListNavigation;
@@ -30,13 +32,21 @@ class KrsController extends Controller
             'semester' => ['nullable', 'integer', 'between:1,14'],
             'semester_akademik' => ['nullable', Rule::in(['Ganjil', 'Genap'])],
             'tahun_akademik' => ['nullable', 'string', 'max:20'],
-            'status' => ['nullable', Rule::in(['Diambil', 'Menunggu', 'Disetujui', 'Ditolak'])],
+            'status' => ['nullable', Rule::in(['Draft', 'Diambil', 'Menunggu', 'Disetujui', 'Ditolak'])],
+            'periode_krs_id' => ['nullable', 'integer', 'exists:periode_krs,id'],
             'page' => ['nullable', 'integer', 'between:1,100000'],
         ]);
+
+        $selectedPeriod = isset($filters['periode_krs_id'])
+            ? PeriodeKrs::findOrFail($filters['periode_krs_id'])
+            : null;
 
         $query = Krs::query()
             ->with(['mahasiswa.prodi', 'mahasiswa.kelas'])
             ->where('is_manual', false)
+            ->when($selectedPeriod, fn (Builder $query) => $query
+                ->where('tahun_akademik', $selectedPeriod->tahun_akademik)
+                ->where('semester_akademik', $selectedPeriod->semester))
             ->when($filters['search'] ?? null, function (Builder $query, string $search) {
                 $query->whereHas('mahasiswa', fn (Builder $student) => $student
                     ->where('nim', 'like', "%{$search}%")
@@ -68,7 +78,9 @@ class KrsController extends Controller
                 ->havingRaw("SUM(CASE WHEN status = 'Ditolak' THEN 1 ELSE 0 END) > 0"))
             ->when(($filters['status'] ?? null) === 'Menunggu', fn (Builder $query) => $query
                 ->havingRaw("SUM(CASE WHEN status = 'Ditolak' THEN 1 ELSE 0 END) = 0")
-                ->havingRaw("SUM(CASE WHEN status <> 'Disetujui' THEN 1 ELSE 0 END) > 0"))
+                ->havingRaw("SUM(CASE WHEN status IN ('Menunggu', 'Diambil') THEN 1 ELSE 0 END) > 0"))
+            ->when(($filters['status'] ?? null) === 'Draft', fn (Builder $query) => $query
+                ->havingRaw("SUM(CASE WHEN status <> 'Draft' THEN 1 ELSE 0 END) = 0"))
             ->when(($filters['status'] ?? null) === 'Diambil', fn (Builder $query) => $query
                 ->havingRaw("SUM(CASE WHEN status = 'Diambil' THEN 1 ELSE 0 END) > 0"))
             ->orderByDesc('tahun_akademik')
@@ -84,6 +96,7 @@ class KrsController extends Controller
         ]);
         $periodRecords = Krs::query()
             ->with(['jadwal.mataKuliah'])
+            ->withExists('khs')
             ->where('is_manual', false)
             ->whereIn('mahasiswa_id', $studentIds)
             ->get()
@@ -101,9 +114,12 @@ class KrsController extends Controller
                 ->sum(fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0)));
             $summary->setAttribute('semester_studi', $summary->mahasiswa?->semester
                 ?? $summary->mahasiswa?->kelas?->semester);
+            $summary->setAttribute('perlu_revisi', $records->contains(fn (Krs $item) => $item->admin_revision_open));
+            $summary->setAttribute('sudah_bernilai', $records->contains(fn (Krs $item) => $item->khs_exists));
             $summary->setAttribute('status_persetujuan', match (true) {
                 $records->isNotEmpty() && $records->every(fn (Krs $item) => $item->status === 'Disetujui') => 'Disetujui',
                 $records->contains(fn (Krs $item) => $item->status === 'Ditolak') => 'Ditolak',
+                $records->isNotEmpty() && $records->every(fn (Krs $item) => $item->status === 'Draft') => 'Draft',
                 default => 'Menunggu',
             });
 
@@ -119,6 +135,11 @@ class KrsController extends Controller
             'studentSuggestions' => Mahasiswa::where('is_active', true)
                 ->orderBy('nama')
                 ->get(['id', 'nim', 'nama']),
+            'periodes' => PeriodeKrs::orderByDesc('tanggal_mulai')->orderByDesc('id')->get(),
+            'selectedPeriod' => $selectedPeriod,
+            'resetHistory' => KrsApprovalReset::with(['admin', 'mahasiswa'])
+                ->when($selectedPeriod, fn (Builder $query) => $query->where('periode_krs_id', $selectedPeriod->id))
+                ->orderByDesc('id')->limit(15)->get(),
         ]);
     }
 

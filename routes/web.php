@@ -9,8 +9,10 @@ use App\Http\Controllers\Admin\JadwalController as AdminJadwalController;
 use App\Http\Controllers\Admin\KelasController;
 use App\Http\Controllers\Admin\KhsController;
 use App\Http\Controllers\Admin\KrsController;
+use App\Http\Controllers\Admin\KrsApprovalResetController;
 use App\Http\Controllers\Admin\IpkCplController;
 use App\Http\Controllers\Admin\KuesionerController as AdminKuesionerController;
+use App\Http\Controllers\Admin\KtmController as AdminKtmController;
 use App\Http\Controllers\Admin\KurikulumController as AdminKurikulumController;
 use App\Http\Controllers\Admin\LaporanAkademikController;
 use App\Http\Controllers\Admin\MahasiswaController;
@@ -42,6 +44,7 @@ use App\Http\Controllers\Mahasiswa\DashboardController as MahasiswaDashboardCont
 use App\Http\Controllers\Mahasiswa\KhsController as MahasiswaKhsController;
 use App\Http\Controllers\Mahasiswa\KrsController as MahasiswaKrsController;
 use App\Http\Controllers\Mahasiswa\KuesionerController as MahasiswaKuesionerController;
+use App\Http\Controllers\Mahasiswa\KtmController as MahasiswaKtmController;
 use App\Http\Controllers\Mahasiswa\PresensiController as MahasiswaPresensiController;
 use App\Http\Controllers\Mahasiswa\ProfileController as MahasiswaProfileController;
 use App\Http\Controllers\Mahasiswa\StudentAssessmentController as MahasiswaStudentAssessmentController;
@@ -193,6 +196,15 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
 
     Route::get('/penilaian-mahasiswa', [MahasiswaStudentAssessmentController::class, 'index'])->name('mahasiswa.penilaian');
 
+    Route::get('/ktm', [MahasiswaKtmController::class, 'index'])->name('mahasiswa.ktm');
+    Route::post('/ktm/preview', [MahasiswaKtmController::class, 'upload'])->name('mahasiswa.ktm.upload');
+    Route::get('/ktm/preview/image', [MahasiswaKtmController::class, 'previewImage'])->name('mahasiswa.ktm.preview-image');
+    Route::delete('/ktm/preview', [MahasiswaKtmController::class, 'cancel'])->name('mahasiswa.ktm.cancel');
+    Route::post('/ktm/finalize', [MahasiswaKtmController::class, 'finalize'])->name('mahasiswa.ktm.finalize');
+    Route::get('/ktm/image', [MahasiswaKtmController::class, 'image'])->name('mahasiswa.ktm.image');
+    Route::get('/ktm/download/pdf', [MahasiswaKtmController::class, 'pdf'])->name('mahasiswa.ktm.pdf');
+    Route::get('/ktm/download/png', [MahasiswaKtmController::class, 'png'])->name('mahasiswa.ktm.png');
+
     // ===================== KUESIONER EVALUASI DOSEN =====================
 
     Route::get('/kuesioner', [MahasiswaKuesionerController::class, 'index'])->name('mahasiswa.kuesioner');
@@ -272,6 +284,11 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::delete('/mahasiswa/{mahasiswa}', [MahasiswaController::class, 'destroy'])->name('admin.mahasiswa.destroy');
 
+    Route::get('/ktm', [AdminKtmController::class, 'index'])->name('admin.ktm.index');
+    Route::get('/ktm/{mahasiswa}', [AdminKtmController::class, 'show'])->name('admin.ktm.show');
+    Route::get('/ktm/{mahasiswa}/image', [AdminKtmController::class, 'image'])->name('admin.ktm.image');
+    Route::delete('/ktm/{mahasiswa}/reset', [AdminKtmController::class, 'reset'])->name('admin.ktm.reset');
+
     // ===================== MATA KULIAH =====================
 
     Route::get('/matakuliah', [MataKuliahController::class, 'index'])->name('admin.matakuliah');
@@ -347,6 +364,8 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/krs', [KrsController::class, 'index'])->name('admin.krs');
 
     Route::get('/krs-mahasiswa', [KrsController::class, 'studentIndex'])->name('admin.krs-mahasiswa.index');
+
+    Route::post('/periode-krs/{periodeKrs}/reset-persetujuan', [KrsApprovalResetController::class, 'reset'])->name('admin.periode-krs.reset-persetujuan');
 
     Route::get('/krs-mahasiswa/{mahasiswa}', [KrsController::class, 'studentShow'])->name('admin.krs-mahasiswa.show');
 

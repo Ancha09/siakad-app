@@ -30,7 +30,10 @@
             ][$periodeKrs->access_mode ?? 'selected'] }}
         </p>
     </div>
-    <a href="{{ route('admin.periode-krs') }}" class="btn-outline">Kembali ke Periode KRS</a>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <a href="{{ route('admin.krs-mahasiswa.index', ['periode_krs_id' => $periodeKrs->id]) }}" class="btn-primary">Koreksi ACC KRS</a>
+        <a href="{{ route('admin.periode-krs') }}" class="btn-outline">Kembali ke Periode KRS</a>
+    </div>
 </div>
 
 @if($periodeKrs->status !== 'Dibuka' || $periodeKrs->tanggal_mulai->isFuture() || $periodeKrs->tanggal_selesai->isPast())

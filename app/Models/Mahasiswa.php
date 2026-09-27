@@ -28,6 +28,7 @@ class Mahasiswa extends Model
         'nama',
         'email',
         'telepon',
+        'alamat',
         'angkatan',
         'semester',
         'prodi_id',
@@ -35,11 +36,21 @@ class Mahasiswa extends Model
         'dosen_wali_id',
         'user_id',
         'is_active',
+        'ktm_photo_path',
+        'ktm_photo_uploaded_at',
+        'ktm_photo_locked',
+        'ktm_photo_reset_at',
+        'ktm_photo_reset_by',
     ];
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return [
+            'is_active' => 'boolean',
+            'ktm_photo_uploaded_at' => 'datetime',
+            'ktm_photo_locked' => 'boolean',
+            'ktm_photo_reset_at' => 'datetime',
+        ];
     }
 
     // ===================== RELASI PROGRAM STUDI =====================
@@ -64,6 +75,11 @@ class Mahasiswa extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function ktmPhotoResetBy()
+    {
+        return $this->belongsTo(User::class, 'ktm_photo_reset_by');
     }
 
     // ===================== RELASI DOSEN WALI =====================

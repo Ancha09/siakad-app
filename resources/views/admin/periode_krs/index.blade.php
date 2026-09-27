@@ -283,6 +283,8 @@
                                     Akses Mahasiswa
                                 </a>
 
+                                <a href="{{ route('admin.krs-mahasiswa.index', ['periode_krs_id' => $item->id]) }}" class="btn-outline" style="white-space:nowrap;">Koreksi ACC KRS</a>
+
                                 {{-- TOGGLE STATUS --}}
 
                                 <form

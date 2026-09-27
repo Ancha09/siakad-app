@@ -19,7 +19,7 @@
         <tbody>
         @forelse($pengumumans as $item)
             <tr>
-                <td><strong>{{ $item->judul }}</strong>@if($item->penting) <span class="badge badge-red">Penting</span>@endif<p class="announcement-muted">{{ $item->penulis?->name ?? 'Admin' }}</p></td>
+                <td><strong>{{ $item->judul }}</strong>@if($item->penting) <span class="badge badge-red">Penting</span>@endif<p class="announcement-muted">{{ $item->penulis?->name ?? 'Admin' }} &middot; Target: {{ match($item->target_type ?? 'all') { 'student' => 'Mahasiswa tertentu', 'period' => 'Periode KRS', 'prodi' => 'Program studi', 'angkatan' => 'Angkatan', default => 'Semua penerima' } }}</p></td>
                 <td><span class="badge {{ $item->label_status === 'Terbit' ? 'badge-green' : 'badge-gray' }}">{{ $item->label_status }}</span></td>
                 <td>{{ $item->terbit_pada?->timezone('Asia/Jakarta')->format('d M Y H:i') ?? 'Belum ditentukan' }}</td>
                 <td>{{ $item->pembaca_count }}</td>
