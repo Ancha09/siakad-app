@@ -58,8 +58,9 @@ test('regular attendance pages remain accessible and legacy input is not linked'
     ['mahasiswa', 'mahasiswa.presensi', 'Absen Mahasiswa'],
 ]);
 
-test('student finance feature is not exposed by route or navigation', function () {
+test('legacy finance route stays removed while the new student payment module is exposed', function () {
     expect(Route::has('mahasiswa.keuangan'))->toBeFalse();
+    expect(Route::has('mahasiswa.pembayaran.index'))->toBeTrue();
 
     $user = User::factory()->create(['role' => 'mahasiswa']);
     Mahasiswa::create([
@@ -73,7 +74,7 @@ test('student finance feature is not exposed by route or navigation', function (
         ->get(route('mahasiswa.dashboard'))
         ->assertOk()
         ->assertSee('Absen Mahasiswa')
-        ->assertDontSee('Keuangan');
+        ->assertSee('Pembayaran (Uji Coba)');
 
     $this->get('/mahasiswa/keuangan')->assertNotFound();
 });

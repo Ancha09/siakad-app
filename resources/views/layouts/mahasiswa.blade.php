@@ -115,6 +115,7 @@
             <x-sidebar-item route="mahasiswa.khs" :active="request()->routeIs('mahasiswa.khs', 'mahasiswa.khs.*')" icon="file-chart">KHS &amp; Transkrip</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.penilaian" :active="request()->routeIs('mahasiswa.penilaian')" icon="star">Penilaian Mahasiswa</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.ktm" :active="request()->routeIs('mahasiswa.ktm*')" icon="user">KTM Mahasiswa</x-sidebar-item>
+            <x-sidebar-item route="mahasiswa.pembayaran.index" :active="request()->routeIs('mahasiswa.pembayaran.*')" icon="wallet">Pembayaran (Uji Coba)</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.kuesioner" :active="request()->routeIs('mahasiswa.kuesioner', 'mahasiswa.kuesioner.*')" icon="clipboard">Kuesioner Dosen</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.skripsi" :active="request()->routeIs('mahasiswa.skripsi', 'mahasiswa.skripsi.*')" icon="graduation">Pengajuan Skripsi</x-sidebar-item>
 

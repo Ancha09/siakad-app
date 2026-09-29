@@ -1,0 +1,8 @@
+<div class="payment-grid">
+    <div><label>Jenis tagihan *</label><input name="jenis_tagihan" required maxlength="100" value="{{ old('jenis_tagihan', $bill->jenis_tagihan ?? '') }}" placeholder="SPP / Praktikum / Lainnya"></div>
+    <div><label>Nominal pokok (rupiah) *</label><input name="nominal_pokok" type="number" required min="{{ config('payments.minimum_payment') }}" max="1000000000" step="1" value="{{ old('nominal_pokok', $bill->nominal_pokok ?? '') }}"><small class="payment-small">Minimal Rp {{ number_format(config('payments.minimum_payment'),0,',','.') }}.</small></div>
+    <div><label>Biaya layanan VA per transaksi (rupiah) *</label><input name="biaya_layanan" type="number" required min="0" max="1000000000" step="1" value="{{ old('biaya_layanan', $bill->biaya_layanan ?? config('payments.default_service_fee')) }}"><small class="payment-small">Default Midtrans VA Rp {{ number_format(config('payments.default_service_fee'),0,',','.') }}; admin dapat menyesuaikan jika pricing berubah.</small></div>
+    <div><label>Jatuh tempo (opsional)</label><input name="jatuh_tempo" type="date" value="{{ old('jatuh_tempo', isset($bill) ? $bill->jatuh_tempo?->format('Y-m-d') : '') }}"></div>
+    <div><label>Cicilan *</label><select name="boleh_cicil"><option value="0" @selected(!old('boleh_cicil', $bill->boleh_cicil ?? false))>Harus lunas sekaligus</option><option value="1" @selected(old('boleh_cicil', $bill->boleh_cicil ?? false))>Boleh dicicil</option></select></div>
+</div>
+<div style="margin-bottom:16px"><label>Deskripsi *</label><textarea name="deskripsi" required maxlength="2000" rows="3">{{ old('deskripsi', $bill->deskripsi ?? '') }}</textarea></div>

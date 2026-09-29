@@ -169,6 +169,9 @@
             <x-sidebar-item route="admin.ipk-cpl.index" :active="request()->routeIs('admin.ipk-cpl.*')" icon="chart">IPK CPL</x-sidebar-item>
             <x-sidebar-item route="admin.penilaian-cpl-mahasiswa.index" :active="request()->routeIs('admin.penilaian-cpl-mahasiswa.*')" icon="star">Penilaian CPL Mahasiswa</x-sidebar-item>
 
+            <div class="nav-section-label">Pembayaran</div>
+            <x-sidebar-item route="admin.pembayaran.index" :active="request()->routeIs('admin.pembayaran.*')" icon="wallet">Tagihan &amp; Pembayaran</x-sidebar-item>
+
             <div class="nav-section-label">Informasi</div>
             <x-sidebar-item route="admin.pengumuman.index" :active="request()->routeIs('admin.pengumuman.*')" icon="bell">Kelola Pengumuman</x-sidebar-item>
             <x-sidebar-item route="admin.pemberitahuan" :active="request()->routeIs('admin.pemberitahuan*')" icon="clipboard">Pemberitahuan</x-sidebar-item>

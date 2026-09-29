@@ -33,7 +33,7 @@
                   </thead>
                   <tbody>
                     <tr><td>1</td><td>Gasal 2024/25</td><td>UKT</td><td><strong>Rp 4.200.000</strong></td><td>5 Agt 2024</td><td>Transfer Bank</td><td><span class="badge badge-green">Lunas</span></td><td><button class="btn-outline" style="padding:4px 10px;font-size:11px">Unduh</button></td></tr>
-                    <tr><td>2</td><td>Genap 2023/24</td><td>UKT</td><td><strong>Rp 4.200.000</strong></td><td>2 Feb 2024</td><td>QRIS</td><td><span class="badge badge-green">Lunas</span></td><td><button class="btn-outline" style="padding:4px 10px;font-size:11px">Unduh</button></td></tr>
+                    <tr><td>2</td><td>Genap 2023/24</td><td>UKT</td><td><strong>Rp 4.200.000</strong></td><td>2 Feb 2024</td><td>Virtual Account</td><td><span class="badge badge-green">Lunas</span></td><td><button class="btn-outline" style="padding:4px 10px;font-size:11px">Unduh</button></td></tr>
                     <tr><td>3</td><td>Gasal 2023/24</td><td>UKT</td><td><strong>Rp 4.200.000</strong></td><td>8 Agt 2023</td><td>Transfer Bank</td><td><span class="badge badge-green">Lunas</span></td><td><button class="btn-outline" style="padding:4px 10px;font-size:11px">Unduh</button></td></tr>
                   </tbody>
                 </table>

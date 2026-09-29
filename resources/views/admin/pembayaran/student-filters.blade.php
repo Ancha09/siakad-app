@@ -1,0 +1,3 @@
+<div><label for="payment-search">Nama / NIM</label><input id="payment-search" name="search" value="{{ request('search') }}" placeholder="Cari nama atau NIM"></div>
+<div><label for="payment-prodi">Program studi</label><select id="payment-prodi" name="prodi_id"><option value="">Semua prodi</option>@foreach($prodis as $prodi)<option value="{{ $prodi->id }}" @selected((string)request('prodi_id') === (string)$prodi->id)>{{ $prodi->nama_prodi }}</option>@endforeach</select></div>
+<div><label for="payment-cohort">Angkatan</label><input type="number" id="payment-cohort" name="angkatan" min="1900" max="2100" value="{{ request('angkatan') }}"></div>

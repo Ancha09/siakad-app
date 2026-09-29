@@ -511,3 +511,5 @@ foreach (['dosen', 'mahasiswa', 'admin'] as $role) {
 require __DIR__.'/auth.php';
 
 require __DIR__.'/skripsi.php';
+
+require __DIR__.'/payments.php';
