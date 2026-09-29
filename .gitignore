@@ -14,6 +14,7 @@
 .phpactor.json
 .phpunit.result.cache
 /.codex
+/.codex-gitconfig.tmp
 /.cursor/
 /.idea
 /.nova
