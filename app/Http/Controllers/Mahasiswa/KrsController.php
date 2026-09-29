@@ -328,23 +328,13 @@ class KrsController extends Controller
                 );
             }
 
-            // Bentrok antarprodi boleh disimpan oleh admin, tetapi seorang mahasiswa
-            // tetap tidak boleh mengambil dua perkuliahan dengan rentang waktu tumpang tindih.
+            // Bentrok jadwal hanya menjadi informasi. Sesuai kebijakan kampus,
+            // mahasiswa tetap boleh menyimpan mata kuliah yang waktunya beririsan.
             $jadwalBentrok = $krsPeriodeAktif
                 ->where('status', '!=', 'Ditolak')
                 ->map(fn (Krs $item) => $item->jadwal)
                 ->filter()
                 ->first(fn (Jadwal $existing) => $this->schedulesOverlap($existing, $jadwal));
-
-            if ($jadwalBentrok) {
-                $mataKuliahBentrok = $jadwalBentrok->mataKuliah?->nama_mk ?? 'mata kuliah sebelumnya';
-                $mataKuliahBaru = $jadwal->mataKuliah?->nama_mk ?? 'mata kuliah yang dipilih';
-
-                return back()->with(
-                    'error',
-                    "Terdapat jadwal mata kuliah yang bentrok: {$mataKuliahBentrok} dan {$mataKuliahBaru}."
-                );
-            }
 
             // ===================== HITUNG TOTAL SKS =====================
 
@@ -402,12 +392,21 @@ class KrsController extends Controller
 
             ]);
 
-            return redirect()
+            $response = redirect()
                 ->route('mahasiswa.krs')
                 ->with(
                     'success',
                     'Mata kuliah tersimpan sebagai draft. Klik Ajukan KRS setelah pilihan selesai.'
                 );
+
+            if ($jadwalBentrok) {
+                $response->with(
+                    'warning',
+                    'Terdapat jadwal yang beririsan. Jika ingin mengganti jadwal, silakan hubungi admin.'
+                );
+            }
+
+            return $response;
         });
     }
 

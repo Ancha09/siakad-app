@@ -10,6 +10,7 @@ use App\Models\Presensi;
 use App\Models\Prodi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class PresensiController extends Controller
 {
@@ -19,6 +20,18 @@ class PresensiController extends Controller
 
     public function index(Request $request)
     {
+        $filters = $request->validate([
+            'tahun_akademik' => ['nullable', 'string', 'max:20'],
+            'semester_akademik' => ['nullable', 'string', 'max:30'],
+            'prodi_id' => ['nullable', 'integer', 'exists:prodis,id'],
+            'kelas_id' => ['nullable', 'integer', 'exists:kelas,id'],
+            'dosen_id' => ['nullable', 'integer', 'exists:dosens,id'],
+            'mata_kuliah_id' => ['nullable', 'integer', 'exists:mata_kuliahs,id'],
+            'tanggal' => ['nullable', 'date_format:Y-m-d'],
+            'pertemuan' => ['nullable', 'integer', 'between:1,16'],
+            'status' => ['nullable', Rule::in(['Hadir', 'Izin', 'Sakit', 'Alpha'])],
+        ]);
+
         // ===================== DATA FILTER =====================
 
         $prodis = Prodi::orderBy('nama_prodi')->get();
@@ -28,6 +41,26 @@ class PresensiController extends Controller
         $dosens = Dosen::orderBy('nama')->get();
 
         $mataKuliahs = MataKuliah::orderBy('nama_mk')->get();
+
+        $tahunAkademiks = DB::table('jadwals')
+            ->whereNotNull('tahun_akademik')
+            ->distinct()
+            ->pluck('tahun_akademik')
+            ->merge(DB::table('krs')->whereNotNull('tahun_akademik')->distinct()->pluck('tahun_akademik'))
+            ->filter()
+            ->unique()
+            ->sortDesc()
+            ->values();
+
+        $semesterAkademiks = DB::table('jadwals')
+            ->whereNotNull('semester_akademik')
+            ->distinct()
+            ->pluck('semester_akademik')
+            ->merge(DB::table('krs')->whereNotNull('semester_akademik')->distinct()->pluck('semester_akademik'))
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
 
         // =====================================================
         // DATA PRESENSI
@@ -44,6 +77,18 @@ class PresensiController extends Controller
             'krs.kelasManual',
             'krs.jadwal.ruangan',
         ]);
+
+        if ($request->filled('tahun_akademik')) {
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('tahun_akademik', $filters['tahun_akademik'])
+                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('tahun_akademik', $filters['tahun_akademik'])));
+        }
+
+        if ($request->filled('semester_akademik')) {
+            $query->whereHas('krs', fn ($q) => $q
+                ->where('semester_akademik', $filters['semester_akademik'])
+                ->orWhereHas('jadwal', fn ($jadwal) => $jadwal->where('semester_akademik', $filters['semester_akademik'])));
+        }
 
         // ===================== FILTER PRODI =====================
 
@@ -92,6 +137,14 @@ class PresensiController extends Controller
                 $request->pertemuan
             );
 
+        }
+
+        if ($request->filled('tanggal')) {
+            $query->whereDate('tanggal', $filters['tanggal']);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $filters['status']);
         }
 
         // ===================== AMBIL DATA =====================
@@ -176,11 +229,24 @@ class PresensiController extends Controller
                 '=',
                 'jadwals.id'
             )
+            ->leftJoin('mata_kuliahs', 'jadwals.mata_kuliah_id', '=', 'mata_kuliahs.id')
+            ->leftJoin('dosens', 'jadwals.dosen_id', '=', 'dosens.id')
             ->select(
                 'presensi_pertemuans.*',
                 'jadwals.mata_kuliah_id',
-                'jadwals.dosen_id'
+                'jadwals.dosen_id',
+                'mata_kuliahs.kode_mk',
+                'mata_kuliahs.nama_mk',
+                'dosens.nama as nama_dosen'
             );
+
+        if ($request->filled('tahun_akademik')) {
+            $pertemuanQuery->where('jadwals.tahun_akademik', $filters['tahun_akademik']);
+        }
+
+        if ($request->filled('semester_akademik')) {
+            $pertemuanQuery->where('jadwals.semester_akademik', $filters['semester_akademik']);
+        }
 
         if ($request->filled('dosen_id')) {
 
@@ -207,6 +273,37 @@ class PresensiController extends Controller
                 $request->pertemuan
             );
 
+        }
+
+        if ($request->filled('tanggal')) {
+            $pertemuanQuery->whereDate('presensi_pertemuans.tanggal', $filters['tanggal']);
+        }
+
+        if ($request->filled('prodi_id') || $request->filled('kelas_id') || $request->filled('status')) {
+            $pertemuanQuery->whereExists(function ($query) use ($filters, $request) {
+                $query->selectRaw('1')
+                    ->from('presensis')
+                    ->join('krs', 'presensis.krs_id', '=', 'krs.id')
+                    ->join('mahasiswas', 'krs.mahasiswa_id', '=', 'mahasiswas.id')
+                    ->whereColumn('krs.jadwal_id', 'jadwals.id')
+                    ->whereColumn('presensis.pertemuan', 'presensi_pertemuans.pertemuan');
+
+                if ($request->filled('prodi_id')) {
+                    $query->where(fn ($prodi) => $prodi
+                        ->where('krs.prodi_id', $filters['prodi_id'])
+                        ->orWhere('mahasiswas.prodi_id', $filters['prodi_id']));
+                }
+
+                if ($request->filled('kelas_id')) {
+                    $query->where(fn ($kelasFilter) => $kelasFilter
+                        ->where('krs.kelas_id', $filters['kelas_id'])
+                        ->orWhere('mahasiswas.kelas_id', $filters['kelas_id']));
+                }
+
+                if ($request->filled('status')) {
+                    $query->where('presensis.status', $filters['status']);
+                }
+            });
         }
 
         $pertemuans = $pertemuanQuery
@@ -243,6 +340,8 @@ class PresensiController extends Controller
                 'kelas',
                 'dosens',
                 'mataKuliahs',
+                'tahunAkademiks',
+                'semesterAkademiks',
                 'presensis',
                 'rekap',
                 'pertemuans',

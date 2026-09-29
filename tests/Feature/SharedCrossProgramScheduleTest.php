@@ -264,7 +264,7 @@ test('students only see the shared schedule course code belonging to their progr
     $responseB->assertSee('Lintas Prodi')->assertSee('MKU')->assertSee('Lintas Prodi B');
 });
 
-test('student KRS rejects overlapping courses and accepts a non conflicting course', function () {
+test('student KRS accepts overlapping courses with a non blocking warning', function () {
     $data = makeSharedScheduleFixture();
     $studentUser = User::factory()->create(['role' => 'mahasiswa']);
     $student = Mahasiswa::create([
@@ -321,17 +321,24 @@ test('student KRS rejects overlapping courses and accepts a non conflicting cour
         ->assertSessionHas('success');
     $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $overlapSchedule->id])
         ->assertSessionHas(
-            'error',
-            'Terdapat jadwal mata kuliah yang bentrok: Matematika Lintas A dan Mata Kuliah Bertabrakan.'
-        );
+            'warning',
+            'Terdapat jadwal yang beririsan. Jika ingin mengganti jadwal, silakan hubungi admin.'
+        )
+        ->assertSessionHas('success');
     $this->post(route('mahasiswa.krs.store'), ['jadwal_id' => $safeSchedule->id])
         ->assertSessionHas('success');
 
-    expect(Krs::where('mahasiswa_id', $student->id)->count())->toBe(2);
-    $this->assertDatabaseMissing('krs', [
+    expect(Krs::where('mahasiswa_id', $student->id)->count())->toBe(3);
+    $this->assertDatabaseHas('krs', [
         'mahasiswa_id' => $student->id,
         'jadwal_id' => $overlapSchedule->id,
+        'status' => 'Draft',
     ]);
+
+    $this->post(route('mahasiswa.krs.ajukan'))
+        ->assertSessionHas('success');
+
+    expect(Krs::where('mahasiswa_id', $student->id)->where('status', 'Menunggu')->count())->toBe(3);
 });
 
 test('adding a shared schedule does not change historical KRS and KHS course values', function () {

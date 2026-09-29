@@ -116,6 +116,14 @@
 
         @endif
 
+        @if(session('warning'))
+
+            <div style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;padding:13px 16px;border-radius:10px;margin-bottom:18px;">
+                <span class="icon-inline"><x-layout-icon name="info" /> {{ session('warning') }}</span>
+            </div>
+
+        @endif
+
 
         {{-- =====================================================
              VALIDATION ERROR

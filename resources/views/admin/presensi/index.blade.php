@@ -77,10 +77,40 @@
                     style="
                         display:grid;
                         grid-template-columns:
-                            repeat(3, 1fr);
+                            repeat(auto-fit, minmax(220px, 1fr));
                         gap:15px;
                     "
                 >
+
+                    <div class="form-group">
+
+                        <label>Tahun Akademik</label>
+
+                        <select name="tahun_akademik" class="form-control">
+                            <option value="">Semua Tahun Akademik</option>
+                            @foreach($tahunAkademiks as $tahun)
+                                <option value="{{ $tahun }}" {{ request('tahun_akademik') === $tahun ? 'selected' : '' }}>
+                                    {{ $tahun }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Semester Akademik</label>
+
+                        <select name="semester_akademik" class="form-control">
+                            <option value="">Semua Semester</option>
+                            @foreach($semesterAkademiks as $semester)
+                                <option value="{{ $semester }}" {{ request('semester_akademik') === $semester ? 'selected' : '' }}>
+                                    {{ $semester }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    </div>
 
 
                     {{-- PRODI --}}
@@ -210,6 +240,34 @@
 
 
                     {{-- PERTEMUAN --}}
+
+                    <div class="form-group">
+
+                        <label>Tanggal Pertemuan</label>
+
+                        <input
+                            type="date"
+                            name="tanggal"
+                            value="{{ request('tanggal') }}"
+                            class="form-control"
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label>Status Kehadiran</label>
+
+                        <select name="status" class="form-control">
+                            <option value="">Semua Status</option>
+                            @foreach(['Hadir', 'Izin', 'Sakit', 'Alpha'] as $status)
+                                <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>
+                                    {{ $status }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                    </div>
 
                     <div class="form-group">
 
@@ -603,9 +661,17 @@
 
                                 <th>Tanggal</th>
 
+                                <th>Mata Kuliah</th>
+
+                                <th>Dosen</th>
+
+                                <th>Materi Kuliah</th>
+
+                                <th>Keterangan</th>
+
                                 <th>Foto</th>
 
-                                <th>Materi</th>
+                                <th>File Materi</th>
 
                             </tr>
 
@@ -635,6 +701,26 @@
 
                                 <td>
                                     {{ \Carbon\Carbon::parse($item->tanggal)->format('d-m-Y') }}
+                                </td>
+
+
+                                <td>
+                                    {{ $item->kode_mk ? $item->kode_mk.' - ' : '' }}{{ $item->nama_mk ?? '-' }}
+                                </td>
+
+
+                                <td>
+                                    {{ $item->nama_dosen ?? '-' }}
+                                </td>
+
+
+                                <td>
+                                    {{ $item->materi_kuliah ?? '-' }}
+                                </td>
+
+
+                                <td>
+                                    {{ $item->keterangan ?? '-' }}
                                 </td>
 
 
@@ -690,7 +776,7 @@
                             <tr>
 
                                 <td
-                                    colspan="5"
+                                    colspan="9"
                                     style="
                                         text-align:center;
                                         padding:30px;

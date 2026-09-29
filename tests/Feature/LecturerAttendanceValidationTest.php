@@ -42,7 +42,7 @@ function attendanceFixture(): array
         'is_manual' => false,
     ]);
 
-    return compact('lecturerUser', 'schedule', 'krs');
+    return compact('lecturerUser', 'lecturer', 'student', 'schedule', 'krs');
 }
 
 test('new lecturer attendance requires material description notes and photo', function () {
@@ -115,4 +115,45 @@ test('editing attendance status does not require another photo upload', function
         'pertemuan' => 1,
         'status' => 'Izin',
     ]);
+});
+
+test('admin can monitor attendance with academic period date meeting and status filters', function () {
+    Storage::fake('public');
+    $data = attendanceFixture();
+
+    $this->actingAs($data['lecturerUser'])->post(route('dosen.presensi.store'), [
+        'jadwal_id' => $data['schedule']->id,
+        'krs_id' => [$data['krs']->id],
+        'status' => ['Hadir'],
+        'pertemuan' => 1,
+        'tanggal' => '2026-09-21',
+        'materi_kuliah' => 'Materi monitoring presensi',
+        'keterangan' => 'Pertemuan untuk pengujian monitoring admin.',
+        'foto' => UploadedFile::fake()->image('foto-monitoring.jpg'),
+    ])->assertSessionHasNoErrors();
+
+    $this->actingAs($data['lecturerUser'])
+        ->get(route('dosen.presensi'))
+        ->assertOk();
+
+    $admin = User::factory()->create(['role' => 'admin']);
+
+    $this->actingAs($admin)
+        ->get(route('admin.presensi', [
+            'tahun_akademik' => '2026/2027',
+            'semester_akademik' => 'Ganjil',
+            'dosen_id' => $data['lecturer']->id,
+            'tanggal' => '2026-09-21',
+            'pertemuan' => 1,
+            'status' => 'Hadir',
+        ]))
+        ->assertOk()
+        ->assertSee('Mahasiswa Presensi')
+        ->assertSee('Materi monitoring presensi');
+
+    $this->get(route('admin.presensi', [
+        'tahun_akademik' => '2025/2026',
+    ]))
+        ->assertOk()
+        ->assertDontSee('Mahasiswa Presensi');
 });
