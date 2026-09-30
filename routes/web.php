@@ -136,6 +136,8 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::post('/krs/mahasiswa/{mahasiswa}/pdf', [DosenKrsController::class, 'cardPdf'])->name('krs.pdf');
 
+    Route::post('/krs/mahasiswa/{mahasiswa}/setujui-semua', [DosenKrsController::class, 'setujuiSemua'])->name('krs.setujui-semua');
+
     Route::put('/krs/{id}/setujui', [DosenKrsController::class, 'setujui'])->name('krs.setujui');
 
     Route::put('/krs/{id}/tolak', [DosenKrsController::class, 'tolak'])->name('krs.tolak');

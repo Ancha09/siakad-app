@@ -147,6 +147,32 @@ test('advisor detail lists all submitted courses and blocks another advisor', fu
         ->assertNotFound();
 });
 
+test('advisor can open KRS records without a schedule from advisee history as read-only', function () {
+    $data = makeAdvisorKrsApprovalFlowData();
+    foreach ([$data['firstKrs'], $data['secondKrs']] as $krs) {
+        $krs->update([
+            'jadwal_id' => null,
+            'mata_kuliah_id' => $krs->jadwal->mata_kuliah_id,
+        ]);
+    }
+
+    $this->actingAs($data['advisorUser'])
+        ->get(route('dosen.mahasiswa-wali.show', $data['student']))
+        ->assertOk()
+        ->assertSee('Lihat KRS');
+
+    $response = $this->get(route('dosen.krs.show', [
+        'mahasiswa' => $data['student'],
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Ganjil',
+    ]));
+
+    $response->assertOk()
+        ->assertSee('Algoritma Persetujuan')
+        ->assertSee('Basis Data Persetujuan')
+        ->assertDontSee('Setujui Semua');
+});
+
 test('advisor decisions return to the filtered list and cannot alter another advisors KRS', function () {
     $data = makeAdvisorKrsApprovalFlowData();
     $listUrl = route('dosen.krs', [
@@ -165,6 +191,57 @@ test('advisor decisions return to the filtered list and cannot alter another adv
         ->put(route('dosen.krs.setujui', $data['secondKrs']), ['return_url' => $listUrl])
         ->assertNotFound();
     expect($data['secondKrs']->fresh()->status)->toBe('Menunggu');
+});
+
+test('advisor can approve all pending courses for one advisee and period after opening their detail', function () {
+    $data = makeAdvisorKrsApprovalFlowData();
+    $otherPeriodKrs = Krs::create([
+        'mahasiswa_id' => $data['student']->id,
+        'jadwal_id' => $data['firstKrs']->jadwal_id,
+        'status' => 'Menunggu',
+        'tahun_akademik' => '2026/2027',
+        'semester_akademik' => 'Genap',
+    ]);
+
+    $detailParameters = [
+        'mahasiswa' => $data['student'],
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Ganjil',
+    ];
+
+    $this->actingAs($data['advisorUser'])
+        ->get(route('dosen.krs.show', $detailParameters))
+        ->assertOk()
+        ->assertSee('Setujui Semua (2)')
+        ->assertSee('Pastikan Anda sudah memeriksa seluruh mata kuliah', false)
+        ->assertSee('Lanjutkan?', false);
+
+    $this->post(route('dosen.krs.setujui-semua', $data['student']), [
+        'tahun_akademik' => '2027/2028',
+        'semester_akademik' => 'Ganjil',
+        'return_url' => route('dosen.krs'),
+    ])->assertRedirect(route('dosen.krs.show', [
+        ...$detailParameters,
+        'return_url' => route('dosen.krs'),
+    ]));
+
+    expect($data['firstKrs']->fresh()->status)->toBe('Disetujui')
+        ->and($data['secondKrs']->fresh()->status)->toBe('Disetujui')
+        ->and($data['otherKrs']->fresh()->status)->toBe('Menunggu')
+        ->and($otherPeriodKrs->fresh()->status)->toBe('Menunggu');
+});
+
+test('advisor cannot bulk approve KRS for another advisors student', function () {
+    $data = makeAdvisorKrsApprovalFlowData();
+
+    $this->actingAs($data['advisorUser'])
+        ->post(route('dosen.krs.setujui-semua', $data['otherStudent']), [
+            'tahun_akademik' => '2027/2028',
+            'semester_akademik' => 'Ganjil',
+        ])
+        ->assertNotFound();
+
+    expect($data['otherKrs']->fresh()->status)->toBe('Menunggu');
 });
 
 test('advisor approval pages never query a payment table', function () {

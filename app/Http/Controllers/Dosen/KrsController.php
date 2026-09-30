@@ -15,6 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class KrsController extends Controller
@@ -115,12 +116,14 @@ class KrsController extends Controller
             'jadwal.mataKuliah',
             'jadwal.dosen',
             'jadwal.ruangan',
+            'mataKuliahManual',
+            'dosenManual',
         ])
             ->where('mahasiswa_id', $mahasiswa->id)
-            ->where('is_manual', false)
+            ->where(fn (Builder $query) => $query
+                ->where('is_manual', false)
+                ->orWhereNull('is_manual'))
             ->where('status', '!=', 'Draft')
-            ->where('admin_revision_open', false)
-            ->whereHas('jadwal.mataKuliah')
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
                 [$year]
@@ -130,15 +133,15 @@ class KrsController extends Controller
                 $item->semester_akademik
             ) === $semester)
             ->sortBy(fn (Krs $item) => strtolower(
-                ($item->jadwal?->mataKuliah?->kode_mk ?? '').'|'.
-                ($item->jadwal?->mataKuliah?->nama_mk ?? '').'|'.
+                ($item->mata_kuliah_efektif?->kode_mk ?? '').'|'.
+                ($item->mata_kuliah_efektif?->nama_mk ?? '').'|'.
                 str_pad((string) $item->id, 10, '0', STR_PAD_LEFT)
             ))
             ->values();
 
         abort_if($krs->isEmpty(), 404);
         $mahasiswa->load(['prodi', 'dosenWali']);
-        $totalSks = $krs->sum(fn (Krs $item) => (int) ($item->jadwal?->mataKuliah?->sks ?? 0));
+        $totalSks = $krs->sum(fn (Krs $item) => (int) ($item->mata_kuliah_efektif?->sks ?? 0));
         $periodeKrs = PeriodeKrs::query()
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
@@ -207,6 +210,69 @@ class KrsController extends Controller
 
         return redirect()->to($returnUrl)
             ->with('success', 'KRS mahasiswa berhasil disetujui.');
+    }
+
+    public function setujuiSemua(Request $request, Mahasiswa $mahasiswa, AvailableKrsScheduleService $scheduleService)
+    {
+        $dosen = $this->authenticatedLecturer();
+        abort_unless((int) $mahasiswa->dosen_wali_id === (int) $dosen->id, 404);
+
+        $period = $request->validate([
+            'tahun_akademik' => ['required', 'string', 'max:20'],
+            'semester_akademik' => ['required', 'string', 'max:30'],
+            'return_url' => ['nullable', 'string', 'max:4096'],
+        ]);
+        $year = $scheduleService->normalizeAcademicYear($period['tahun_akademik']);
+        $semester = $scheduleService->normalizeAcademicSemester($period['semester_akademik']);
+        abort_if($semester === null, 404);
+
+        $approvedCount = DB::transaction(function () use ($mahasiswa, $scheduleService, $year, $semester) {
+            $pendingKrs = Krs::query()
+                ->where('mahasiswa_id', $mahasiswa->id)
+                ->where('is_manual', false)
+                ->where('admin_revision_open', false)
+                ->whereIn('status', ['Menunggu', 'Diambil'])
+                ->whereHas('jadwal.mataKuliah')
+                ->whereRaw(
+                    "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
+                    [$year]
+                )
+                ->lockForUpdate()
+                ->get(['id', 'semester_akademik'])
+                ->filter(fn (Krs $item) => $scheduleService->normalizeAcademicSemester(
+                    $item->semester_akademik
+                ) === $semester)
+                ->pluck('id');
+
+            if ($pendingKrs->isEmpty()) {
+                return 0;
+            }
+
+            return Krs::query()
+                ->whereIn('id', $pendingKrs)
+                ->where('is_manual', false)
+                ->where('admin_revision_open', false)
+                ->whereIn('status', ['Menunggu', 'Diambil'])
+                ->update([
+                    'status' => 'Disetujui',
+                    'alasan_penolakan' => null,
+                ]);
+        });
+
+        $detailUrl = route('dosen.krs.show', [
+            'mahasiswa' => $mahasiswa,
+            'tahun_akademik' => $year,
+            'semester_akademik' => $semester,
+            'return_url' => app(LegacyListNavigation::class)->returnUrl($request, 'dosen.krs'),
+        ]);
+
+        if ($approvedCount === 0) {
+            return redirect()->to($detailUrl)
+                ->with('error', 'Tidak ada KRS berstatus menunggu yang dapat disetujui untuk mahasiswa dan periode ini.');
+        }
+
+        return redirect()->to($detailUrl)
+            ->with('success', "{$approvedCount} mata kuliah KRS mahasiswa berhasil disetujui.");
     }
 
     public function tolak(Request $request, int $id)

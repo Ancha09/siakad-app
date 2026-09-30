@@ -9,6 +9,12 @@
             <h2 style="margin:0;">Detail Pengajuan KRS</h2>
             <p style="margin:5px 0 0;color:#64748b;">Periksa mata kuliah mahasiswa sebelum memberi keputusan.</p>
         </div>
+        @php
+            $approvableKrs = $krs->filter(fn ($item) => $item->is_manual === false
+                && $item->admin_revision_open === false
+                && $item->jadwal?->mataKuliah !== null);
+            $pendingKrs = $approvableKrs->whereIn('status', ['Menunggu', 'Diambil']);
+        @endphp
         <div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;">
             @include('krs.partials.pdf-download-form', [
                 'action' => route('dosen.krs.pdf', $mahasiswa),
@@ -16,10 +22,29 @@
                 'semesterAkademik' => $semester,
                 'buttonLabel' => 'Download KRS PDF',
             ])
+            @if($pendingKrs->isNotEmpty())
+                <form
+                    method="POST"
+                    action="{{ route('dosen.krs.setujui-semua', $mahasiswa) }}"
+                    onsubmit="return confirm('Pastikan Anda sudah memeriksa seluruh mata kuliah, jumlah SKS, jadwal, dan ruangan pada detail mahasiswa ini.') && confirm('Setujui semua {{ $pendingKrs->count() }} mata kuliah yang masih menunggu untuk mahasiswa dan periode ini? Tindakan ini tidak dapat dibatalkan dari halaman ini.')"
+                >
+                    @csrf
+                    <input type="hidden" name="tahun_akademik" value="{{ $year }}">
+                    <input type="hidden" name="semester_akademik" value="{{ $semester }}">
+                    <input type="hidden" name="return_url" value="{{ $listUrl }}">
+                    <button type="submit" class="btn-primary">Setujui Semua ({{ $pendingKrs->count() }})</button>
+                </form>
+            @endif
             <a href="{{ $listUrl }}" class="btn-outline">Kembali ke Daftar Mahasiswa</a>
         </div>
     </div>
 
+    @if(session('success'))
+        <div class="info-alert" style="margin-bottom:20px;">{{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="info-alert" style="margin-bottom:20px;color:#991b1b;">{{ session('error') }}</div>
+    @endif
     @if($errors->any())
         <div class="info-alert" style="margin-bottom:20px;color:#991b1b;">{{ $errors->first() }}</div>
     @endif
@@ -73,12 +98,16 @@
                     </thead>
                     <tbody>
                         @foreach($krs as $item)
+                            @php
+                                $course = $item->mata_kuliah_efektif;
+                                $lecturer = $item->dosen_efektif;
+                            @endphp
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $item->jadwal?->mataKuliah?->kode_mk ?? '-' }}</td>
-                                <td><strong>{{ $item->jadwal?->mataKuliah?->nama_mk ?? '-' }}</strong></td>
-                                <td>{{ (int) ($item->jadwal?->mataKuliah?->sks ?? 0) }}</td>
-                                <td>{{ $item->jadwal?->dosen?->nama ?? '-' }}</td>
+                                <td>{{ $course?->kode_mk ?? '-' }}</td>
+                                <td><strong>{{ $course?->nama_mk ?? '-' }}</strong></td>
+                                <td>{{ (int) ($course?->sks ?? 0) }}</td>
+                                <td>{{ $lecturer?->nama ?? '-' }}</td>
                                 <td>
                                     {{ $item->jadwal?->hari ?? '-' }}<br>
                                     <small style="color:#64748b;">
@@ -101,7 +130,10 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if(in_array($item->status, ['Menunggu', 'Diambil'], true))
+                                    @if(in_array($item->status, ['Menunggu', 'Diambil'], true)
+                                        && $item->is_manual === false
+                                        && $item->admin_revision_open === false
+                                        && $item->jadwal?->mataKuliah !== null)
                                         <div style="display:flex;gap:7px;align-items:flex-start;flex-wrap:wrap;">
                                             <form method="POST" action="{{ route('dosen.krs.setujui', $item) }}" onsubmit="return confirm('Setujui mata kuliah ini?')">
                                                 @csrf
@@ -121,6 +153,10 @@
                                                 </form>
                                             </details>
                                         </div>
+                                    @elseif(in_array($item->status, ['Menunggu', 'Diambil'], true) && $item->admin_revision_open)
+                                        <span style="color:#64748b;font-size:12px;">Sedang direvisi mahasiswa</span>
+                                    @elseif(in_array($item->status, ['Menunggu', 'Diambil'], true))
+                                        <span style="color:#64748b;font-size:12px;">Tidak dapat diproses di halaman ini</span>
                                     @else
                                         <span style="color:#64748b;font-size:12px;">Sudah diproses</span>
                                     @endif
