@@ -125,11 +125,11 @@
     </div>
 
     <div class="hero-card-title">
-        Absen Dosen
+        Presensi &amp; BAP Kuliah
     </div>
 
     <div class="hero-card-desc">
-        Catat pertemuan dan presensi mahasiswa
+        Kelola kehadiran, progres sesi &amp; cetak BAP
     </div>
 
 </a>

@@ -171,9 +171,14 @@
                     </div>
                 </div>
 
-                <div class="details-action">
-                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link">
-                        Lihat Data Rekap Absensi Lengkap &rarr;
+                <div class="details-action" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link" style="display:inline-flex;align-items:center;gap:6px;">
+                        <x-layout-icon name="attendance" />
+                        <span>Rekap &amp; Progres MK</span>
+                    </a>
+                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link" style="display:inline-flex;align-items:center;gap:6px;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;">
+                        <x-layout-icon name="clipboard" />
+                        <span>Detail &amp; Cetak BAP Matkul</span>
                     </a>
                 </div>
             </div>

@@ -124,6 +124,8 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::get('/presensi/{jadwal}/bap', [PresensiController::class, 'bap'])->name('presensi.bap');
 
+    Route::get('/presensi/{jadwal}/detail', [PresensiController::class, 'bap'])->name('presensi.detail');
+
     Route::get('/presensi/{jadwal}/bap-pdf', [PresensiController::class, 'downloadBapPdf'])->name('presensi.bap-pdf');
 
     Route::post('/presensi', [PresensiController::class, 'store'])->name('presensi.store');

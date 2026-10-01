@@ -17,7 +17,7 @@
 
     <div class="page-card-head">
 
-        <h2>📊 Rekap Presensi Mahasiswa</h2>
+        <h2><x-layout-icon name="attendance" /> <span>Rekap Presensi Mahasiswa</span></h2>
 
         <div style="display:flex;gap:10px;">
 
@@ -25,14 +25,16 @@
                 href="{{ route('admin.presensi.excel', request()->query()) }}"
                 class="btn-primary"
             >
-                📊 Download Excel (.xlsx)
+                <x-layout-icon name="file-chart" />
+                <span>Download Excel (.xlsx)</span>
             </a>
 
             <a
                 href="{{ route('admin.presensi.pdf', request()->query()) }}"
                 class="btn-primary"
             >
-                📄 Download PDF
+                <x-layout-icon name="file" />
+                <span>Download PDF</span>
             </a>
 
         </div>
@@ -64,7 +66,7 @@
                     color:#1e293b;
                 "
             >
-                🔎 Filter Rekap Presensi
+                <x-layout-icon name="search" /> <span>Filter Rekap Presensi</span>
             </div>
 
 
@@ -312,7 +314,8 @@
                             type="submit"
                             class="btn-primary"
                         >
-                            🔍 Tampilkan
+                            <x-layout-icon name="search" />
+                            <span>Tampilkan</span>
                         </button>
 
 
@@ -452,7 +455,10 @@
         ====================================================== --}}
         <div class="page-card" style="margin-bottom:25px;">
             <div class="page-card-head" style="display:flex;justify-content:space-between;align-items:center;">
-                <h3>📈 Progres Pertemuan Mata Kuliah</h3>
+                <h3 style="display:flex;align-items:center;gap:8px;">
+                    <x-layout-icon name="chart" />
+                    <span>Progres Pertemuan Mata Kuliah</span>
+                </h3>
                 <span style="font-size:12px;color:#64748b;">Target Standar: 16 Pertemuan</span>
             </div>
             <div class="page-card-body">
@@ -466,6 +472,7 @@
                                 <th>Kelas / Ruangan</th>
                                 <th>Jadwal</th>
                                 <th>Status Progres Pertemuan</th>
+                                <th style="text-align:center;width:130px;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -493,10 +500,16 @@
                                         </span>
                                     </div>
                                 </td>
+                                <td style="text-align:center;">
+                                    <a href="{{ route('admin.presensi.detail', $jadwalItem->id) }}" class="btn-primary btn-sm btn-bap-detail" title="Detail Presensi & BAP Mata Kuliah">
+                                        <x-layout-icon name="clipboard" />
+                                        <span>Detail &amp; BAP</span>
+                                    </a>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" style="text-align:center;padding:25px;color:#64748b;">
+                                <td colspan="7" style="text-align:center;padding:25px;color:#64748b;">
                                     Belum ada data jadwal mata kuliah di semester ini.
                                 </td>
                             </tr>
@@ -512,7 +525,7 @@
             <div class="page-card-head">
 
                 <h3>
-                    👨‍🎓 Rekap Kehadiran Mahasiswa
+                    <x-layout-icon name="users" /> <span>Rekap Kehadiran Mahasiswa</span>
                 </h3>
 
             </div>
@@ -665,7 +678,7 @@
                                     "
                                 >
 
-                                    📭 Belum ada data presensi.
+                                    Belum ada data presensi.
 
                                 </td>
 
@@ -696,7 +709,7 @@
             <div class="page-card-head">
 
                 <h3>
-                    📚 Sesi Pertemuan & Dokumentasi
+                    <x-layout-icon name="calendar" /> <span>Sesi Pertemuan &amp; Dokumentasi</span>
                 </h3>
 
             </div>
@@ -791,9 +804,10 @@
                                         <a
                                             href="{{ asset('storage/' . $item->foto) }}"
                                             target="_blank"
-                                            class="btn-outline"
+                                            class="btn-outline btn-sm btn-view-photo"
                                         >
-                                            📷 Lihat Foto
+                                            <x-layout-icon name="search" />
+                                            <span>Lihat Foto</span>
                                         </a>
 
                                     @else
@@ -814,9 +828,10 @@
                                         <a
                                             href="{{ asset('storage/' . $item->materi) }}"
                                             target="_blank"
-                                            class="btn-outline"
+                                            class="btn-outline btn-sm btn-view-material"
                                         >
-                                            📚 Lihat Materi
+                                            <x-layout-icon name="download" />
+                                            <span>Lihat Materi</span>
                                         </a>
 
                                     @else

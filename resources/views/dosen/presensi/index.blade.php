@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>📋 Presensi Mahasiswa</h2>
+        <h2><x-layout-icon name="attendance" /> <span>Presensi Mahasiswa</span></h2>
     </div>
 
 
@@ -177,16 +177,8 @@
 
                             @if($sudahPresensi)
 
-                                <span
-                                    class="badge-success"
-                                    style="
-                                        display:inline-block;
-                                        padding:6px 10px;
-                                        border-radius:20px;
-                                        white-space:nowrap;
-                                    "
-                                >
-                                    📌 Pertemuan {{ $jumlahSesi }} / 16
+                                <span class="badge-status-pill badge-status-green">
+                                    Pertemuan {{ $jumlahSesi }} / 16
                                 </span>
 
                                 @if($pertemuanTerakhir)
@@ -198,25 +190,15 @@
                                             color:#64748b;
                                         "
                                     >
-                                        Terakhir:
-                                        Pertemuan
-                                        {{ $pertemuanTerakhir->pertemuan }}
+                                        Terakhir: Pertemuan {{ $pertemuanTerakhir->pertemuan }}
                                     </div>
 
                                 @endif
 
                             @else
 
-                                <span
-                                    class="badge-warning"
-                                    style="
-                                        display:inline-block;
-                                        padding:6px 10px;
-                                        border-radius:20px;
-                                        white-space:nowrap;
-                                    "
-                                >
-                                    ⏳ Belum Presensi
+                                <span class="badge-status-pill badge-status-amber">
+                                    Belum Presensi
                                 </span>
 
                             @endif
@@ -228,22 +210,25 @@
 
                         <td>
 
-                            <a
-                                href="{{ route('dosen.presensi.show', $jadwal->id) }}"
-                                class="{{ $sudahPresensi ? 'btn-outline' : 'btn-primary' }}"
-                            >
+                            <div style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap;">
+                                <a
+                                    href="{{ route('dosen.presensi.show', $jadwal->id) }}"
+                                    class="{{ $sudahPresensi ? 'btn-outline' : 'btn-primary' }} btn-sm btn-table-action"
+                                >
+                                    <x-layout-icon name="{{ $sudahPresensi ? 'edit' : 'plus' }}" />
+                                    <span>{{ $sudahPresensi ? 'Kelola Presensi' : 'Input Presensi' }}</span>
+                                </a>
 
-                                @if($sudahPresensi)
-
-                                    📋 Kelola Presensi
-
-                                @else
-
-                                    📝 Input Presensi
-
-                                @endif
-
-                            </a>
+                                <a
+                                    href="{{ route('dosen.presensi.bap', $jadwal->id) }}"
+                                    class="btn-outline btn-sm btn-table-action"
+                                    style="border-color:#3b82f6;color:#1d4ed8;background:#eff6ff;"
+                                    title="Lihat Detail & Download BAP"
+                                >
+                                    <x-layout-icon name="clipboard" />
+                                    <span>Detail &amp; Download BAP (PDF)</span>
+                                </a>
+                            </div>
 
                         </td>
 
