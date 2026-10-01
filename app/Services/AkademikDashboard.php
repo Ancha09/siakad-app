@@ -6,6 +6,7 @@ use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Khs;
 use App\Models\Mahasiswa;
+use App\Models\MataKuliah;
 use App\Models\PeriodeKrs;
 use App\Models\Presensi;
 use App\Models\Prodi;
@@ -65,6 +66,7 @@ class AkademikDashboard
             'delta', 'prodis', 'hasCurrentGrades', 'hasPreviousGrades') + [
                 'totalLecturers' => Dosen::count(),
                 'totalStudents' => Mahasiswa::count(),
+                'totalMatkul' => MataKuliah::count(),
                 'totalClasses' => $jadwals->count(),
                 'attendance' => $attendanceTotal ? round(($presensi['Hadir'] ?? 0) / $attendanceTotal * 100, 1) : null,
                 'progress' => $planned ? round($completed / $planned * 100, 1) : null,

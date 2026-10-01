@@ -273,7 +273,7 @@ class PresensiController extends Controller
                 [$requiredOnCreate, 'string', 'max:2000'],
 
             'foto' =>
-                [$requiredOnCreate, 'image', 'mimes:jpg,jpeg,png', 'max:2048'],
+                [$requiredOnCreate, 'file', 'mimes:jpg,jpeg,png,heic,heif,webp', 'max:10240'],
 
             'materi' =>
                 'nullable|file|mimes:pdf,ppt,pptx,doc,docx,xls,xlsx|max:10240',
@@ -293,10 +293,10 @@ class PresensiController extends Controller
                 'Foto absen harus berupa gambar.',
 
             'foto.max' =>
-                'Foto maksimal 2 MB.',
+                'Ukuran foto terlalu besar. Maksimal ukuran foto adalah 10 MB.',
 
             'foto.mimes' =>
-                'Foto harus JPG, JPEG, atau PNG.',
+                'Foto harus berformat JPG, JPEG, PNG, HEIC, atau WEBP.',
 
             'materi.mimes' =>
                 'Format materi tidak diperbolehkan.',

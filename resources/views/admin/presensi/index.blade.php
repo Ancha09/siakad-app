@@ -447,6 +447,66 @@
              REKAP MAHASISWA
         ====================================================== --}}
 
+        {{-- =====================================================
+             PROGRES PERTEMUAN MATA KULIAH (SEMESTER AKTIF)
+        ====================================================== --}}
+        <div class="page-card" style="margin-bottom:25px;">
+            <div class="page-card-head" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3>📈 Progres Pertemuan Mata Kuliah</h3>
+                <span style="font-size:12px;color:#64748b;">Target Standar: 16 Pertemuan</span>
+            </div>
+            <div class="page-card-body">
+                <div class="table-wrap" style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Mata Kuliah</th>
+                                <th>Dosen Pengampu</th>
+                                <th>Kelas / Ruangan</th>
+                                <th>Jadwal</th>
+                                <th>Status Progres Pertemuan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @forelse($progresMataKuliah as $jadwalItem)
+                            @php
+                                $terlaksana = $jadwalItem->total_pertemuan ?? 0;
+                                $pct = min(100, round(($terlaksana / 16) * 100));
+                            @endphp
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>
+                                    <strong>{{ $jadwalItem->mataKuliah?->kode_mk ?? '-' }}</strong><br>
+                                    <span style="color:#475569;">{{ $jadwalItem->mataKuliah?->nama_mk ?? '-' }}</span>
+                                </td>
+                                <td>{{ $jadwalItem->dosen?->nama ?? '-' }}</td>
+                                <td>{{ $jadwalItem->kelas?->nama_kelas ?? $jadwalItem->kelas ?? '-' }} &middot; {{ $jadwalItem->ruangan?->nama_ruangan ?? '-' }}</td>
+                                <td>{{ $jadwalItem->hari }}, {{ $jadwalItem->jam_mulai }} - {{ $jadwalItem->jam_selesai }}</td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <div style="flex:1;min-width:110px;background:#e2e8f0;height:8px;border-radius:4px;overflow:hidden;">
+                                            <div style="width: {{ $pct }}%; background: {{ $pct >= 100 ? '#10b981' : ($pct >= 50 ? '#3b82f6' : '#f59e0b') }}; height:100%; border-radius:4px;"></div>
+                                        </div>
+                                        <span style="font-weight:700;font-size:12px;white-space:nowrap;color:#1e293b;">
+                                            Pertemuan {{ $terlaksana }} / 16
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:25px;color:#64748b;">
+                                    Belum ada data jadwal mata kuliah di semester ini.
+                                </td>
+                            </tr>
+                        @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
         <div class="page-card">
 
             <div class="page-card-head">

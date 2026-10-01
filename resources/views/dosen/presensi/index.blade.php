@@ -186,7 +186,7 @@
                                         white-space:nowrap;
                                     "
                                 >
-                                    🔒 {{ $jumlahSesi }} Pertemuan
+                                    📌 Pertemuan {{ $jumlahSesi }} / 16
                                 </span>
 
                                 @if($pertemuanTerakhir)

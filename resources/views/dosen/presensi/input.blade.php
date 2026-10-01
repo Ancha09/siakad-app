@@ -327,7 +327,7 @@
                         type="file"
                         name="foto"
                         class="form-control"
-                        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                        accept="image/*,.jpg,.jpeg,.png,.heic,.heif,.webp"
                         required
                     >
 
@@ -338,7 +338,7 @@
                             color:#64748b;
                         "
                     >
-                        JPG, JPEG, PNG. Maksimal 2 MB.
+                        Format: JPG, JPEG, PNG, HEIC, WEBP. Maksimal 10 MB.
                     </small>
 
                 </div>

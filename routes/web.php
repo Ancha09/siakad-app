@@ -247,6 +247,9 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->middleware(SkripsiRole::class.':admin')->name('admin.dashboard');
 
+    Route::get('/dashboard/attendance-analytics', [AdminDashboardController::class, 'attendanceAnalytics'])
+        ->middleware(SkripsiRole::class.':admin')->name('admin.dashboard.attendance-analytics');
+
     Route::middleware(SkripsiRole::class.':admin')->prefix('kurikulum')->name('admin.kurikulum.')->group(function () {
         Route::get('/', [AdminKurikulumController::class, 'index'])->name('index');
         Route::post('/', [AdminKurikulumController::class, 'store'])->name('store');
