@@ -122,6 +122,10 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::get('/presensi/{jadwal}', [PresensiController::class, 'show'])->name('presensi.show');
 
+    Route::get('/presensi/{jadwal}/bap', [PresensiController::class, 'bap'])->name('presensi.bap');
+
+    Route::get('/presensi/{jadwal}/bap-pdf', [PresensiController::class, 'downloadBapPdf'])->name('presensi.bap-pdf');
+
     Route::post('/presensi', [PresensiController::class, 'store'])->name('presensi.store');
 
     // ===================== ABSENSI MAHASISWA =====================
@@ -450,6 +454,10 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== REKAP PRESENSI =====================
 
     Route::get('/presensi', [AdminPresensiController::class, 'index'])->name('admin.presensi');
+
+    Route::get('/presensi/jadwal/{jadwal}', [AdminPresensiController::class, 'detail'])->name('admin.presensi.detail');
+
+    Route::get('/presensi/jadwal/{jadwal}/bap-pdf', [AdminPresensiController::class, 'downloadBapPdf'])->name('admin.presensi.bap-pdf');
 
     Route::get('/presensi/download/excel', [PresensiExportController::class, 'excel'])->name('admin.presensi.excel');
 

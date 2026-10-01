@@ -1,4 +1,4 @@
-@extends('layouts.dosen')
+﻿@extends('layouts.dosen')
 
 @section('title', 'Presensi Mahasiswa')
 
@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>📋 Presensi Mahasiswa</h2>
+        <h2><x-layout-icon name="attendance" /> <span>Presensi Mahasiswa</span></h2>
     </div>
 
     {{-- ===================== ALERT ===================== --}}
@@ -194,7 +194,7 @@
             >
 
                 <strong style="font-size:16px;">
-                    📝 Buat Sesi Presensi
+                    Buat Sesi Presensi
                 </strong>
 
                 <div style="margin-top:6px;">
@@ -476,7 +476,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Simpan Pertemuan {{ $pertemuanDipilih }}
+                    Simpan Pertemuan {{ $pertemuanDipilih }}
                 </button>
 
 
@@ -515,7 +515,7 @@
                         margin-bottom:8px;
                     "
                 >
-                    🔒 Sesi Presensi Sudah Dibuat
+                    Sesi Presensi Sudah Dibuat
                 </div>
 
                 <div>
@@ -571,7 +571,7 @@
 
                 <h3 style="margin-top:0;">
 
-                    📎 Dokumentasi Pertemuan
+                    Dokumentasi Pertemuan
                     {{ $pertemuanAktif->pertemuan }}
 
                 </h3>
@@ -602,7 +602,7 @@
                             class="btn-outline"
                             style="margin-left:10px;"
                         >
-                            📷 Lihat Foto
+                            Lihat Foto
                         </a>
 
                     @else
@@ -630,7 +630,7 @@
                             class="btn-outline"
                             style="margin-left:10px;"
                         >
-                            📚 Lihat Materi
+                            Lihat Materi
                         </a>
 
                     @else
@@ -832,7 +832,7 @@
                         type="submit"
                         class="btn-primary"
                     >
-                        💾 Simpan Perubahan Status
+                        Simpan Perubahan Status
                     </button>
 
 
@@ -858,7 +858,7 @@
 
 
         <h3>
-            📊 Rekap Presensi Mahasiswa
+            Rekap Presensi Mahasiswa
         </h3>
 
 

@@ -5,6 +5,8 @@
 @section('content')
 @php
     $number = fn ($value, $decimals = 0) => $value === null ? '—' : number_format($value, $decimals, ',', '.');
+    $mainRatePct = min(100, (float)($attendanceData['stats']['today_rate'] ?? ($stats['attendance'] ?? 0)));
+    $dosenRatePct = $stats['totalLecturers'] > 0 ? round(($stats['activeLecturers'] / $stats['totalLecturers']) * 100) : 0;
 @endphp
 <div class="inner-page academic-dashboard">
     <!-- Header Welcome & Filter Tahun -->
@@ -40,7 +42,7 @@
             <div class="card-body">
                 <strong class="stat-number text-green" id="stat-main-rate">{{ $attendanceData['stats']['today_rate'] ?? ($stats['attendance'] ?? 0) }}%</strong>
                 <div class="stat-meter-bar">
-                    <div class="meter-fill fill-green" id="stat-main-progress" style="width: {{ min(100, (float)($attendanceData['stats']['today_rate'] ?? ($stats['attendance'] ?? 0))) }}%;"></div>
+                    <div class="meter-fill fill-green" id="stat-main-progress" style="width: {{ $mainRatePct }}%;"></div>
                 </div>
                 <small class="stat-subtext" id="stat-main-desc">
                     <span id="stat-main-hadir">{{ $attendanceData['stats']['today_hadir'] }}</span> hadir dari <span id="stat-main-total">{{ $attendanceData['stats']['today_total'] }}</span> sesi
@@ -87,7 +89,7 @@
             <div class="card-body">
                 <strong class="stat-number text-amber">{{ $number($stats['activeLecturers']) }}</strong>
                 <div class="stat-meter-bar">
-                    <div class="meter-fill fill-amber" style="width: {{ $stats['totalLecturers'] > 0 ? round(($stats['activeLecturers'] / $stats['totalLecturers']) * 100) : 0 }}%;"></div>
+                    <div class="meter-fill fill-amber" style="width: {{ $dosenRatePct }}%;"></div>
                 </div>
                 <small class="stat-subtext">Dari {{ $number($stats['totalLecturers']) }} total dosen</small>
             </div>
