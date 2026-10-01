@@ -2,6 +2,112 @@
 
 @section('title', 'Detail Presensi & BAP Mata Kuliah')
 
+@push('styles')
+<style>
+    /* Tab Navigasi BAP & Rekap */
+    .bap-tab-nav {
+        display: flex;
+        gap: 8px;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 5px;
+        margin-bottom: 22px;
+        flex-wrap: wrap;
+    }
+    .bap-tab-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: transparent;
+        color: #64748b;
+        font-size: 13.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+        outline: none;
+    }
+    .bap-tab-btn .layout-icon {
+        width: 16px;
+        height: 16px;
+        stroke: currentColor;
+    }
+    .bap-tab-btn:hover {
+        color: #0f172a;
+        background: rgba(255, 255, 255, 0.6);
+    }
+    .bap-tab-btn.active {
+        background: #ffffff;
+        color: #2563eb;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    }
+    .bap-tab-pane {
+        display: none;
+    }
+    .bap-tab-pane.active {
+        display: block;
+    }
+
+    /* Tombol Lihat Foto & Lihat Materi */
+    .btn-view-photo,
+    .btn-view-material {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+        padding: 6px 14px !important;
+        border: 1.5px solid #2563eb !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+        color: #2563eb !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        text-decoration: none !important;
+        white-space: nowrap !important;
+        line-height: 1 !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        transition: all 0.15s ease-in-out;
+        vertical-align: middle;
+    }
+    .btn-view-photo:hover,
+    .btn-view-material:hover {
+        background: #eff6ff !important;
+        border-color: #1d4ed8 !important;
+        color: #1d4ed8 !important;
+    }
+    .btn-view-photo .layout-icon,
+    .btn-view-material .layout-icon {
+        display: inline-block !important;
+        width: 14px !important;
+        height: 14px !important;
+        flex-shrink: 0 !important;
+        stroke: currentColor !important;
+        vertical-align: middle !important;
+    }
+
+    /* Status Pills */
+    .badge-status-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+    .badge-status-green { background: #dcfce7; color: #15803d; }
+    .badge-status-blue  { background: #dbeafe; color: #1d4ed8; }
+    .badge-status-amber { background: #fef3c7; color: #b45309; }
+    .badge-status-red   { background: #fee2e2; color: #b91c1c; }
+    .badge-status-gray  { background: #f1f5f9; color: #64748b; font-weight: 500; font-size: 11px; }
+</style>
+@endpush
+
 @section('content')
 <div class="inner-page">
     {{-- ===================== HEADER INFORMASI MATA KULIAH ===================== --}}
@@ -71,12 +177,12 @@
     {{-- ===================== TAB NAVIGASI ===================== --}}
     <div class="page-card">
         <div class="page-card-body" style="padding-top: 14px;">
-            <div class="bap-tab-nav" role="tablist">
-                <button type="button" class="bap-tab-btn active" data-tab="tab-rekap">
+            <div class="bap-tab-nav" role="tablist" style="display:flex;gap:8px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:10px;padding:6px;margin-bottom:22px;flex-wrap:wrap;">
+                <button type="button" class="bap-tab-btn active" data-tab="tab-rekap" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:8px;background:#ffffff;color:#2563eb;font-size:13.5px;font-weight:700;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.08);outline:none;">
                     <x-layout-icon name="users" />
                     <span>Rekap Absensi Mahasiswa ({{ $totalPeserta }})</span>
                 </button>
-                <button type="button" class="bap-tab-btn" data-tab="tab-bap">
+                <button type="button" class="bap-tab-btn" data-tab="tab-bap" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border:none;border-radius:8px;background:transparent;color:#64748b;font-size:13.5px;font-weight:700;cursor:pointer;outline:none;">
                     <x-layout-icon name="calendar" />
                     <span>Berita Acara Perkuliahan ({{ $pertemuans->count() }} Sesi)</span>
                 </button>
@@ -206,7 +312,7 @@
                                     </td>
                                     <td style="text-align: center;">
                                         @if($p->foto)
-                                            <a href="{{ asset('storage/' . $p->foto) }}" target="_blank" class="btn-outline btn-sm btn-view-photo">
+                                            <a href="{{ asset('storage/' . $p->foto) }}" target="_blank" class="btn-view-photo" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 14px;border:1.5px solid #2563eb;border-radius:6px;background:#ffffff;color:#2563eb;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;line-height:1;">
                                                 <x-layout-icon name="search" />
                                                 <span>Lihat Foto</span>
                                             </a>
@@ -216,7 +322,7 @@
                                     </td>
                                     <td style="text-align: center;">
                                         @if($p->materi)
-                                            <a href="{{ asset('storage/' . $p->materi) }}" target="_blank" class="btn-outline btn-sm btn-view-material">
+                                            <a href="{{ asset('storage/' . $p->materi) }}" target="_blank" class="btn-view-material" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 14px;border:1.5px solid #0284c7;border-radius:6px;background:#ffffff;color:#0284c7;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;line-height:1;">
                                                 <x-layout-icon name="download" />
                                                 <span>Lihat Materi</span>
                                             </a>
@@ -251,10 +357,19 @@ document.addEventListener('DOMContentLoaded', function () {
         btn.addEventListener('click', function () {
             const target = this.getAttribute('data-tab');
 
-            tabBtns.forEach(b => b.classList.remove('active'));
+            tabBtns.forEach(b => {
+                b.classList.remove('active');
+                b.style.background = 'transparent';
+                b.style.color = '#64748b';
+                b.style.boxShadow = 'none';
+            });
             tabPanes.forEach(p => p.classList.remove('active'));
 
             this.classList.add('active');
+            this.style.background = '#ffffff';
+            this.style.color = '#2563eb';
+            this.style.boxShadow = '0 1px 4px rgba(0, 0, 0, 0.08)';
+
             const targetPane = document.getElementById(target);
             if (targetPane) {
                 targetPane.classList.add('active');

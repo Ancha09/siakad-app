@@ -351,6 +351,7 @@ class PresensiController extends Controller
         ->when($request->filled('tahun_akademik'), fn ($q) => $q->where('tahun_akademik', $filters['tahun_akademik']))
         ->when($request->filled('semester_akademik'), fn ($q) => $q->where('semester_akademik', $filters['semester_akademik']))
         ->when($request->filled('prodi_id'), fn ($q) => $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $filters['prodi_id'])))
+        ->when($request->filled('kelas_id'), fn ($q) => $q->where('kelas_id', $filters['kelas_id']))
         ->when($request->filled('mata_kuliah_id'), fn ($q) => $q->where('mata_kuliah_id', $filters['mata_kuliah_id']))
         ->when($request->filled('dosen_id'), fn ($q) => $q->where('dosen_id', $filters['dosen_id']))
         ->orderBy('hari')

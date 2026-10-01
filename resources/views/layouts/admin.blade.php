@@ -27,7 +27,7 @@
 
     <link
         rel="stylesheet"
-        href="{{ asset('assets/css/style.css') }}"
+        href="{{ asset('assets/css/style.css') }}?v={{ filemtime(public_path('assets/css/style.css')) }}"
     >
 
 

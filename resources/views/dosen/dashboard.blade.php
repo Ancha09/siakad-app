@@ -129,7 +129,7 @@
     </div>
 
     <div class="hero-card-desc">
-        Kelola kehadiran, progres sesi &amp; cetak BAP
+        Kelola kehadiran, progres sesi &amp; unduh BAP
     </div>
 
 </a>

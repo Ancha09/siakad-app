@@ -25,16 +25,14 @@
                 href="{{ route('admin.presensi.excel', request()->query()) }}"
                 class="btn-primary"
             >
-                <x-layout-icon name="file-chart" />
-                <span>Download Excel (.xlsx)</span>
+                <x-layout-icon name="file-chart" /> <span>Download Excel (.xlsx)</span>
             </a>
 
             <a
                 href="{{ route('admin.presensi.pdf', request()->query()) }}"
                 class="btn-primary"
             >
-                <x-layout-icon name="file" />
-                <span>Download PDF</span>
+                <x-layout-icon name="file" /> <span>Download PDF</span>
             </a>
 
         </div>
@@ -66,7 +64,7 @@
                     color:#1e293b;
                 "
             >
-                <x-layout-icon name="search" /> <span>Filter Rekap Presensi</span>
+                <div style="display:flex;align-items:center;gap:8px;"><x-layout-icon name="search" /> <span>Filter Rekap Presensi</span></div>
             </div>
 
 
@@ -314,8 +312,7 @@
                             type="submit"
                             class="btn-primary"
                         >
-                            <x-layout-icon name="search" />
-                            <span>Tampilkan</span>
+                            <span style="display:inline-flex;align-items:center;gap:6px;"><x-layout-icon name="search" /> <span>Tampilkan</span></span>
                         </button>
 
 
@@ -455,10 +452,7 @@
         ====================================================== --}}
         <div class="page-card" style="margin-bottom:25px;">
             <div class="page-card-head" style="display:flex;justify-content:space-between;align-items:center;">
-                <h3 style="display:flex;align-items:center;gap:8px;">
-                    <x-layout-icon name="chart" />
-                    <span>Progres Pertemuan Mata Kuliah</span>
-                </h3>
+                <h3 style="display:flex;align-items:center;gap:8px;"><x-layout-icon name="chart" /> <span>Progres Pertemuan Mata Kuliah</span></h3>
                 <span style="font-size:12px;color:#64748b;">Target Standar: 16 Pertemuan</span>
             </div>
             <div class="page-card-body">
@@ -501,7 +495,7 @@
                                     </div>
                                 </td>
                                 <td style="text-align:center;">
-                                    <a href="{{ route('admin.presensi.detail', $jadwalItem->id) }}" class="btn-primary btn-sm btn-bap-detail" title="Detail Presensi & BAP Mata Kuliah">
+                                    <a href="{{ route('admin.presensi.detail', $jadwalItem->id) }}" class="btn-primary btn-sm btn-bap-action" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;white-space:nowrap;">
                                         <x-layout-icon name="clipboard" />
                                         <span>Detail &amp; BAP</span>
                                     </a>
@@ -518,362 +512,6 @@
                     </table>
                 </div>
             </div>
-        </div>
-
-        <div class="page-card">
-
-            <div class="page-card-head">
-
-                <h3>
-                    <x-layout-icon name="users" /> <span>Rekap Kehadiran Mahasiswa</span>
-                </h3>
-
-            </div>
-
-
-            <div class="page-card-body">
-
-                <div
-                    class="table-wrap"
-                    style="overflow-x:auto;"
-                >
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>No</th>
-
-                                <th>NIM</th>
-
-                                <th>Nama Mahasiswa</th>
-
-                                <th>Program Studi</th>
-
-                                <th>Kelas</th>
-
-                                <th>Mata Kuliah</th>
-
-                                <th>Dosen</th>
-
-                                <th>Hadir</th>
-
-                                <th>Izin</th>
-
-                                <th>Sakit</th>
-
-                                <th>Alpha</th>
-
-                                <th>Kehadiran</th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                        @forelse($rekap as $item)
-
-                            <tr>
-
-                                <td>
-                                    {{ $loop->iteration }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->krs->mahasiswa->nim ?? '-' }}
-                                </td>
-
-
-                                <td>
-
-                                    <strong>
-                                        {{ $item->krs->mahasiswa->nama ?? '-' }}
-                                    </strong>
-
-                                </td>
-
-
-                                <td>
-                                    {{ $item->krs?->prodi_efektif?->nama_prodi ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->krs?->kelas_efektif?->nama_kelas ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->dosen_pengampu }}
-                                </td>
-
-
-                                <td>
-
-                                    <span class="badge-success">
-                                        {{ $item->hadir }}
-                                    </span>
-
-                                </td>
-
-
-                                <td>
-                                    {{ $item->izin }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->sakit }}
-                                </td>
-
-
-                                <td>
-
-                                    <span class="badge-warning">
-                                        {{ $item->alpha }}
-                                    </span>
-
-                                </td>
-
-
-                                <td>
-
-                                    @if($item->persentase >= 75)
-
-                                        <span class="badge-success">
-                                            {{ $item->persentase }}%
-                                        </span>
-
-                                    @else
-
-                                        <span class="badge-warning">
-                                            {{ $item->persentase }}%
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td
-                                    colspan="12"
-                                    style="
-                                        text-align:center;
-                                        padding:35px;
-                                    "
-                                >
-
-                                    Belum ada data presensi.
-
-                                </td>
-
-                            </tr>
-
-                        @endforelse
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        {{-- =====================================================
-             SESI PERTEMUAN
-        ====================================================== --}}
-
-        <div
-            class="page-card"
-            style="margin-top:25px;"
-        >
-
-            <div class="page-card-head">
-
-                <h3>
-                    <x-layout-icon name="calendar" /> <span>Sesi Pertemuan &amp; Dokumentasi</span>
-                </h3>
-
-            </div>
-
-
-            <div class="page-card-body">
-
-                <div
-                    class="table-wrap"
-                    style="overflow-x:auto;"
-                >
-
-                    <table>
-
-                        <thead>
-
-                            <tr>
-
-                                <th>No</th>
-
-                                <th>Pertemuan</th>
-
-                                <th>Tanggal</th>
-
-                                <th>Mata Kuliah</th>
-
-                                <th>Dosen</th>
-
-                                <th>Materi Kuliah</th>
-
-                                <th>Keterangan</th>
-
-                                <th>Foto</th>
-
-                                <th>File Materi</th>
-
-                            </tr>
-
-                        </thead>
-
-
-                        <tbody>
-
-                        @forelse($pertemuans as $item)
-
-                            <tr>
-
-                                <td>
-                                    {{ $loop->iteration }}
-                                </td>
-
-
-                                <td>
-
-                                    <strong>
-                                        Pertemuan
-                                        {{ $item->pertemuan }}
-                                    </strong>
-
-                                </td>
-
-
-                                <td>
-                                    {{ \Carbon\Carbon::parse($item->tanggal)->format('d-m-Y') }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->kode_mk ? $item->kode_mk.' - ' : '' }}{{ $item->nama_mk ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->nama_dosen ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->materi_kuliah ?? '-' }}
-                                </td>
-
-
-                                <td>
-                                    {{ $item->keterangan ?? '-' }}
-                                </td>
-
-
-                                <td>
-
-                                    @if($item->foto)
-
-                                        <a
-                                            href="{{ asset('storage/' . $item->foto) }}"
-                                            target="_blank"
-                                            class="btn-outline btn-sm btn-view-photo"
-                                        >
-                                            <x-layout-icon name="search" />
-                                            <span>Lihat Foto</span>
-                                        </a>
-
-                                    @else
-
-                                        <span style="color:#64748b;">
-                                            Tidak ada foto
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-
-                                <td>
-
-                                    @if($item->materi)
-
-                                        <a
-                                            href="{{ asset('storage/' . $item->materi) }}"
-                                            target="_blank"
-                                            class="btn-outline btn-sm btn-view-material"
-                                        >
-                                            <x-layout-icon name="download" />
-                                            <span>Lihat Materi</span>
-                                        </a>
-
-                                    @else
-
-                                        <span style="color:#64748b;">
-                                            Tidak ada materi
-                                        </span>
-
-                                    @endif
-
-                                </td>
-
-                            </tr>
-
-                        @empty
-
-                            <tr>
-
-                                <td
-                                    colspan="9"
-                                    style="
-                                        text-align:center;
-                                        padding:30px;
-                                    "
-                                >
-
-                                    Belum ada sesi pertemuan.
-
-                                </td>
-
-                            </tr>
-
-                        @endforelse
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-            </div>
-
         </div>
 
     </div>

@@ -34,9 +34,9 @@
     ========================================================== -->
     <div class="simple-stats-grid">
         <!-- 1. Persentase Kehadiran (% Kehadiran) -->
-        <div class="simple-stat-card card-accent-green">
+        <a class="simple-stat-card card-accent-green" href="{{ route('admin.presensi') }}" style="text-decoration: none; color: inherit;">
             <div class="card-head">
-                <span class="card-label">% Kehadiran</span>
+                <span class="card-label">% Kehadiran &amp; BAP</span>
                 <span class="card-badge badge-green">Presensi</span>
             </div>
             <div class="card-body">
@@ -48,7 +48,7 @@
                     <span id="stat-main-hadir">{{ $attendanceData['stats']['today_hadir'] }}</span> hadir dari <span id="stat-main-total">{{ $attendanceData['stats']['today_total'] }}</span> sesi
                 </small>
             </div>
-        </div>
+        </a>
 
         <!-- 2. Jumlah / Total Mata Kuliah (Matkul) -->
         <a class="simple-stat-card card-accent-blue" href="{{ route('admin.matakuliah') }}">
@@ -171,14 +171,9 @@
                     </div>
                 </div>
 
-                <div class="details-action" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link" style="display:inline-flex;align-items:center;gap:6px;">
-                        <x-layout-icon name="attendance" />
-                        <span>Rekap &amp; Progres MK</span>
-                    </a>
-                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link" style="display:inline-flex;align-items:center;gap:6px;background:#e0e7ff;color:#3730a3;border-color:#c7d2fe;">
-                        <x-layout-icon name="clipboard" />
-                        <span>Detail &amp; Cetak BAP Matkul</span>
+                <div class="details-action">
+                    <a href="{{ route('admin.presensi') }}" class="btn-monitoring-link">
+                        Lihat Data Rekap Absensi Lengkap &rarr;
                     </a>
                 </div>
             </div>

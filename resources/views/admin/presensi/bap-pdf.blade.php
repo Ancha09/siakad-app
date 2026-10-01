@@ -167,21 +167,27 @@
 </head>
 <body>
     {{-- ===================== KOP RESMI STTMI ===================== --}}
-    <table class="letterhead">
-        <tr>
-            <td style="width: 65px; text-align: center;">
-                @if(file_exists(public_path('images/logo_sttmi.jpeg')))
-                    <img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo STTMI">
-                @endif
-            </td>
-            <td class="school">
-                <div class="sttmi">STTMI BANDUNG</div>
-                <div class="name">SEKOLAH TINGGI TEKNOLOGI MINERAL INDONESIA</div>
-                <div class="address">Jalan Cihanjuang No. 161, Kabupaten Bandung Barat 40559 &middot; Telp. 082-118652085 &middot; Email: info@sttmi.ac.id</div>
-            </td>
-            <td style="width: 65px;"></td>
-        </tr>
-    </table>
+    @if(file_exists(public_path('images/kop-sttmi.jpeg.jpeg')))
+        <div style="text-align: center; margin-bottom: 12px; border-bottom: 2.5px solid #0a1f5c; padding-bottom: 6px;">
+            <img src="{{ public_path('images/kop-sttmi.jpeg.jpeg') }}" style="width: 100%; max-height: 110px;" alt="Kop STTMI">
+        </div>
+    @else
+        <table class="letterhead">
+            <tr>
+                <td style="width: 65px; text-align: center;">
+                    @if(file_exists(public_path('images/logo_sttmi.jpeg')))
+                        <img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo STTMI">
+                    @endif
+                </td>
+                <td class="school">
+                    <div class="sttmi">STTMI BANDUNG</div>
+                    <div class="name">SEKOLAH TINGGI TEKNOLOGI MINERAL INDONESIA</div>
+                    <div class="address">Jalan Cihanjuang No. 161, Kabupaten Bandung Barat 40559 &middot; Telp. 082-118652085 &middot; Email: info@sttmi.ac.id</div>
+                </td>
+                <td style="width: 65px;"></td>
+            </tr>
+        </table>
+    @endif
 
     <div class="doc-title">BERITA ACARA PERKULIAHAN (BAP)</div>
     <div class="doc-subtitle">
