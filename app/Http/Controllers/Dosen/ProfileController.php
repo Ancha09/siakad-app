@@ -63,23 +63,26 @@ class ProfileController extends Controller
             ->firstOrFail();
 
         $request->validate([
-            'nama' => 'required|string|max:255',
+            'nama' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'telepon' => 'nullable|string|max:20',
         ]);
 
+        $nama = $request->filled('nama') ? $request->nama : $dosen->nama;
+        $email = $request->filled('email') ? $request->email : $dosen->email;
+
         // Update data dosen
         $dosen->update([
-            'nama' => $request->nama,
-            'email' => $request->email,
+            'nama' => $nama,
+            'email' => $email,
             'telepon' => $request->telepon,
         ]);
 
         // Sinkronkan ke tabel users
         if ($dosen->user) {
             $dosen->user->update([
-                'name' => $request->nama,
-                'email' => $request->email,
+                'name' => $nama,
+                'email' => $email,
             ]);
         }
 

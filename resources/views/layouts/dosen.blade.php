@@ -262,6 +262,8 @@
 
 <script src="{{ asset('assets/js/navigation.js') }}"></script>
 
+@stack('scripts')
+
 </body>
 
 </html>

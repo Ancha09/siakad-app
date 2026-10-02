@@ -84,7 +84,7 @@
                             <div style="flex:1;min-width:260px;">
                                 <div class="form-group" style="margin-bottom:10px;">
                                     <label for="fotoInput" style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:6px;display:block;">Pilih File Foto Profil Formal</label>
-                                    <input type="file" name="foto" id="fotoInput" class="form-control" accept=".jpg,.jpeg,.png,.svg,.heic,.heif,.webp" required style="padding:8px 12px;">
+                                    <input type="file" name="foto" id="fotoInput" class="form-control" accept=".jpg,.jpeg,.png,.svg,.heic,.heif,.webp" required style="padding:8px 12px;" onchange="previewDosenFoto(this)">
                                     <small style="color:#64748b;font-size:11.5px;display:block;margin-top:5px;">
                                         Format didukung: JPG, JPEG, PNG, SVG, HEIC, WEBP &middot; Ukuran maksimal: 10 MB
                                     </small>
@@ -94,12 +94,12 @@
                                     File terpilih: <strong id="previewFileName">-</strong> (<span id="previewFileSize">-</span>)
                                 </div>
 
-                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                                    <button type="submit" id="btnSimpanFoto" class="btn-primary" style="display:none;" onclick="return confirm('Apakah Anda yakin ingin menyimpan foto ini? Foto profil hanya dapat diunggah 1 kali dan tidak dapat diubah kembali secara mandiri.')">
+                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;">
+                                    <button type="submit" id="btnSimpanFoto" class="btn-primary" onclick="return konfirmasiSimpanFoto()">
                                         <x-layout-icon name="save" />
                                         <span>Konfirmasi Simpan Foto</span>
                                     </button>
-                                    <button type="button" id="btnBatalFoto" class="btn-outline" style="display:none;">
+                                    <button type="button" id="btnBatalFoto" class="btn-outline" style="display:none;" onclick="batalPilihFoto()">
                                         Batal
                                     </button>
                                 </div>
@@ -170,6 +170,7 @@
 
                                 @csrf
                                 @method('PUT')
+                                <input type="hidden" name="nama" value="{{ $dosen->nama }}">
 
                                 <div style="display:flex;gap:10px;align-items:center;">
 
@@ -307,78 +308,91 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const fotoInput = document.getElementById('fotoInput');
-    const avatarPreviewImg = document.getElementById('avatarPreviewImg');
-    const avatarPreviewInitials = document.getElementById('avatarPreviewInitials');
-    const previewMetaBox = document.getElementById('previewMetaBox');
-    const previewFileName = document.getElementById('previewFileName');
-    const previewFileSize = document.getElementById('previewFileSize');
-    const btnSimpanFoto = document.getElementById('btnSimpanFoto');
-    const btnBatalFoto = document.getElementById('btnBatalFoto');
+function previewDosenFoto(input) {
+    const file = input.files && input.files[0];
+    const previewImg = document.getElementById('avatarPreviewImg');
+    const previewInitials = document.getElementById('avatarPreviewInitials');
+    const metaBox = document.getElementById('previewMetaBox');
+    const fileNameSpan = document.getElementById('previewFileName');
+    const fileSizeSpan = document.getElementById('previewFileSize');
+    const btnBatal = document.getElementById('btnBatalFoto');
 
-    if (fotoInput) {
-        fotoInput.addEventListener('change', function (e) {
-            const file = e.target.files[0];
-            if (!file) {
-                resetPreview();
-                return;
-            }
-
-            // Check size (10 MB = 10 * 1024 * 1024 bytes)
-            const maxSize = 10 * 1024 * 1024;
-            if (file.size > maxSize) {
-                alert('Ukuran file melebihi batas maksimal 10 MB. Silakan pilih foto dengan ukuran lebih kecil.');
-                fotoInput.value = '';
-                resetPreview();
-                return;
-            }
-
-            // Format size for display
-            const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-            previewFileName.textContent = file.name;
-            previewFileSize.textContent = sizeInMB + ' MB';
-            previewMetaBox.style.display = 'block';
-
-            // FileReader preview
-            const reader = new FileReader();
-            reader.onload = function (event) {
-                avatarPreviewImg.src = event.target.result;
-                avatarPreviewImg.style.display = 'block';
-                if (avatarPreviewInitials) {
-                    avatarPreviewInitials.style.display = 'none';
-                }
-                btnSimpanFoto.style.display = 'inline-flex';
-                btnBatalFoto.style.display = 'inline-flex';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        if (btnBatalFoto) {
-            btnBatalFoto.addEventListener('click', function () {
-                fotoInput.value = '';
-                resetPreview();
-            });
-        }
+    if (!file) {
+        resetFotoPreview();
+        return;
     }
 
-    function resetPreview() {
-        if (avatarPreviewImg) {
-            avatarPreviewImg.src = '';
-            avatarPreviewImg.style.display = 'none';
+    // Maksimal 10 MB (10 * 1024 * 1024 bytes)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+        alert('Ukuran file melebihi batas maksimal 10 MB. Silakan pilih foto dengan ukuran lebih kecil.');
+        input.value = '';
+        resetFotoPreview();
+        return;
+    }
+
+    // Tampilkan informasi file
+    if (fileNameSpan) fileNameSpan.textContent = file.name;
+    if (fileSizeSpan) fileSizeSpan.textContent = (file.size / (1024 * 1024)).toFixed(2) + ' MB';
+    if (metaBox) metaBox.style.display = 'block';
+    if (btnBatal) btnBatal.style.display = 'inline-flex';
+
+    // Tampilkan preview gambar
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        if (previewImg) {
+            previewImg.src = e.target.result;
+            previewImg.style.display = 'block';
         }
-        if (avatarPreviewInitials) {
-            avatarPreviewInitials.style.display = 'block';
+        if (previewInitials) {
+            previewInitials.style.display = 'none';
         }
-        if (previewMetaBox) {
-            previewMetaBox.style.display = 'none';
-        }
-        if (btnSimpanFoto) {
-            btnSimpanFoto.style.display = 'none';
-        }
-        if (btnBatalFoto) {
-            btnBatalFoto.style.display = 'none';
-        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function batalPilihFoto() {
+    const input = document.getElementById('fotoInput');
+    if (input) input.value = '';
+    resetFotoPreview();
+}
+
+function resetFotoPreview() {
+    const previewImg = document.getElementById('avatarPreviewImg');
+    const previewInitials = document.getElementById('avatarPreviewInitials');
+    const metaBox = document.getElementById('previewMetaBox');
+    const btnBatal = document.getElementById('btnBatalFoto');
+
+    if (previewImg) {
+        previewImg.src = '';
+        previewImg.style.display = 'none';
+    }
+    if (previewInitials) {
+        previewInitials.style.display = 'block';
+    }
+    if (metaBox) {
+        metaBox.style.display = 'none';
+    }
+    if (btnBatal) {
+        btnBatal.style.display = 'none';
+    }
+}
+
+function konfirmasiSimpanFoto() {
+    const input = document.getElementById('fotoInput');
+    if (!input || !input.files || input.files.length === 0) {
+        alert('Silakan pilih file foto terlebih dahulu.');
+        return false;
+    }
+    return confirm('Apakah Anda yakin ingin menyimpan foto ini? Foto profil hanya dapat diunggah 1 kali dan tidak dapat diubah kembali secara mandiri.');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const fotoInput = document.getElementById('fotoInput');
+    if (fotoInput) {
+        fotoInput.addEventListener('change', function () {
+            previewDosenFoto(this);
+        });
     }
 });
 </script>
