@@ -58,8 +58,12 @@
 
         <div class="sidebar-user">
 
-            <div class="user-avatar">
-                {{ strtoupper(substr($dosenLogin->nama ?? 'D', 0, 1)) }}
+            <div class="user-avatar" style="overflow: hidden; padding: 0;">
+                @if($dosenLogin && $dosenLogin->foto)
+                    <img src="{{ asset('storage/' . $dosenLogin->foto) }}" alt="{{ $dosenLogin->nama }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;">
+                @else
+                    {{ strtoupper(substr($dosenLogin->nama ?? 'D', 0, 1)) }}
+                @endif
             </div>
 
             <div class="user-info">
@@ -180,10 +184,12 @@
                 <a class="topbar-profile" href="{{ route('dosen.profil') }}" aria-label="Buka profil dosen">
 
 
-                    <div class="topbar-avatar">
-
-                        {{ strtoupper(substr($dosenLogin->nama ?? 'D', 0, 1)) }}
-
+                    <div class="topbar-avatar" style="overflow: hidden; padding: 0;">
+                        @if($dosenLogin && $dosenLogin->foto)
+                            <img src="{{ asset('storage/' . $dosenLogin->foto) }}" alt="{{ $dosenLogin->nama }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block;">
+                        @else
+                            {{ strtoupper(substr($dosenLogin->nama ?? 'D', 0, 1)) }}
+                        @endif
                     </div>
 
 

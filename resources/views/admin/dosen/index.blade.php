@@ -9,12 +9,12 @@
 @endif
 
 <div class="toolbar">
-    <a href="{{ route('admin.dosen.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary">➕ Tambah Dosen</a>
+    <a href="{{ route('admin.dosen.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary"><x-layout-icon name="plus" /> <span>Tambah Dosen</span></a>
 </div>
 
 <div class="page-card">
     <div class="page-card-head">
-        <h2>👨‍🏫 Data Dosen</h2>
+        <h2><x-layout-icon name="user" /> <span>Data Dosen</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -103,7 +103,7 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{{ route('admin.dosen.edit', ['dosen' => $dosen->id, 'return_url' => request()->fullUrl()]) }}" class="btn-edit">✏ Edit</a>
+                                    <a href="{{ route('admin.dosen.edit', ['dosen' => $dosen->id, 'return_url' => request()->fullUrl()]) }}" class="btn-edit"><x-layout-icon name="edit" /> <span>Edit</span></a>
 
                                     <form action="{{ route('admin.dosen.destroy', $dosen->id) }}" method="POST">
                                         @csrf

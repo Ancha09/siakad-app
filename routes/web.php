@@ -162,6 +162,8 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
 
     Route::get('/profil', [DosenProfileController::class, 'index'])->name('profil');
 
+    Route::post('/profil/foto', [DosenProfileController::class, 'updateFoto'])->name('profil.foto');
+
     Route::put('/profil', [DosenProfileController::class, 'update'])->name('profil.update');
 
     Route::put('/profil/password', [DosenProfileController::class, 'updatePassword'])->name('profil.password');
@@ -276,6 +278,8 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::post('/dosen', [DosenController::class, 'store'])->name('admin.dosen.store');
 
     Route::get('/dosen/{dosen}/edit', [DosenController::class, 'edit'])->name('admin.dosen.edit');
+
+    Route::post('/dosen/{dosen}/reset-foto', [DosenController::class, 'resetFoto'])->name('admin.dosen.reset-foto');
 
     Route::put('/dosen/{dosen}', [DosenController::class, 'update'])->name('admin.dosen.update');
 

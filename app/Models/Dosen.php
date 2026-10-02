@@ -26,6 +26,7 @@ class Dosen extends Model
         'golongan',
         'prodi_id',
         'user_id',
+        'foto',
         'is_active',
     ];
 

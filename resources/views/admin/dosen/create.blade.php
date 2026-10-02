@@ -9,7 +9,7 @@
     <div class="page-card">
 
         <div class="page-card-head">
-            <h2>➕ Tambah Data Dosen</h2>
+            <h2><x-layout-icon name="plus" /> <span>Tambah Data Dosen</span></h2>
         </div>
 
         <div class="page-card-body">

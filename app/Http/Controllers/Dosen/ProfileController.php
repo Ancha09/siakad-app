@@ -21,6 +21,41 @@ class ProfileController extends Controller
         return view('dosen.profil.index', compact('dosen'));
     }
 
+    // ===================== UPDATE FOTO PROFIL =====================
+    public function updateFoto(Request $request)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())
+            ->firstOrFail();
+
+        // Kunci: Hanya bisa upload 1 kali jika belum direset admin
+        if ($dosen->foto) {
+            return back()->with('error', 'Foto profil sudah tersimpan dan terkunci. Perubahan hanya dapat dilakukan melalui permohonan reset ke Administrator.');
+        }
+
+        $request->validate([
+            'foto' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,svg,heic,heif,webp',
+                'max:10240', // 10 MB
+            ],
+        ], [
+            'foto.required' => 'Silakan pilih file foto terlebih dahulu.',
+            'foto.mimes' => 'Format foto harus berformat JPG, JPEG, PNG, SVG, HEIC, atau WEBP.',
+            'foto.max' => 'Ukuran foto maksimal adalah 10 MB.',
+        ]);
+
+        $path = $request->file('foto')->store('dosen/foto', 'public');
+
+        $dosen->update([
+            'foto' => $path,
+        ]);
+
+        return redirect()
+            ->route('dosen.profil')
+            ->with('success', 'Foto profil berhasil disimpan dan dikunci.');
+    }
+
     // ===================== UPDATE PROFIL =====================
     public function update(Request $request)
     {

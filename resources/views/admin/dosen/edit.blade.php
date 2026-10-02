@@ -4,11 +4,84 @@
 
 @section('content')
 
-<div class="page-card">
+<div class="inner-page">
 
-    <div class="page-card-head">
-        <h2>✏️ Edit Data Dosen</h2>
+    @if(session('success'))
+        <div class="alert alert-success" style="margin-bottom:20px;padding:12px 16px;border-radius:8px;background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if(session('info'))
+        <div class="alert alert-info" style="margin-bottom:20px;padding:12px 16px;border-radius:8px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd;">
+            {{ session('info') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger" style="margin-bottom:20px;padding:12px 16px;border-radius:8px;background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    {{-- ===================== FOTO PROFIL DOSEN (ADMIN VIEW & RESET) ===================== --}}
+    <div class="page-card" style="margin-bottom: 22px;">
+        <div class="page-card-head">
+            <h2>
+                <x-layout-icon name="user" />
+                <span>Foto Profil Dosen</span>
+            </h2>
+        </div>
+        <div class="page-card-body">
+            @if($dosen->foto)
+                <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;">
+                    <div style="width:100px;height:100px;border-radius:50%;overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,0.1);border:3px solid #ffffff;flex-shrink:0;">
+                        <img src="{{ asset('storage/' . $dosen->foto) }}" alt="{{ $dosen->nama }}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                    </div>
+                    <div style="flex:1;min-width:240px;">
+                        <div style="margin-bottom:8px;">
+                            <span class="badge-status-pill badge-status-green">
+                                <x-layout-icon name="check" />
+                                <span>Foto Profil Terpasang (Terkunci bagi Dosen)</span>
+                            </span>
+                        </div>
+                        <p style="margin:0 0 12px 0;color:#64748b;font-size:12.5px;line-height:1.5;">
+                            Foto profil ini diunggah secara mandiri oleh dosen. Sebagai Administrator, Anda memiliki akses untuk melihat dan melakukan reset foto jika diperlukan pergantian foto baru.
+                        </p>
+                        <form action="{{ route('admin.dosen.reset-foto', $dosen->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin me-reset foto profil dosen ini? File foto akan dihapus permanen dan dosen bersangkutan dapat mengunggah kembali foto baru.')">
+                            @csrf
+                            <button type="submit" class="btn-outline btn-sm btn-table-action" style="color:#dc2626;border-color:#fca5a5;background:#fef2f2;">
+                                <x-layout-icon name="trash" />
+                                <span>Reset Foto Profil Dosen</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            @else
+                <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+                    <div style="width:80px;height:80px;border-radius:50%;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:28px;font-weight:700;flex-shrink:0;">
+                        {{ strtoupper(substr($dosen->nama ?? 'D', 0, 1)) }}
+                    </div>
+                    <div style="flex:1;min-width:240px;">
+                        <div style="margin-bottom:6px;">
+                            <span class="badge-status-pill badge-status-gray">
+                                Belum Ada Foto Profil
+                            </span>
+                        </div>
+                        <p style="margin:0;color:#64748b;font-size:12.5px;line-height:1.5;">
+                            Dosen bersangkutan belum mengunggah foto profil. Sesuai kebijakan sistem, pengunggahan foto dilakukan secara mandiri oleh dosen melalui Portal Dosen (maksimal 1 kali unggah). Administrator tidak dapat mengunggah foto secara langsung.
+                        </p>
+                    </div>
+                </div>
+            @endif
+        </div>
     </div>
+
+    <div class="page-card">
+
+        <div class="page-card-head">
+            <h2><x-layout-icon name="edit" /> <span>Edit Data Dosen</span></h2>
+        </div>
 
     <div class="page-card-body">
 
@@ -210,7 +283,7 @@
 
                 <div class="page-card-head">
 
-                    <h2>🎓 Mahasiswa Wali</h2>
+                    <h2><x-layout-icon name="graduation" /> <span>Mahasiswa Wali</span></h2>
 
                     <span class="badge badge-blue">
                         Opsional
@@ -337,7 +410,8 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Update Dosen
+                    <x-layout-icon name="save" />
+                    <span>Update Dosen</span>
                 </button>
 
 
@@ -354,6 +428,8 @@
         </form>
 
     </div>
+
+</div>
 
 </div>
 

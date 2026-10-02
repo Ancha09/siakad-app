@@ -12,6 +12,7 @@ use App\Services\LegacyListNavigation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Throwable;
 
@@ -205,5 +206,19 @@ class DosenController extends Controller
         });
 
         return redirect()->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.dosen'))->with('success', 'Dosen dinonaktifkan tanpa menghapus jadwal atau riwayat akademik.');
+    }
+
+    // ================= RESET FOTO =================
+
+    public function resetFoto(Dosen $dosen)
+    {
+        if ($dosen->foto) {
+            Storage::disk('public')->delete($dosen->foto);
+            $dosen->update(['foto' => null]);
+
+            return back()->with('success', 'Foto profil dosen berhasil di-reset. Dosen yang bersangkutan kini dapat mengunggah foto baru.');
+        }
+
+        return back()->with('info', 'Dosen ini belum memiliki foto profil.');
     }
 }
