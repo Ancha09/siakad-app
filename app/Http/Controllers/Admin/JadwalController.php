@@ -45,6 +45,7 @@ class JadwalController extends Controller
         $query = Jadwal::with([
             'mataKuliah.prodi.fakultas',
             'dosen',
+            'dosens',
             'ruangan',
         ]);
 
@@ -65,11 +66,15 @@ class JadwalController extends Controller
 
                 })
 
-                // Cari Dosen
+                // Cari Dosen Utama & Dosen Pendamping
                 ->orWhereHas('dosen', function ($dosen) use ($search) {
 
-                    $dosen->whereLike('nama', '%' . $search . '%'
-                    );
+                    $dosen->whereLike('nama', '%' . $search . '%');
+
+                })
+                ->orWhereHas('dosens', function ($dosen) use ($search) {
+
+                    $dosen->whereLike('nama', '%' . $search . '%');
 
                 })
                 ->orWhereLike('group_key', '%' . $search . '%');
@@ -109,10 +114,7 @@ class JadwalController extends Controller
 
         if ($request->filled('dosen_id')) {
 
-            $query->where(
-                'dosen_id',
-                $request->dosen_id
-            );
+            $query->untukDosen((int) $request->dosen_id);
         }
 
 
@@ -191,12 +193,15 @@ class JadwalController extends Controller
     public function store(Request $request)
     {
         $validated = $this->validatedSchedule($request);
+        $dosenPendampingIds = $validated['dosen_pendamping_ids'] ?? [];
+        $scheduleData = collect($validated)->except('dosen_pendamping_ids')->all();
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $scheduleData, $dosenPendampingIds) {
             $this->ensureSharedGroupIsConsistent($validated);
             $this->ensureScheduleDoesNotConflict($validated);
 
-            Jadwal::create($validated);
+            $jadwal = Jadwal::create($scheduleData);
+            $this->syncJadwalDosens($jadwal, (int) $validated['dosen_id'], $dosenPendampingIds);
         });
 
 
@@ -213,6 +218,8 @@ class JadwalController extends Controller
 
     public function edit(Jadwal $jadwal)
     {
+        $jadwal->load('dosens');
+
         $mataKuliahs = MataKuliah::with('prodi')
             ->orderBy('nama_mk')
             ->get();
@@ -242,12 +249,15 @@ class JadwalController extends Controller
         Jadwal $jadwal
     ) {
         $validated = $this->validatedSchedule($request);
+        $dosenPendampingIds = $validated['dosen_pendamping_ids'] ?? [];
+        $scheduleData = collect($validated)->except('dosen_pendamping_ids')->all();
 
-        DB::transaction(function () use ($validated, $jadwal) {
+        DB::transaction(function () use ($validated, $jadwal, $scheduleData, $dosenPendampingIds) {
             $this->ensureSharedGroupIsConsistent($validated, $jadwal);
             $this->ensureScheduleDoesNotConflict($validated, $jadwal);
 
-            $jadwal->update($validated);
+            $jadwal->update($scheduleData);
+            $this->syncJadwalDosens($jadwal, (int) $validated['dosen_id'], $dosenPendampingIds);
         });
 
 
@@ -257,6 +267,21 @@ class JadwalController extends Controller
                 'success',
                 'Data jadwal berhasil diperbarui.'
             );
+    }
+
+    private function syncJadwalDosens(Jadwal $jadwal, int $dosenUtamaId, array $dosenPendampingIds): void
+    {
+        $sync = [
+            $dosenUtamaId => ['peran' => 'utama'],
+        ];
+
+        foreach ($dosenPendampingIds as $coId) {
+            if ($coId && (int) $coId !== $dosenUtamaId) {
+                $sync[$coId] = ['peran' => 'pendamping'];
+            }
+        }
+
+        $jadwal->dosens()->sync($sync);
     }
 
 
@@ -293,20 +318,32 @@ class JadwalController extends Controller
         ]);
 
         $validated = $request->validate([
-            'mata_kuliah_id'    => ['required', 'exists:mata_kuliahs,id'],
-            'dosen_id'          => ['required', 'exists:dosens,id'],
-            'ruangan_id'        => ['required', 'exists:ruangans,id'],
-            'kelas_id'          => ['nullable', 'exists:kelas,id'],
-            'hari'              => ['required', Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'])],
-            'jam_mulai'         => ['required', 'regex:/^\d{2}:\d{2}(?::\d{2})?$/'],
-            'jam_selesai'       => ['required', 'regex:/^\d{2}:\d{2}(?::\d{2})?$/', 'after:jam_mulai'],
-            'tahun_akademik'    => ['required', 'regex:/^\d{4}\/\d{4}$/'],
-            'semester_akademik' => ['required', Rule::in(['Ganjil', 'Genap'])],
-            'is_lintas_prodi'   => ['required', 'boolean'],
-            'group_key'         => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'mata_kuliah_id'         => ['required', 'exists:mata_kuliahs,id'],
+            'dosen_id'               => ['required', 'exists:dosens,id'],
+            'dosen_pendamping_ids'   => ['nullable', 'array'],
+            'dosen_pendamping_ids.*' => ['nullable', 'integer', 'exists:dosens,id', 'different:dosen_id'],
+            'ruangan_id'             => ['required', 'exists:ruangans,id'],
+            'kelas_id'               => ['nullable', 'exists:kelas,id'],
+            'hari'                   => ['required', Rule::in(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'])],
+            'jam_mulai'              => ['required', 'regex:/^\d{2}:\d{2}(?::\d{2})?$/'],
+            'jam_selesai'            => ['required', 'regex:/^\d{2}:\d{2}(?::\d{2})?$/', 'after:jam_mulai'],
+            'tahun_akademik'         => ['required', 'regex:/^\d{4}\/\d{4}$/'],
+            'semester_akademik'      => ['required', Rule::in(['Ganjil', 'Genap'])],
+            'is_lintas_prodi'        => ['required', 'boolean'],
+            'group_key'              => ['nullable', 'string', 'max:100', 'regex:/^[A-Za-z0-9._-]+$/'],
         ], [
             'group_key.regex' => 'Kode grup hanya boleh berisi huruf, angka, titik, garis bawah, atau tanda hubung.',
+            'dosen_pendamping_ids.*.different' => 'Dosen pendamping tidak boleh sama dengan dosen utama.',
+            'dosen_pendamping_ids.*.exists' => 'Dosen pendamping yang dipilih tidak valid.',
         ]);
+
+        $validated['dosen_pendamping_ids'] = collect($validated['dosen_pendamping_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id !== (int) $validated['dosen_id'])
+            ->unique()
+            ->values()
+            ->all();
 
         $validated['jam_mulai'] = $this->normalizeTime($validated['jam_mulai']);
         $validated['jam_selesai'] = $this->normalizeTime($validated['jam_selesai']);
@@ -351,8 +388,13 @@ class JadwalController extends Controller
         $incomingCourse = MataKuliah::with('kurikulums')->findOrFail($data['mata_kuliah_id']);
         $incomingProgramIds = $this->courseProgramIds($incomingCourse);
 
+        $allDosenIds = array_values(array_unique(array_filter([
+            (int) $data['dosen_id'],
+            ...array_map('intval', $data['dosen_pendamping_ids'] ?? []),
+        ])));
+
         $conflicts = Jadwal::query()
-            ->with('mataKuliah.kurikulums')
+            ->with(['mataKuliah.kurikulums', 'dosen', 'dosens'])
             ->where('hari', $data['hari'])
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
@@ -361,8 +403,9 @@ class JadwalController extends Controller
             ->whereIn('semester_akademik', $this->semesterAliases($data['semester_akademik']))
             ->where('jam_mulai', '<', $data['jam_selesai'])
             ->where('jam_selesai', '>', $data['jam_mulai'])
-            ->where(function ($query) use ($data) {
-                $query->where('dosen_id', $data['dosen_id'])
+            ->where(function ($query) use ($data, $allDosenIds) {
+                $query->whereIn('dosen_id', $allDosenIds)
+                    ->orWhereHas('dosens', fn ($q) => $q->whereIn('dosens.id', $allDosenIds))
                     ->orWhere('ruangan_id', $data['ruangan_id']);
             })
             ->when($ignored, fn ($query) => $query->whereKeyNot($ignored->getKey()))
@@ -377,6 +420,33 @@ class JadwalController extends Controller
                 && hash_equals((string) $conflict->group_key, (string) $data['group_key']);
             $bothMarkedAsShared = $data['is_lintas_prodi'] && $conflict->is_lintas_prodi;
             $sharedSessionAllowed = $sameSessionDetails && ($sameGroup || $bothMarkedAsShared);
+
+            if ($sharedSessionAllowed) {
+                continue;
+            }
+
+            // Cek bentrok ruangan
+            if ((int) $conflict->ruangan_id === (int) $data['ruangan_id']) {
+                throw ValidationException::withMessages([
+                    'jam_mulai' => 'Jadwal bentrok: Ruangan tersebut sudah digunakan oleh jadwal lain pada hari, jam, dan periode tersebut.',
+                ]);
+            }
+
+            // Cek bentrok dosen (baik dosen utama maupun dosen tim pengajar)
+            $conflictDosenIds = array_values(array_unique(array_filter([
+                (int) $conflict->dosen_id,
+                ...$conflict->dosens->pluck('id')->map(fn ($id) => (int) $id)->all(),
+            ])));
+
+            $bentrokDosenIds = array_intersect($allDosenIds, $conflictDosenIds);
+            if (! empty($bentrokDosenIds)) {
+                $bentrokDosen = Dosen::find(reset($bentrokDosenIds));
+                $namaDosen = $bentrokDosen ? $bentrokDosen->nama : 'dosen pengampu';
+                throw ValidationException::withMessages([
+                    'jam_mulai' => "Jadwal bentrok: {$namaDosen} sudah memiliki jadwal mengajar lain pada hari, jam, dan periode tersebut.",
+                ]);
+            }
+
             $sameProgramScope = $this->programScopesOverlap(
                 $incomingProgramIds,
                 $this->courseProgramIds($conflict->mataKuliah)
@@ -385,7 +455,7 @@ class JadwalController extends Controller
             // Mata kuliah reguler milik prodi yang benar-benar berbeda boleh
             // memakai slot yang sama. Ruang lingkup kosong berarti MKU/umum
             // dan sengaja dianggap beririsan dengan seluruh prodi.
-            if ($sameProgramScope && ! $sharedSessionAllowed) {
+            if ($sameProgramScope) {
                 throw ValidationException::withMessages([
                     'jam_mulai' => 'Jadwal bentrok dengan jadwal lain dalam program studi yang sama pada hari, jam, dan periode tersebut.',
                 ]);

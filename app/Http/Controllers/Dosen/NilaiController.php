@@ -23,8 +23,9 @@ class NilaiController extends Controller
                 'mataKuliah',
                 'ruangan',
                 'dosen',
+                'dosens',
             ])
-            ->where('dosen_id', $dosen->id)
+            ->untukDosen($dosen->id)
             ->orderBy('hari')
             ->orderBy('jam_mulai')
             ->get();
@@ -36,8 +37,8 @@ public function rekap()
 {
     $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
-    $jadwals = Jadwal::with(['mataKuliah', 'ruangan'])
-        ->where('dosen_id', $dosen->id)
+    $jadwals = Jadwal::with(['mataKuliah', 'ruangan', 'dosen', 'dosens'])
+        ->untukDosen($dosen->id)
         ->orderBy('hari')
         ->orderBy('jam_mulai')
         ->get();
@@ -66,7 +67,7 @@ public function rekap()
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
         // Cegah dosen membuka jadwal milik dosen lain
-        if ($jadwal->dosen_id != $dosen->id) {
+        if (! $jadwal->isDosenPengampu($dosen)) {
             abort(403);
         }
 
@@ -103,7 +104,7 @@ public function rekap()
             ->where('is_manual', false)
             ->whereIn('id', $krsIds)
             ->where('status', 'Disetujui')
-            ->whereHas('jadwal', fn ($query) => $query->where('dosen_id', $dosen->id))
+            ->whereHas('jadwal', fn ($query) => $query->untukDosen($dosen->id))
             ->get()
             ->keyBy('id');
 

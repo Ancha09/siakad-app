@@ -344,6 +344,7 @@ class PresensiController extends Controller
         $progresMataKuliah = \App\Models\Jadwal::with([
             'mataKuliah',
             'dosen',
+            'dosens',
             'kelas',
             'ruangan',
         ])
@@ -353,7 +354,7 @@ class PresensiController extends Controller
         ->when($request->filled('prodi_id'), fn ($q) => $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $filters['prodi_id'])))
         ->when($request->filled('kelas_id'), fn ($q) => $q->where('kelas_id', $filters['kelas_id']))
         ->when($request->filled('mata_kuliah_id'), fn ($q) => $q->where('mata_kuliah_id', $filters['mata_kuliah_id']))
-        ->when($request->filled('dosen_id'), fn ($q) => $q->where('dosen_id', $filters['dosen_id']))
+        ->when($request->filled('dosen_id'), fn ($q) => $q->untukDosen((int) $filters['dosen_id']))
         ->orderBy('hari')
         ->get();
 
@@ -535,6 +536,7 @@ class PresensiController extends Controller
         $jadwal->load([
             'mataKuliah.prodi.fakultas',
             'dosen.prodi',
+            'dosens',
             'kelas',
             'ruangan',
             'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),
@@ -604,6 +606,7 @@ class PresensiController extends Controller
         $jadwal->load([
             'mataKuliah.prodi.fakultas',
             'dosen.prodi',
+            'dosens',
             'kelas',
             'ruangan',
             'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),

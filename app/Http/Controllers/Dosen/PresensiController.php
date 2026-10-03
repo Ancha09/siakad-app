@@ -31,12 +31,11 @@ class PresensiController extends Controller
             'mataKuliah',
             'ruangan',
             'kelas',
+            'dosen',
+            'dosens',
             'presensiPertemuans' => fn ($query) => $query->orderByDesc('pertemuan'),
         ])
-        ->where(
-            'dosen_id',
-            $dosen->id
-        )
+        ->untukDosen($dosen->id)
         ->orderBy('hari')
         ->orderBy('jam_mulai')
         ->get();
@@ -66,10 +65,7 @@ class PresensiController extends Controller
 
         // ===================== CEK JADWAL =====================
 
-        if (
-            $jadwal->dosen_id !=
-            $dosen->id
-        ) {
+        if (! $jadwal->isDosenPengampu($dosen)) {
             abort(403);
         }
 
@@ -328,10 +324,7 @@ class PresensiController extends Controller
         );
 
 
-        if (
-            $jadwal->dosen_id !=
-            $dosen->id
-        ) {
+        if (! $jadwal->isDosenPengampu($dosen)) {
             abort(403);
         }
 
@@ -558,13 +551,14 @@ class PresensiController extends Controller
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
-        if ($jadwal->dosen_id != $dosen->id) {
+        if (! $jadwal->isDosenPengampu($dosen)) {
             abort(403);
         }
 
         $jadwal->load([
             'mataKuliah.prodi.fakultas',
             'dosen.prodi',
+            'dosens',
             'kelas',
             'ruangan',
             'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),
@@ -633,13 +627,14 @@ class PresensiController extends Controller
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
-        if ($jadwal->dosen_id != $dosen->id) {
+        if (! $jadwal->isDosenPengampu($dosen)) {
             abort(403);
         }
 
         $jadwal->load([
             'mataKuliah.prodi.fakultas',
             'dosen.prodi',
+            'dosens',
             'kelas',
             'ruangan',
             'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),

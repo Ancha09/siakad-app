@@ -104,7 +104,7 @@
                 <td class="center">{{ $item->mata_kuliah_efektif?->semester ?? $semesterStudi ?? '-' }}</td>
                 <td class="center">{{ $item->mata_kuliah_efektif?->sks ?? 0 }}</td>
                 <td>
-                    <strong>{{ $item->dosen_efektif?->nama ?? 'Dosen belum tersedia' }}</strong>
+                    <strong>{{ $item->semua_dosen_nama ?: ($item->dosen_efektif?->nama ?? 'Dosen belum tersedia') }}</strong>
                     @if($item->jadwal)
                         <div class="muted">
                             {{ $item->jadwal->hari ?? '-' }}, {{ substr((string) $item->jadwal->jam_mulai, 0, 5) }}-{{ substr((string) $item->jadwal->jam_selesai, 0, 5) }}

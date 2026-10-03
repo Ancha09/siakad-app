@@ -217,7 +217,7 @@
         <tr>
             <td class="label">Dosen Pengampu</td>
             <td class="colon">:</td>
-            <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
+            <td>{{ $jadwal->semua_dosen_nama }}</td>
 
             <td class="label">Jadwal Kuliah</td>
             <td class="colon">:</td>
@@ -226,7 +226,7 @@
         <tr>
             <td class="label">NIDN / NIP Dosen</td>
             <td class="colon">:</td>
-            <td>{{ $jadwal->dosen?->nidn ?? '-' }}</td>
+            <td>{{ $jadwal->semua_dosen_nidn ?: ($jadwal->dosen?->nidn ?? '-') }}</td>
 
             <td class="label">Jumlah Peserta</td>
             <td class="colon">:</td>
@@ -315,6 +315,11 @@
                     {{ $jadwal->dosen?->nama ?? '-' }}
                 </div>
                 NIDN. {{ $jadwal->dosen?->nidn ?? '-' }}
+                @if($jadwal->relationLoaded('dosens') && $jadwal->dosens->where('pivot.peran', 'pendamping')->count() > 0)
+                    <div style="font-size:8.5pt;color:#64748b;margin-top:4px;">
+                        Tim Pengajar: {{ $jadwal->dosens->where('pivot.peran', 'pendamping')->pluck('nama')->implode(', ') }}
+                    </div>
+                @endif
             </td>
         </tr>
     </table>

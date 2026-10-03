@@ -47,6 +47,7 @@ class AvailableKrsScheduleService
                 'mataKuliah.prodi',
                 'mataKuliah.kurikulums',
                 'dosen',
+                'dosens',
                 'ruangan',
             ])
             ->whereNotNull('mata_kuliah_id');

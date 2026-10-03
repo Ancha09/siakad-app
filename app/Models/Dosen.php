@@ -61,6 +61,14 @@ class Dosen extends Model
         return $this->hasMany(Jadwal::class, 'dosen_id');
     }
 
+    // Relasi semua jadwal yang diajar (baik sebagai dosen utama maupun pendamping)
+    public function jadwalsAjar()
+    {
+        return $this->belongsToMany(Jadwal::class, 'jadwal_dosen')
+            ->withPivot('peran')
+            ->withTimestamps();
+    }
+
     public function penelitians()
     {
         return $this->hasMany(Penelitian::class, 'dosen_id');

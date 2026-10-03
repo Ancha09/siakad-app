@@ -339,7 +339,10 @@
 
                             <td>
 
-                                {{ $jadwal->dosen->nama ?? '-' }}
+                                <div>{{ $jadwal->semua_dosen_nama }}</div>
+                                @if($jadwal->dosens->count() > 1)
+                                    <span class="badge" style="background:#e0e7ff;color:#3730a3;font-size:11px;padding:2px 8px;margin-top:4px;display:inline-block;">Team Teaching</span>
+                                @endif
 
                             </td>
 

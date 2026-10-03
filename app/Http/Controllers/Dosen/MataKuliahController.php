@@ -17,12 +17,13 @@ class MataKuliahController extends Controller
         $jadwals = Jadwal::with([
             'mataKuliah.prodi',
             'dosen',
+            'dosens',
             'ruangan',
         ])
         ->withCount([
             'krs as jumlah_mahasiswa' => fn ($query) => $query->where('status', '!=', 'Ditolak'),
         ])
-        ->where('dosen_id', $dosen->id)
+        ->untukDosen($dosen->id)
         ->orderBy('tahun_akademik', 'desc')
         ->orderBy('hari')
         ->orderBy('jam_mulai')

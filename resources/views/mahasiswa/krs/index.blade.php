@@ -632,7 +632,7 @@
                                     {{-- DOSEN --}}
 
                                     <td>
-                                        {{ $item->dosen_efektif?->nama ?? '-' }}
+                                        {{ $item->semua_dosen_nama ?: ($item->dosen_efektif?->nama ?? '-') }}
                                     </td>
 
 
@@ -1137,7 +1137,7 @@
                                                         {{ $mataKuliah?->sks ?? 0 }} SKS
                                                     </span>
                                                 </td>
-                                                <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
+                                                <td>{{ $jadwal->semua_dosen_nama }}</td>
                                                 <td>{{ $jadwal->ruangan?->nama_ruangan ?? '-' }}</td>
                                                 <td>
                                                     <strong>{{ $jadwal->hari }}</strong><br>

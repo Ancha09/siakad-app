@@ -50,7 +50,7 @@
                 {{-- DOSEN --}}
                 <div class="form-group">
 
-                    <label>Dosen Pengampu</label>
+                    <label>Dosen Pengampu Utama <span style="color:#dc2626;">*</span></label>
 
                     <select
                         name="dosen_id"
@@ -78,6 +78,10 @@
                     </select>
 
                 </div>
+
+
+                {{-- DOSEN PENDAMPING / TEAM TEACHING --}}
+                @include('admin.jadwal.partials.team-teaching-fields')
 
 
                 {{-- RUANGAN --}}

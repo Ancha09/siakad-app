@@ -22,7 +22,7 @@
                                 <td>{{ $jadwal->mataKuliah?->kode_mk ?? '-' }}</td>
                                 <td><strong>{{ $jadwal->mataKuliah?->nama_mk ?? '-' }}</strong></td>
                                 <td>{{ $jadwal->mataKuliah?->sks ?? '-' }}</td>
-                                <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
+                                <td>{{ $jadwal->semua_dosen_nama }}</td>
                                 <td>{{ $jadwal->mataKuliah?->prodi?->nama_prodi ?? '-' }}</td>
                                 <td>{{ $jadwal->mataKuliah?->semester ? 'Semester '.$jadwal->mataKuliah->semester : '-' }}<br><small style="color:#64748b;">{{ $jadwal->semester_akademik ?? '-' }}</small></td>
                                 <td>{{ $jadwal->tahun_akademik ?? '-' }}</td>

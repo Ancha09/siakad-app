@@ -45,6 +45,87 @@ class Jadwal extends Model
         );
     }
 
+    // Relasi Multi-Dosen (Team Teaching) via tabel pivot jadwal_dosen
+    public function dosens()
+    {
+        return $this->belongsToMany(Dosen::class, 'jadwal_dosen')
+            ->withPivot('peran')
+            ->withTimestamps();
+    }
+
+    public function dosenPendampings()
+    {
+        return $this->belongsToMany(Dosen::class, 'jadwal_dosen')
+            ->wherePivot('peran', 'pendamping')
+            ->withPivot('peran')
+            ->withTimestamps();
+    }
+
+    // Scope untuk mencari jadwal yang diajar oleh dosen tertentu (baik dosen utama maupun pendamping)
+    public function scopeUntukDosen($query, int|Dosen $dosen)
+    {
+        $dosenId = $dosen instanceof Dosen ? $dosen->id : (int) $dosen;
+
+        return $query->where(function ($q) use ($dosenId) {
+            $q->where('dosen_id', $dosenId)
+              ->orWhereHas('dosens', fn ($sq) => $sq->where('dosens.id', $dosenId));
+        });
+    }
+
+    // Helper untuk mengecek apakah dosen tertentu mengampu jadwal ini
+    public function isDosenPengampu(int|Dosen $dosen): bool
+    {
+        $dosenId = $dosen instanceof Dosen ? $dosen->id : (int) $dosen;
+
+        if ((int) $this->dosen_id === $dosenId) {
+            return true;
+        }
+
+        if ($this->relationLoaded('dosens')) {
+            return $this->dosens->contains('id', $dosenId);
+        }
+
+        return $this->dosens()->where('dosens.id', $dosenId)->exists();
+    }
+
+    // Accessor: Mengembalikan gabungan nama seluruh dosen pengampu
+    public function getSemuaDosenNamaAttribute(): string
+    {
+        if ($this->relationLoaded('dosens') && $this->dosens->isNotEmpty()) {
+            $sorted = $this->dosens->sortBy(fn ($d) => ($d->pivot?->peran === 'utama') ? 0 : 1);
+            return $sorted->pluck('nama')->filter()->implode(' / ');
+        }
+
+        $dosenList = $this->dosens()
+            ->orderByRaw("CASE WHEN peran = 'utama' THEN 0 ELSE 1 END")
+            ->get();
+
+        if ($dosenList->isNotEmpty()) {
+            return $dosenList->pluck('nama')->filter()->implode(' / ');
+        }
+
+        return $this->dosen?->nama ?? '-';
+    }
+
+    // Accessor: Mengembalikan gabungan NIDN seluruh dosen pengampu
+    public function getSemuaDosenNidnAttribute(): string
+    {
+        if ($this->relationLoaded('dosens') && $this->dosens->isNotEmpty()) {
+            $sorted = $this->dosens->sortBy(fn ($d) => ($d->pivot?->peran === 'utama') ? 0 : 1);
+            return $sorted->map(fn ($d) => $d->nidn ?: '-')->implode(' / ');
+        }
+
+        $dosenList = $this->dosens()
+            ->orderByRaw("CASE WHEN peran = 'utama' THEN 0 ELSE 1 END")
+            ->get();
+
+        if ($dosenList->isNotEmpty()) {
+            return $dosenList->map(fn ($d) => $d->nidn ?: '-')->implode(' / ');
+        }
+
+        return $this->dosen?->nidn ?? '-';
+    }
+
     // Relasi ke Ruangan
     public function ruangan()
     {

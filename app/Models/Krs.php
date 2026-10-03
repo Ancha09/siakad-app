@@ -78,12 +78,21 @@ class Krs extends Model
         return $this->jadwal?->dosen ?? $this->dosenManual;
     }
 
+    public function getSemuaDosenNamaAttribute(): string
+    {
+        if ($this->is_manual) {
+            return $this->dosenManual?->nama ?? '-';
+        }
+
+        return $this->jadwal?->semua_dosen_nama ?? ($this->dosenManual?->nama ?? '-');
+    }
+
     public function scopeForDosen(Builder $query, int $dosenId): Builder
     {
         return $query->where(fn (Builder $q) => $q
             ->where(fn (Builder $manual) => $manual->where('is_manual', true)->where('dosen_id', $dosenId))
             ->orWhere(fn (Builder $active) => $active->where('is_manual', false)
-                ->whereHas('jadwal', fn (Builder $j) => $j->where('dosen_id', $dosenId))));
+                ->whereHas('jadwal', fn (Builder $j) => $j->untukDosen($dosenId))));
     }
 
     public function getKelasEfektifAttribute()
