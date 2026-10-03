@@ -429,13 +429,34 @@ class AttendanceAnalyticsService
             $rateSeries[] = $r;
         }
 
-        // Buat stat hari ini
+        // Buat stat hari ini (jika hari ini akhir pekan / 0, ambil dari hari aktif terakhir agar grafik/distribusi tetap informatif)
         $todayIndex = count($fullDates) - 1;
-        $tHadir = $hadirSeries[$todayIndex] ?? (int) round($baseActive * 0.88);
-        $tIzin = $izinSeries[$todayIndex] ?? 3;
-        $tSakit = $sakitSeries[$todayIndex] ?? 2;
-        $tAlpa = $alpaSeries[$todayIndex] ?? 2;
+        $tHadir = $hadirSeries[$todayIndex] ?? 0;
+        $tIzin = $izinSeries[$todayIndex] ?? 0;
+        $tSakit = $sakitSeries[$todayIndex] ?? 0;
+        $tAlpa = $alpaSeries[$todayIndex] ?? 0;
         $tTotal = $tHadir + $tIzin + $tSakit + $tAlpa;
+
+        if ($tTotal === 0) {
+            for ($k = $todayIndex - 1; $k >= 0; $k--) {
+                if (($totalSeries[$k] ?? 0) > 0) {
+                    $tHadir = $hadirSeries[$k];
+                    $tIzin = $izinSeries[$k];
+                    $tSakit = $sakitSeries[$k];
+                    $tAlpa = $alpaSeries[$k];
+                    $tTotal = $totalSeries[$k];
+                    break;
+                }
+            }
+            if ($tTotal === 0) {
+                $tHadir = (int) round($baseActive * 0.88);
+                $tIzin = 3;
+                $tSakit = 2;
+                $tAlpa = 2;
+                $tTotal = $tHadir + $tIzin + $tSakit + $tAlpa;
+            }
+        }
+
         $tRate = $tTotal > 0 ? round(($tHadir / $tTotal) * 100, 1) : 89.5;
 
         $simulatedToday = [
@@ -457,10 +478,10 @@ class AttendanceAnalyticsService
             'labels' => ['Hadir', 'Izin', 'Sakit', 'Alpa'],
             'counts' => [$tHadir, $tIzin, $tSakit, $tAlpa],
             'rates' => [
-                round(($tHadir / $tTotal) * 100, 1),
-                round(($tIzin / $tTotal) * 100, 1),
-                round(($tSakit / $tTotal) * 100, 1),
-                round(($tAlpa / $tTotal) * 100, 1),
+                $tTotal > 0 ? round(($tHadir / $tTotal) * 100, 1) : 0,
+                $tTotal > 0 ? round(($tIzin / $tTotal) * 100, 1) : 0,
+                $tTotal > 0 ? round(($tSakit / $tTotal) * 100, 1) : 0,
+                $tTotal > 0 ? round(($tAlpa / $tTotal) * 100, 1) : 0,
             ],
             'colors' => ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
             'total' => $tTotal,
@@ -495,7 +516,7 @@ class AttendanceAnalyticsService
             $s = (int) round($base * 0.04);
             $a = max(1, $base - $h - $i - $s);
             $tot = $h + $i + $s + $a;
-            $pct = round(($h / $tot) * 100, 1);
+            $pct = $tot > 0 ? round(($h / $tot) * 100, 1) : 0;
 
             $pHadir[] = $h;
             $pIzin[] = $i;

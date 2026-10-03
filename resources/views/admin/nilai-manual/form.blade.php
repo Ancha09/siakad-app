@@ -3,6 +3,11 @@
 @php
     $editing = isset($khs);
     $recordKrs = $editing ? $khs->krs : null;
+    $selectedStudentId = old('mahasiswa_id', $recordKrs?->mahasiswa_id);
+    $selectedStudentModel = $mahasiswas->first(fn ($m) => (string) $m->id === (string) $selectedStudentId);
+    $selectedStudentLabel = $selectedStudentModel
+        ? $selectedStudentModel->nim.' — '.$selectedStudentModel->nama.($selectedStudentModel->is_active ? '' : ' (nonaktif)')
+        : '';
     $selectedCourse = $recordKrs?->mata_kuliah_id ?? $recordKrs?->jadwal?->mata_kuliah_id;
     $selectedCourseId = old('mata_kuliah_id', $selectedCourse);
     $selectedCourseModel = $mataKuliahs->first(fn ($mataKuliah) => (string) $mataKuliah->id === (string) $selectedCourseId);
@@ -24,7 +29,52 @@
             @csrf @if($editing) @method('PUT') @endif
             <input type="hidden" name="return_url" value="{{ $returnUrl }}">
             <div class="krs-form-grid">
-                <div class="form-group"><label>Mahasiswa *</label><select name="mahasiswa_id" class="form-control" required><option value="">Pilih mahasiswa</option>@foreach($mahasiswas as $m)<option value="{{ $m->id }}" @selected(old('mahasiswa_id', $recordKrs?->mahasiswa_id) == $m->id)>{{ $m->nim }} — {{ $m->nama }}{{ $m->is_active ? '' : ' (nonaktif)' }}</option>@endforeach</select></div>
+                <div class="form-group">
+                    <label for="mahasiswa-search">Mahasiswa *</label>
+                    <div class="manual-student-picker" data-student-picker>
+                        <div class="manual-student-input-wrap">
+                            <span class="manual-student-search-icon" aria-hidden="true"><x-layout-icon name="search" /></span>
+                            <input
+                                id="mahasiswa-search"
+                                type="text"
+                                class="form-control manual-student-search"
+                                value="{{ $selectedStudentLabel }}"
+                                placeholder="Ketik NIM atau nama mahasiswa"
+                                autocomplete="off"
+                                role="combobox"
+                                aria-autocomplete="list"
+                                aria-controls="mahasiswa-results"
+                                aria-expanded="false"
+                                required
+                                data-student-search
+                            >
+                            <input type="hidden" name="mahasiswa_id" value="{{ $selectedStudentId }}" data-student-value>
+                        </div>
+
+                        <div id="mahasiswa-results" class="manual-student-results" role="listbox" hidden data-student-results>
+                            @foreach($mahasiswas as $m)
+                                @php($mLabel = $m->nim.' — '.$m->nama.($m->is_active ? '' : ' (nonaktif)'))
+                                <button
+                                    id="mahasiswa-option-{{ $m->id }}"
+                                    type="button"
+                                    class="manual-student-option{{ (string) $selectedStudentId === (string) $m->id ? ' is-selected' : '' }}"
+                                    role="option"
+                                    aria-selected="{{ (string) $selectedStudentId === (string) $m->id ? 'true' : 'false' }}"
+                                    data-student-option
+                                    data-student-id="{{ $m->id }}"
+                                    data-student-label="{{ $mLabel }}"
+                                    data-student-search-text="{{ $m->nim }} {{ $m->nama }}"
+                                    data-student-angkatan="{{ $m->angkatan }}"
+                                    data-student-prodi-id="{{ $m->prodi_id }}"
+                                >
+                                    {{ $mLabel }}
+                                </button>
+                            @endforeach
+                            <div class="manual-student-empty" role="status" hidden data-student-empty>Mahasiswa tidak ditemukan</div>
+                        </div>
+                    </div>
+                    <small>Cari menggunakan NIM atau nama mahasiswa, lalu pilih salah satu hasil.</small>
+                </div>
                 <div class="form-group"><label>Angkatan</label><input type="number" name="angkatan" class="form-control" min="1900" value="{{ old('angkatan', $recordKrs?->angkatan ?? $recordKrs?->mahasiswa?->angkatan) }}"></div>
                 <div class="form-group"><label>Semester Mahasiswa</label><input type="number" name="semester" class="form-control" min="1" max="14" value="{{ old('semester', $recordKrs?->semester) }}"></div>
                 <div class="form-group"><label>Tahun Ajaran *</label><input type="text" name="tahun_akademik" class="form-control" placeholder="2020/2021" value="{{ old('tahun_akademik', $khs->tahun_akademik ?? '') }}" required></div>
@@ -96,17 +146,29 @@
         const nilaiAngka = document.getElementById('nilai_angka');
         const nilaiHuruf = document.getElementById('nilai_huruf');
         const bobot = document.getElementById('bobot');
-        const coursePicker = document.querySelector('[data-course-picker]');
         const bobotHuruf = { A: 4, 'A-': 3.75, 'B+': 3.5, B: 3, 'B-': 2.75, 'C+': 2.5, C: 2, D: 1, E: 0 };
         const batasNilai = [[85, 'A'], [80, 'A-'], [75, 'B+'], [70, 'B'], [65, 'B-'], [60, 'C+'], [55, 'C'], [40, 'D'], [0, 'E']];
 
-        if (coursePicker) {
-            const search = coursePicker.querySelector('[data-course-search]');
-            const value = coursePicker.querySelector('[data-course-value]');
-            const results = coursePicker.querySelector('[data-course-results]');
-            const empty = coursePicker.querySelector('[data-course-empty]');
-            const options = Array.from(coursePicker.querySelectorAll('[data-course-option]'));
-            const form = coursePicker.closest('form');
+        function setupCombobox({
+            picker,
+            searchSelector,
+            valueSelector,
+            resultsSelector,
+            emptySelector,
+            optionSelector,
+            idDataKey,
+            labelDataKey,
+            searchTextDataKey,
+            validationMessage,
+            onSelect,
+        }) {
+            if (! picker) return;
+            const search = picker.querySelector(searchSelector);
+            const value = picker.querySelector(valueSelector);
+            const results = picker.querySelector(resultsSelector);
+            const empty = picker.querySelector(emptySelector);
+            const options = Array.from(picker.querySelectorAll(optionSelector));
+            const form = picker.closest('form');
             let selectedLabel = search.value;
             let activeIndex = -1;
 
@@ -145,7 +207,8 @@
                 let matchCount = 0;
 
                 options.forEach((option) => {
-                    const matches = option.dataset.courseSearchText.toLocaleLowerCase('id-ID').includes(query);
+                    const text = option.dataset[searchTextDataKey] || '';
+                    const matches = text.toLocaleLowerCase('id-ID').includes(query);
                     option.hidden = ! matches;
                     if (matches) matchCount += 1;
                 });
@@ -157,10 +220,10 @@
                 setOpen(true);
             };
 
-            const chooseCourse = (option) => {
-                value.value = option.dataset.courseId;
-                search.value = option.dataset.courseLabel;
-                selectedLabel = option.dataset.courseLabel;
+            const chooseOption = (option) => {
+                value.value = option.dataset[idDataKey];
+                search.value = option.dataset[labelDataKey];
+                selectedLabel = option.dataset[labelDataKey];
                 search.setCustomValidity('');
                 options.forEach((item) => {
                     const selected = item === option;
@@ -169,6 +232,9 @@
                 });
                 setOpen(false);
                 search.focus();
+                if (typeof onSelect === 'function') {
+                    onSelect(option);
+                }
             };
 
             search.addEventListener('focus', filterOptions);
@@ -192,29 +258,65 @@
                     setActive(activeIndex < 0 ? (direction > 0 ? 0 : visibleOptions().length - 1) : activeIndex + direction);
                 } else if (event.key === 'Enter' && ! results.hidden && activeIndex >= 0) {
                     event.preventDefault();
-                    chooseCourse(visibleOptions()[activeIndex]);
-                } else if (event.key === 'Escape') {
-                    setOpen(false);
-                } else if (event.key === 'Tab') {
+                    chooseOption(visibleOptions()[activeIndex]);
+                } else if (event.key === 'Escape' || event.key === 'Tab') {
                     setOpen(false);
                 }
             });
 
-            options.forEach((option) => option.addEventListener('click', () => chooseCourse(option)));
+            options.forEach((option) => option.addEventListener('click', () => chooseOption(option)));
 
             document.addEventListener('mousedown', (event) => {
-                if (! coursePicker.contains(event.target)) setOpen(false);
+                if (! picker.contains(event.target)) setOpen(false);
             });
 
             form?.addEventListener('submit', (event) => {
                 if (! value.value) {
                     event.preventDefault();
-                    search.setCustomValidity('Pilih mata kuliah dari daftar hasil pencarian.');
+                    search.setCustomValidity(validationMessage);
                     search.reportValidity();
                     filterOptions();
                 }
             });
         }
+
+        // Setup Mahasiswa Combobox
+        setupCombobox({
+            picker: document.querySelector('[data-student-picker]'),
+            searchSelector: '[data-student-search]',
+            valueSelector: '[data-student-value]',
+            resultsSelector: '[data-student-results]',
+            emptySelector: '[data-student-empty]',
+            optionSelector: '[data-student-option]',
+            idDataKey: 'studentId',
+            labelDataKey: 'studentLabel',
+            searchTextDataKey: 'studentSearchText',
+            validationMessage: 'Pilih mahasiswa dari daftar hasil pencarian.',
+            onSelect: (option) => {
+                const angkatanInput = document.querySelector('input[name="angkatan"]');
+                if (angkatanInput && ! angkatanInput.value && option.dataset.studentAngkatan) {
+                    angkatanInput.value = option.dataset.studentAngkatan;
+                }
+                const prodiSelect = document.querySelector('select[name="prodi_id"]');
+                if (prodiSelect && ! prodiSelect.value && option.dataset.studentProdiId) {
+                    prodiSelect.value = option.dataset.studentProdiId;
+                }
+            },
+        });
+
+        // Setup Mata Kuliah Combobox
+        setupCombobox({
+            picker: document.querySelector('[data-course-picker]'),
+            searchSelector: '[data-course-search]',
+            valueSelector: '[data-course-value]',
+            resultsSelector: '[data-course-results]',
+            emptySelector: '[data-course-empty]',
+            optionSelector: '[data-course-option]',
+            idDataKey: 'courseId',
+            labelDataKey: 'courseLabel',
+            searchTextDataKey: 'courseSearchText',
+            validationMessage: 'Pilih mata kuliah dari daftar hasil pencarian.',
+        });
 
         nilaiAngka?.addEventListener('input', function () {
             const angka = Number(nilaiAngka.value);
