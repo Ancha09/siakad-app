@@ -6,9 +6,8 @@
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>📝 Jadwal Mengajar - Input / Edit Nilai</h2>
+    <h2><x-layout-icon name="file-check" /> Jadwal Mengajar - Penilaian OBE</h2>
 </div>
 
 {{-- Notifikasi sukses --}}
@@ -125,7 +124,6 @@
     </div>
 
 </div>
-```
 
 </div>
 

@@ -155,6 +155,7 @@
 
             <div class="nav-section-label">Akademik</div>
             <x-sidebar-item route="admin.kurikulum.index" :active="request()->routeIs('admin.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
+            <x-sidebar-item route="admin.obe.index" :active="request()->routeIs('admin.obe.*')" icon="chart" badge="OBE">Kurikulum OBE &amp; RPS</x-sidebar-item>
             <x-sidebar-item route="admin.jadwal" :active="request()->routeIs('admin.jadwal', 'admin.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
             <x-sidebar-item route="admin.periode-krs" :active="request()->routeIs('admin.periode-krs', 'admin.periode-krs.*')" icon="period">Periode KRS</x-sidebar-item>
             <x-sidebar-item route="admin.krs-mahasiswa.index" :active="request()->routeIs('admin.krs', 'admin.krs.*', 'admin.krs-mahasiswa.*')" icon="file-check">KRS Admin</x-sidebar-item>

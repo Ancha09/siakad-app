@@ -21,7 +21,17 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td><span class="badge badge-blue">{{ $item->mata_kuliah_efektif?->kode_mk ?? '-' }}</span></td>
-                                <td><strong>{{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}</strong></td>
+                                <td>
+                                    <strong>{{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}</strong>
+                                    @php($rps = $item->mata_kuliah_efektif?->rpsAktif ?? $jadwal?->mataKuliah?->rpsAktif)
+                                    @if($rps && $rps->file_rps && $item->mata_kuliah_efektif)
+                                        <div style="margin-top:3px;">
+                                            <a href="{{ route('mahasiswa.rps.download', $item->mata_kuliah_efektif->id) }}" class="btn-outline" style="font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" target="_blank">
+                                                <x-layout-icon name="download" /> RPS (PDF)
+                                            </a>
+                                        </div>
+                                    @endif
+                                </td>
                                 <td>{{ $item->mata_kuliah_efektif?->sks ?? '-' }}</td>
                                 <td>{{ $item->dosen_efektif?->nama ?? '-' }}</td>
                                 <td><strong>{{ $jadwal?->hari ?? '-' }}</strong><br><small style="color:#64748b;">{{ $jadwal?->jam_mulai ?? '-' }} - {{ $jadwal?->jam_selesai ?? '-' }}</small></td>

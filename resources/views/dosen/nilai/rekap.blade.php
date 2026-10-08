@@ -6,9 +6,8 @@
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>📊 Rekap Nilai Per Kelas</h2>
+    <h2><x-layout-icon name="chart" /> Rekap Nilai Per Kelas</h2>
 </div>
 
 <div class="page-card-body">
@@ -93,7 +92,6 @@
     </a>
 
 </div>
-```
 
 </div>
 

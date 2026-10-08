@@ -18,6 +18,7 @@ use App\Http\Controllers\Admin\LaporanAkademikController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\NilaiManualController;
+use App\Http\Controllers\Admin\ObeCurriculumController;
 use App\Http\Controllers\Admin\PeriodeKrsController;
 use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
 use App\Http\Controllers\Admin\PresensiExportController;
@@ -104,11 +105,14 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
     // ===================== NILAI =====================
 
     Route::get('/nilai', [NilaiController::class, 'index'])->name('nilai');
-
     Route::get('/nilai/rekap', [NilaiController::class, 'rekap'])->name('nilai.rekap');
-
     Route::get('/nilai/{jadwal}', [NilaiController::class, 'show'])->name('nilai.show');
-
+    Route::get('/nilai/{jadwal}/detail', [NilaiController::class, 'show'])->name('nilai.detail');
+    Route::post('/nilai/{jadwal}/skema', [NilaiController::class, 'saveSkema'])->name('nilai.skema');
+    Route::post('/nilai/{jadwal}/input-obe', [NilaiController::class, 'saveNilai'])->name('nilai.input-obe');
+    Route::post('/nilai/{jadwal}/finalisasi', [NilaiController::class, 'finalize'])->name('nilai.finalisasi');
+    Route::get('/nilai/{jadwal}/template', [NilaiController::class, 'exportTemplate'])->name('nilai.template');
+    Route::post('/nilai/{jadwal}/import', [NilaiController::class, 'importExcel'])->name('nilai.import');
     Route::post('/nilai', [NilaiController::class, 'store'])->name('nilai.store');
 
     // ===================== HASIL EVALUASI =====================
@@ -228,6 +232,7 @@ Route::middleware(['auth', SkripsiRole::class.':mahasiswa'])->prefix('mahasiswa'
     Route::middleware(SkripsiRole::class.':mahasiswa')->group(function () {
         Route::get('/kurikulum', [KurikulumViewerController::class, 'mahasiswa'])->name('mahasiswa.kurikulum');
         Route::get('/kurikulum/silabus/{item}', [KurikulumViewerController::class, 'downloadMahasiswa'])->name('mahasiswa.kurikulum.silabus');
+        Route::get('/rps/{mataKuliah}/download', [ObeCurriculumController::class, 'downloadRpsByCourse'])->name('mahasiswa.rps.download');
     });
 
     // ===================== PRESENSI =====================
@@ -496,6 +501,28 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
 
     Route::get('/penilaian-cpl-mahasiswa', [AdminStudentCplAssessmentController::class, 'index'])->name('admin.penilaian-cpl-mahasiswa.index');
     Route::get('/penilaian-cpl-mahasiswa/{mahasiswa}', [AdminStudentCplAssessmentController::class, 'show'])->name('admin.penilaian-cpl-mahasiswa.show');
+
+    // ===================== KURIKULUM OBE & RPS =====================
+
+    Route::get('/kurikulum-obe', [ObeCurriculumController::class, 'index'])->name('admin.obe.index');
+    Route::post('/kurikulum-obe/cpl', [ObeCurriculumController::class, 'storeCpl'])->name('admin.obe.cpl.store');
+    Route::put('/kurikulum-obe/cpl/{cpl}', [ObeCurriculumController::class, 'updateCpl'])->name('admin.obe.cpl.update');
+    Route::delete('/kurikulum-obe/cpl/{cpl}', [ObeCurriculumController::class, 'destroyCpl'])->name('admin.obe.cpl.destroy');
+
+    Route::post('/kurikulum-obe/cpmk', [ObeCurriculumController::class, 'storeCpmk'])->name('admin.obe.cpmk.store');
+    Route::put('/kurikulum-obe/cpmk/{cpmk}', [ObeCurriculumController::class, 'updateCpmk'])->name('admin.obe.cpmk.update');
+    Route::delete('/kurikulum-obe/cpmk/{cpmk}', [ObeCurriculumController::class, 'destroyCpmk'])->name('admin.obe.cpmk.destroy');
+
+    Route::post('/kurikulum-obe/sub-cpmk', [ObeCurriculumController::class, 'storeSubCpmk'])->name('admin.obe.sub-cpmk.store');
+    Route::put('/kurikulum-obe/sub-cpmk/{subCpmk}', [ObeCurriculumController::class, 'updateSubCpmk'])->name('admin.obe.sub-cpmk.update');
+    Route::delete('/kurikulum-obe/sub-cpmk/{subCpmk}', [ObeCurriculumController::class, 'destroySubCpmk'])->name('admin.obe.sub-cpmk.destroy');
+
+    Route::post('/kurikulum-obe/rps', [ObeCurriculumController::class, 'storeRps'])->name('admin.obe.rps.store');
+    Route::put('/kurikulum-obe/rps/{rps}', [ObeCurriculumController::class, 'updateRps'])->name('admin.obe.rps.update');
+    Route::delete('/kurikulum-obe/rps/{rps}', [ObeCurriculumController::class, 'destroyRps'])->name('admin.obe.rps.destroy');
+    Route::get('/kurikulum-obe/rps/{rps}/download', [ObeCurriculumController::class, 'downloadRps'])->name('admin.obe.rps.download');
+
+    Route::post('/kurikulum-obe/unlock-nilai/{skema}', [ObeCurriculumController::class, 'unlockNilai'])->name('admin.obe.unlock-nilai');
 });
 
 // =========================================================

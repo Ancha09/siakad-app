@@ -37,4 +37,19 @@ class MataKuliah extends Model
             ->withPivot(['id', 'kode_sumber', 'nama_sumber', 'semester', 'sks'])
             ->withTimestamps();
     }
+
+    public function cpmks()
+    {
+        return $this->hasMany(Cpmk::class);
+    }
+
+    public function rpsList()
+    {
+        return $this->hasMany(MataKuliahRps::class);
+    }
+
+    public function rpsAktif()
+    {
+        return $this->hasOne(MataKuliahRps::class)->where('is_active', true)->latestOfMany();
+    }
 }

@@ -7,7 +7,7 @@
 <div class="page-card">
 
 <div class="page-card-head">
-    <h2>📝 Input / Edit Nilai Mahasiswa</h2>
+    <h2><x-layout-icon name="file-check" /> Input / Edit Nilai Mahasiswa</h2>
 </div>
 
 <div class="page-card-body">
@@ -54,9 +54,13 @@
 
         @csrf
 
+        <div style="margin-bottom:15px; max-width:360px;">
+            <input type="text" id="filter-mhs" class="form-control" placeholder="Cari NIM atau Nama Mahasiswa...">
+        </div>
+
         <div class="table-wrap">
 
-            <table>
+            <table id="table-nilai-lama">
 
                 <thead>
                     <tr>
@@ -72,7 +76,7 @@
 
                 @forelse($krs as $item)
 
-                    <tr>
+                    <tr class="mhs-row" data-nim="{{ strtolower($item->mahasiswa->nim ?? '') }}" data-nama="{{ strtolower($item->mahasiswa->nama ?? '') }}">
 
                         <td>{{ $item->mahasiswa->nim }}</td>
 
@@ -127,7 +131,7 @@
         <br>
 
         <button type="submit" class="btn-primary">
-            💾 Simpan Nilai
+            <x-layout-icon name="save" /> Simpan Nilai
         </button>
 
         <a href="{{ route('dosen.nilai') }}" class="btn-outline">
@@ -188,6 +192,21 @@ document.querySelectorAll('.nilai-input').forEach(function(input){
     });
 
 });
+const searchInput = document.getElementById('filter-mhs');
+if (searchInput) {
+    searchInput.addEventListener('input', function(){
+        const q = this.value.trim().toLowerCase();
+        document.querySelectorAll('#table-nilai-lama tbody tr.mhs-row').forEach(function(tr){
+            const nim = tr.getAttribute('data-nim') || '';
+            const nama = tr.getAttribute('data-nama') || '';
+            if (nim.includes(q) || nama.includes(q)) {
+                tr.style.display = '';
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+    });
+}
 </script>
 
 @endsection

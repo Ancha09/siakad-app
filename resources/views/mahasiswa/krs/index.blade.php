@@ -618,6 +618,20 @@
                                         <strong>
                                             {{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}
                                         </strong>
+                                        @php
+                                            $rpsAktif = $item->mata_kuliah_efektif?->rpsAktif ?? $item->jadwal?->mataKuliah?->rpsAktif;
+                                        @endphp
+                                        @if($rpsAktif && $rpsAktif->file_rps && $item->mata_kuliah_efektif)
+                                            <div style="margin-top:4px;">
+                                                <a href="{{ route('mahasiswa.rps.download', $item->mata_kuliah_efektif->id) }}"
+                                                   class="btn-outline"
+                                                   style="font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;"
+                                                   target="_blank"
+                                                   title="Unduh Rencana Pembelajaran Semester">
+                                                    <x-layout-icon name="download" /> RPS (PDF)
+                                                </a>
+                                            </div>
+                                        @endif
 
                                     </td>
 
@@ -813,7 +827,7 @@
                                                     padding:6px 12px;
                                                 "
                                             >
-                                                ⏳ Menunggu
+                                                <span class="icon-inline"><x-layout-icon name="period" /> Menunggu</span>
                                             </span>
 
 

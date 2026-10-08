@@ -163,4 +163,9 @@ class Jadwal extends Model
     {
         return $this->hasMany(PresensiPertemuan::class, 'jadwal_id');
     }
+
+    public function skemaPenilaian()
+    {
+        return $this->hasOne(RpsPenilaianSkema::class, 'jadwal_id');
+    }
 }

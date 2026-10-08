@@ -121,4 +121,9 @@ class Krs extends Model
     {
         return $this->hasMany(Presensi::class);
     }
+
+    public function nilaiKomponens()
+    {
+        return $this->hasMany(MahasiswaNilaiKomponen::class, 'krs_id');
+    }
 }

@@ -7,10 +7,15 @@ use App\Models\Dosen;
 use App\Models\Jadwal;
 use App\Models\Khs;
 use App\Models\Krs;
+use App\Models\MahasiswaNilaiKomponen;
+use App\Models\RpsPenilaianKomponen;
+use App\Models\RpsPenilaianSkema;
+use App\Services\ObeAssessmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NilaiController extends Controller
 {
@@ -24,6 +29,7 @@ class NilaiController extends Controller
                 'ruangan',
                 'dosen',
                 'dosens',
+                'skemaPenilaian.komponens',
             ])
             ->untukDosen($dosen->id)
             ->orderBy('hari')
@@ -32,37 +38,38 @@ class NilaiController extends Controller
 
         return view('dosen.nilai.index', compact('jadwals'));
     }
-// ===================== REKAP NILAI PER KELAS =====================
-public function rekap()
-{
-    $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
-    $jadwals = Jadwal::with(['mataKuliah', 'ruangan', 'dosen', 'dosens'])
-        ->untukDosen($dosen->id)
-        ->orderBy('hari')
-        ->orderBy('jam_mulai')
-        ->get();
+    // ===================== REKAP NILAI PER KELAS =====================
+    public function rekap()
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
-    foreach ($jadwals as $jadwal) {
+        $jadwals = Jadwal::with(['mataKuliah', 'ruangan', 'dosen', 'dosens'])
+            ->untukDosen($dosen->id)
+            ->orderBy('hari')
+            ->orderBy('jam_mulai')
+            ->get();
 
-        $khs = Khs::whereHas('krs', function ($q) use ($jadwal) {
-            $q->where('jadwal_id', $jadwal->id)->where('is_manual', false);
-        })->get();
+        foreach ($jadwals as $jadwal) {
+            $khs = Khs::whereHas('krs', function ($q) use ($jadwal) {
+                $q->where('jadwal_id', $jadwal->id)->where('is_manual', false);
+            })->get();
 
-        $jadwal->jumlah = $khs->count();
-        $jadwal->rata = $khs->count() ? round($khs->avg('nilai_angka'), 2) : 0;
-        $jadwal->tertinggi = $khs->count() ? $khs->max('nilai_angka') : 0;
-        $jadwal->terendah = $khs->count() ? $khs->min('nilai_angka') : 0;
+            $jadwal->jumlah = $khs->count();
+            $jadwal->rata = $khs->count() ? round($khs->avg('nilai_angka'), 2) : 0;
+            $jadwal->tertinggi = $khs->count() ? $khs->max('nilai_angka') : 0;
+            $jadwal->terendah = $khs->count() ? $khs->min('nilai_angka') : 0;
 
-        // Lulus jika nilai >= 60
-        $jadwal->lulus = $khs->where('nilai_angka', '>=', 60)->count();
-        $jadwal->tidak_lulus = $khs->where('nilai_angka', '<', 60)->count();
+            // Lulus jika nilai >= 60
+            $jadwal->lulus = $khs->where('nilai_angka', '>=', 60)->count();
+            $jadwal->tidak_lulus = $khs->where('nilai_angka', '<', 60)->count();
+        }
+
+        return view('dosen.nilai.rekap', compact('jadwals'));
     }
 
-    return view('dosen.nilai.rekap', compact('jadwals'));
-}
-    // ===================== FORM INPUT / EDIT NILAI =====================
-    public function show(Jadwal $jadwal)
+    // ===================== HALAMAN PENILAIAN OBE (3 TAB) =====================
+    public function show(Jadwal $jadwal, Request $request, ObeAssessmentService $obeService)
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
@@ -71,16 +78,345 @@ public function rekap()
             abort(403);
         }
 
-        $krs = Krs::with(['mahasiswa', 'khs'])
+        $jadwal->load([
+            'mataKuliah.prodi',
+            'mataKuliah.cpmks.subCpmks.cpl',
+            'kelasRelasi',
+            'ruangan',
+            'dosen',
+            'dosens',
+        ]);
+
+        $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
+        $skema = $obeService->getOrCreateSkema($jadwal, $dosen->id);
+        $skema->load(['komponens.subCpmk.cpl', 'komponens.subCpmk.cpmk']);
+
+        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens', 'khs'])
             ->where('is_manual', false)
             ->where('jadwal_id', $jadwal->id)
             ->where('status', 'Disetujui')
             ->get();
 
-        return view('dosen.nilai.input', compact('jadwal', 'krs'));
+        // Hitung nilai mahasiswa dan status CPL
+        $studentAssessments = [];
+        foreach ($krsList as $krs) {
+            $studentAssessments[$krs->id] = $obeService->hitungNilaiMahasiswa($krs, $skema, $rps);
+        }
+
+        // Hitung analitik agregat kelas untuk Tab 3
+        $capaianKelas = $obeService->hitungCapaianKelas($jadwal, $skema, $rps);
+
+        // Tentukan tab aktif
+        $defaultTab = $skema->komponens->count() > 0 ? 'input' : 'pengaturan';
+        $tab = $request->query('tab', $defaultTab);
+
+        return view('dosen.nilai.obe', compact(
+            'jadwal',
+            'rps',
+            'skema',
+            'krsList',
+            'studentAssessments',
+            'capaianKelas',
+            'tab'
+        ));
     }
 
-    // ===================== SIMPAN / UPDATE NILAI =====================
+    // ===================== SIMPAN PENGATURAN SKEMA INSTRUMEN (TAB 1) =====================
+    public function saveSkema(Request $request, Jadwal $jadwal)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
+        if (! $jadwal->isDosenPengampu($dosen)) {
+            abort(403);
+        }
+
+        $skema = RpsPenilaianSkema::firstOrCreate(
+            ['jadwal_id' => $jadwal->id],
+            ['dosen_id' => $dosen->id]
+        );
+
+        if ($skema->is_finalized) {
+            return back()->with('error', 'Skema penilaian telah difinalisasi dan tidak dapat diubah tanpa izin Admin/Kaprodi.');
+        }
+
+        $validated = $request->validate([
+            'nama_instrumen' => ['required', 'array', 'min:1'],
+            'nama_instrumen.*' => ['required', 'string', 'max:100'],
+            'sub_cpmk_id' => ['required', 'array', 'min:1'],
+            'sub_cpmk_id.*' => ['nullable', 'exists:sub_cpmks,id'],
+            'bobot' => ['required', 'array', 'min:1'],
+            'bobot.*' => ['required', 'numeric', 'between:0,100'],
+        ]);
+
+        $totalBobot = array_sum(array_map('floatval', $validated['bobot']));
+        $isDraft = $request->input('action') === 'draft';
+
+        if (! $isDraft && round($totalBobot, 1) != 100.0) {
+            return back()->withInput()->with('error', "Total bobot instrumen harus tepat 100%. Saat ini: {$totalBobot}%. Anda dapat memilih 'Simpan Draf' jika belum selesai mengatur.");
+        }
+
+        DB::transaction(function () use ($skema, $validated) {
+            // Hapus komponen lama yang tidak ada nilai atau update
+            // Untuk menjaga integritas nilai mahasiswa, kita lakukan replace bersih
+            $skema->komponens()->delete();
+
+            foreach ($validated['nama_instrumen'] as $i => $nama) {
+                RpsPenilaianKomponen::create([
+                    'skema_id' => $skema->id,
+                    'nama_instrumen' => trim($nama),
+                    'sub_cpmk_id' => ! empty($validated['sub_cpmk_id'][$i]) ? $validated['sub_cpmk_id'][$i] : null,
+                    'bobot' => (float) $validated['bobot'][$i],
+                    'urutan' => $i + 1,
+                ]);
+            }
+        });
+
+        $msg = $isDraft
+            ? 'Draf pengaturan penilaian RPS berhasil disimpan.'
+            : 'Pengaturan RPS Penilaian berhasil disimpan.';
+
+        return redirect()
+            ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
+            ->with('success', $msg);
+    }
+
+    // ===================== SIMPAN NILAI KOMPONEN MAHASISWA (TAB 2) =====================
+    public function saveNilai(Request $request, Jadwal $jadwal, ObeAssessmentService $obeService)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
+        if (! $jadwal->isDosenPengampu($dosen)) {
+            abort(403);
+        }
+
+        $skema = RpsPenilaianSkema::where('jadwal_id', $jadwal->id)->firstOrFail();
+        if ($skema->is_finalized) {
+            return back()->with('error', 'Nilai kelas telah difinalisasi dan terkunci.');
+        }
+
+        $validated = $request->validate([
+            'nilai' => ['nullable', 'array'],
+        ]);
+
+        $scores = $validated['nilai'] ?? [];
+
+        DB::transaction(function () use ($scores) {
+            foreach ($scores as $krsId => $komponenScores) {
+                if (! is_array($komponenScores)) {
+                    continue;
+                }
+                foreach ($komponenScores as $komponenId => $val) {
+                    if ($val === '' || $val === null) {
+                        $val = 0.0;
+                    }
+                    MahasiswaNilaiKomponen::updateOrCreate(
+                        [
+                            'krs_id' => (int) $krsId,
+                            'komponen_id' => (int) $komponenId,
+                        ],
+                        [
+                            'nilai_angka' => (float) $val,
+                        ]
+                    );
+                }
+            }
+        });
+
+        // Update draf KHS
+        $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
+        $obeService->sinkronisasiKeKhs($jadwal, $skema, $rps);
+
+        return redirect()
+            ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
+            ->with('success', 'Nilai mahasiswa berhasil disimpan.');
+    }
+
+    // ===================== FINALISASI NILAI (TAB 2) =====================
+    public function finalize(Request $request, Jadwal $jadwal, ObeAssessmentService $obeService)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
+        if (! $jadwal->isDosenPengampu($dosen)) {
+            abort(403);
+        }
+
+        $skema = RpsPenilaianSkema::where('jadwal_id', $jadwal->id)->firstOrFail();
+        if ($skema->is_finalized) {
+            return back()->with('info', 'Nilai kelas sudah dalam status finalisasi.');
+        }
+
+        if (round($skema->total_bobot, 1) != 100.0) {
+            return back()->with('error', 'Finalisasi gagal: Total bobot instrumen penilaian belum mencapai 100%.');
+        }
+
+        $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
+
+        DB::transaction(function () use ($skema, $jadwal, $obeService, $rps) {
+            $skema->update([
+                'is_finalized' => true,
+                'finalized_at' => now(),
+            ]);
+
+            // Sinkronisasi nilai akhir ke tabel khs
+            $obeService->sinkronisasiKeKhs($jadwal, $skema, $rps);
+        });
+
+        return redirect()
+            ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
+            ->with('success', 'Nilai kelas berhasil difinalisasi! Data nilai akhir mahasiswa telah disinkronkan ke KHS, IPK, dan transkrip akademik.');
+    }
+
+    // ===================== UNDUH TEMPLATE EXCEL / CSV =====================
+    public function exportTemplate(Jadwal $jadwal)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
+        if (! $jadwal->isDosenPengampu($dosen)) {
+            abort(403);
+        }
+
+        $skema = RpsPenilaianSkema::with('komponens')->where('jadwal_id', $jadwal->id)->firstOrFail();
+        $komponens = $skema->komponens;
+
+        if ($komponens->isEmpty()) {
+            return back()->with('error', 'Silakan atur instrumen penilaian terlebih dahulu di Tab Pengaturan sebelum mengunduh template.');
+        }
+
+        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens'])
+            ->where('jadwal_id', $jadwal->id)
+            ->where('is_manual', false)
+            ->where('status', 'Disetujui')
+            ->get();
+
+        $filename = 'Template_Nilai_' . str_replace(' ', '_', $jadwal->mataKuliah->kode_mk) . '_Kelas_' . ($jadwal->kelas ?? 'A') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+            'Pragma' => 'no-cache',
+            'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires' => '0',
+        ];
+
+        return new StreamedResponse(function () use ($komponens, $krsList) {
+            $handle = fopen('php://output', 'w');
+            // Write UTF-8 BOM so Excel opens cleanly
+            fputs($handle, "\xEF\xBB\xBF");
+
+            // Header row
+            $headerRow = ['NIM', 'Nama Mahasiswa'];
+            foreach ($komponens as $k) {
+                $headerRow[] = "{$k->nama_instrumen} [{$k->bobot}%]";
+            }
+            fputcsv($handle, $headerRow, ';');
+
+            // Data rows
+            foreach ($krsList as $krs) {
+                $nilaiMap = $krs->nilaiKomponens->pluck('nilai_angka', 'komponen_id');
+                $row = [
+                    $krs->mahasiswa?->nim ?? '',
+                    $krs->mahasiswa?->nama ?? '',
+                ];
+                foreach ($komponens as $k) {
+                    $row[] = $nilaiMap->get($k->id) ?? '';
+                }
+                fputcsv($handle, $row, ';');
+            }
+
+            fclose($handle);
+        }, 200, $headers);
+    }
+
+    // ===================== IMPOR DARI EXCEL / CSV =====================
+    public function importExcel(Request $request, Jadwal $jadwal, ObeAssessmentService $obeService)
+    {
+        $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
+        if (! $jadwal->isDosenPengampu($dosen)) {
+            abort(403);
+        }
+
+        $skema = RpsPenilaianSkema::with('komponens')->where('jadwal_id', $jadwal->id)->firstOrFail();
+        if ($skema->is_finalized) {
+            return back()->with('error', 'Nilai kelas telah difinalisasi dan terkunci.');
+        }
+
+        $request->validate([
+            'file_excel' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $file = $request->file('file_excel');
+        $filePath = $file->getRealPath();
+
+        $rows = [];
+        if (($handle = fopen($filePath, 'r')) !== false) {
+            // Check BOM
+            $bom = fread($handle, 3);
+            if ($bom !== "\xEF\xBB\xBF") {
+                rewind($handle);
+            }
+
+            // Determine delimiter (; or ,)
+            $firstLine = fgets($handle);
+            rewind($handle);
+            if ($bom === "\xEF\xBB\xBF") {
+                fread($handle, 3);
+            }
+            $delimiter = strpos($firstLine, ';') !== false ? ';' : ',';
+
+            while (($data = fgetcsv($handle, 2000, $delimiter)) !== false) {
+                $rows[] = $data;
+            }
+            fclose($handle);
+        }
+
+        if (count($rows) < 2) {
+            return back()->with('error', 'Format file CSV tidak valid atau data kosong.');
+        }
+
+        $headerRow = array_map('trim', $rows[0]);
+        $komponens = $skema->komponens;
+        $krsList = Krs::with('mahasiswa')
+            ->where('jadwal_id', $jadwal->id)
+            ->where('is_manual', false)
+            ->where('status', 'Disetujui')
+            ->get()
+            ->keyBy(fn ($k) => trim($k->mahasiswa?->nim));
+
+        $importedCount = 0;
+
+        DB::transaction(function () use ($rows, $headerRow, $komponens, $krsList, &$importedCount) {
+            for ($r = 1; $r < count($rows); $r++) {
+                $row = $rows[$r];
+                if (empty($row[0])) {
+                    continue;
+                }
+                $nim = trim($row[0]);
+                $krs = $krsList->get($nim);
+                if (! $krs) {
+                    continue;
+                }
+
+                foreach ($komponens as $idx => $komp) {
+                    $colIndex = 2 + $idx;
+                    if (isset($row[$colIndex]) && is_numeric(str_replace(',', '.', trim($row[$colIndex])))) {
+                        $val = (float) str_replace(',', '.', trim($row[$colIndex]));
+                        $val = min(100.0, max(0.0, $val));
+
+                        MahasiswaNilaiKomponen::updateOrCreate(
+                            ['krs_id' => $krs->id, 'komponen_id' => $komp->id],
+                            ['nilai_angka' => $val]
+                        );
+                    }
+                }
+                $importedCount++;
+            }
+        });
+
+        $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
+        $obeService->sinkronisasiKeKhs($jadwal, $skema, $rps);
+
+        return redirect()
+            ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
+            ->with('success', "Berhasil mengimpor nilai untuk {$importedCount} mahasiswa.");
+    }
+
+    // ===================== STORE LEGACY =====================
     public function store(Request $request)
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
@@ -108,85 +444,33 @@ public function rekap()
             ->get()
             ->keyBy('id');
 
-        // Tolak seluruh permintaan apabila satu saja KRS bukan dari jadwal dosen ini.
         abort_unless($krsById->count() === $krsIds->count(), 403);
-        // Only admins may correct historical/manual grades, including those on an active KRS.
         abort_if($krsById->contains(fn (Krs $krs) => $krs->khs?->is_manual), 403);
 
-        $adaInputBaru = false;
-        $adaPerubahan = false;
+        $obeService = app(ObeAssessmentService::class);
 
-        DB::transaction(function () use ($krsIds, $nilaiAngka, $krsById, &$adaInputBaru, &$adaPerubahan) {
+        DB::transaction(function () use ($krsIds, $nilaiAngka, $krsById, $obeService) {
             foreach ($krsIds as $i => $krsId) {
                 $nilai = $nilaiAngka[$i];
-
                 if ($nilai === null || $nilai === '') {
                     continue;
                 }
 
-                // Konversi nilai angka ke huruf & bobot
-                if ($nilai >= 85) {
-                    $huruf = 'A';
-                    $bobot = 4.00;
-                } elseif ($nilai >= 80) {
-                    $huruf = 'A-';
-                    $bobot = 3.75;
-                } elseif ($nilai >= 75) {
-                    $huruf = 'B+';
-                    $bobot = 3.50;
-                } elseif ($nilai >= 70) {
-                    $huruf = 'B';
-                    $bobot = 3.00;
-                } elseif ($nilai >= 65) {
-                    $huruf = 'B-';
-                    $bobot = 2.75;
-                } elseif ($nilai >= 60) {
-                    $huruf = 'C+';
-                    $bobot = 2.50;
-                } elseif ($nilai >= 55) {
-                    $huruf = 'C';
-                    $bobot = 2.00;
-                } elseif ($nilai >= 40) {
-                    $huruf = 'D';
-                    $bobot = 1.00;
-                } else {
-                    $huruf = 'E';
-                    $bobot = 0.00;
-                }
-
+                $konversi = $obeService->konversiNilai((float) $nilai);
                 $krs = $krsById->get((int) $krsId);
 
-                // Insert jika belum ada, update jika sudah ada
-                $khs = Khs::updateOrCreate(
+                Khs::updateOrCreate(
                     ['krs_id' => $krs->id],
                     [
-                        'nilai_angka' => $nilai,
-                        'nilai_huruf' => $huruf,
-                        'bobot' => $bobot,
+                        'nilai_angka' => (float) $nilai,
+                        'nilai_huruf' => $konversi['huruf'],
+                        'bobot' => $konversi['bobot'],
                         'tahun_akademik' => $krs->tahun_akademik,
                         'semester_akademik' => $krs->semester_akademik,
                     ]
                 );
-
-                if ($khs->wasRecentlyCreated) {
-                    $adaInputBaru = true;
-                } else {
-                    $adaPerubahan = true;
-                }
             }
         });
-
-        if ($adaInputBaru && !$adaPerubahan) {
-            return redirect()
-                ->route('dosen.nilai')
-                ->with('success', 'Nilai berhasil diinput.');
-        }
-
-        if ($adaPerubahan && !$adaInputBaru) {
-            return redirect()
-                ->route('dosen.nilai')
-                ->with('success', 'Nilai berhasil diubah.');
-        }
 
         return redirect()
             ->route('dosen.nilai')
