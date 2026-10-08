@@ -43,3 +43,4 @@ class RpsPenilaianSkema extends Model
         return (float) $this->komponens->sum('bobot');
     }
 }
+

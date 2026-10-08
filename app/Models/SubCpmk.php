@@ -38,3 +38,4 @@ class SubCpmk extends Model
         return $this->hasMany(RpsPenilaianKomponen::class, 'sub_cpmk_id');
     }
 }
+

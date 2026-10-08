@@ -39,3 +39,4 @@ class RpsPenilaianKomponen extends Model
         return $this->hasMany(MahasiswaNilaiKomponen::class, 'komponen_id');
     }
 }
+

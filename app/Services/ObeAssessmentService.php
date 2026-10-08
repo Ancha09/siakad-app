@@ -8,6 +8,7 @@ use App\Models\Krs;
 use App\Models\MataKuliahRps;
 use App\Models\RpsPenilaianKomponen;
 use App\Models\RpsPenilaianSkema;
+use App\Models\SubCpmk;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -59,7 +60,53 @@ class ObeAssessmentService
             ]
         );
 
+        if ($skema->komponens()->count() === 0) {
+            $this->seedDefaultKomponenFromRps($skema, $jadwal);
+        }
+
         return $skema;
+    }
+
+    /**
+     * Inisialisasi komponen instrumen penilaian dari dokumen RPS baku
+     */
+    public function seedDefaultKomponenFromRps(RpsPenilaianSkema $skema, Jadwal $jadwal, bool $force = false): void
+    {
+        if ($force) {
+            $skema->komponens()->delete();
+        }
+
+        $mk = $jadwal->mataKuliah;
+        if (! $mk) {
+            return;
+        }
+
+        $rps = $mk->rpsAktif ?? MataKuliahRps::where('mata_kuliah_id', $mk->id)->where('is_active', true)->first();
+        if (! $rps || empty($rps->komponen_bobot_default)) {
+            return;
+        }
+
+        $subCpmks = SubCpmk::whereHas('cpmk', function ($q) use ($mk) {
+            $q->where('mata_kuliah_id', $mk->id);
+        })->orderBy('id')->get();
+
+        $subCount = $subCpmks->count();
+        $urutan = 1;
+        $subIndex = 0;
+
+        foreach ($rps->komponen_bobot_default as $nama => $bobot) {
+            $assignedSubId = $subCount > 0 ? $subCpmks[$subIndex % $subCount]->id : null;
+
+            RpsPenilaianKomponen::create([
+                'skema_id' => $skema->id,
+                'nama_instrumen' => trim($nama),
+                'sub_cpmk_id' => $assignedSubId,
+                'bobot' => (float) $bobot,
+                'urutan' => $urutan++,
+            ]);
+
+            $subIndex++;
+        }
     }
 
     /**
@@ -265,3 +312,4 @@ class ObeAssessmentService
         });
     }
 }
+

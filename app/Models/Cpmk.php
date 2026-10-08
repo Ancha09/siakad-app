@@ -22,3 +22,4 @@ class Cpmk extends Model
         return $this->hasMany(SubCpmk::class);
     }
 }
+

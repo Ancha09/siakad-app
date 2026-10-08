@@ -503,10 +503,18 @@
 
                         @if(! $skema->is_finalized)
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:12px;">
-                                <button type="button" class="btn-outline" id="btn-add-row">
-                                    <x-layout-icon name="plus" />
-                                    <span>Tambah Baris Instrumen</span>
-                                </button>
+                                <div style="display:flex; gap:8px; align-items:center;">
+                                    <button type="button" class="btn-outline" id="btn-add-row">
+                                        <x-layout-icon name="plus" />
+                                        <span>Tambah Baris Instrumen</span>
+                                    </button>
+                                    @if($rps && !empty($rps->komponen_bobot_default))
+                                        <button type="submit" name="action" value="reset_rps" class="btn-outline" style="color:#0369a1; border-color:#bae6fd; background:#f0f9ff;" onclick="return confirm('Muat ulang seluruh instrumen default dari dokumen RPS baku? Komponen yang belum disimpan akan ditimpa.')">
+                                            <x-layout-icon name="refresh" />
+                                            <span>Muat Default dari RPS</span>
+                                        </button>
+                                    @endif
+                                </div>
 
                                 <div style="display:flex; gap:10px;">
                                     <button type="submit" name="action" value="draft" class="btn-outline">
@@ -1455,3 +1463,4 @@
 @endpush
 
 @endsection
+

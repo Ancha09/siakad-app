@@ -484,10 +484,14 @@
                         @endforeach
                     </select>
                 </div>
-                <div style="margin-left: auto;">
-                    <button type="button" class="btn-primary" onclick="openModal('modal-tambah-rps')">
+                <div style="margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="btn-primary" onclick="openModal('modal-auto-extract-rps')">
+                        <x-layout-icon name="clipboard" />
+                        <span>Upload &amp; Ekstrak RPS (PDF Baku)</span>
+                    </button>
+                    <button type="button" class="btn-outline" onclick="openModal('modal-tambah-rps')">
                         <x-layout-icon name="plus" />
-                        <span>Upload &amp; Atur RPS Baru</span>
+                        <span>Input Manual RPS</span>
                     </button>
                 </div>
             </form>
@@ -577,6 +581,64 @@
                 <div style="margin-top: 16px;">
                     {{ $rpsList->links() }}
                 </div>
+            </div>
+        </div>
+
+        {{-- Modal Auto-Extract RPS dari Dokumen PDF --}}
+        <div id="modal-auto-extract-rps" class="modal-backdrop-custom" style="display: none;">
+            <div class="modal-box-custom" style="max-width: 600px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                    <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <x-layout-icon name="clipboard" />
+                        <span>Upload &amp; Ekstrak Dokumen RPS (PDF)</span>
+                    </h3>
+                    <button type="button" class="btn-outline" onclick="closeModal('modal-auto-extract-rps')" style="padding: 4px 8px; border: none; font-size: 18px; cursor: pointer;">
+                        &times;
+                    </button>
+                </div>
+
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 12px; color: #1e40af; line-height: 1.5;">
+                    <strong>Ekstraksi Kurikulum Otomatis:</strong>
+                    Sistem akan membaca dokumen PDF baku STTMI dan mengekstrak:
+                    <ul style="margin: 6px 0 0; padding-left: 18px;">
+                        <li>Metadata mata kuliah (Nama, Kode, SKS, Semester, Tahun)</li>
+                        <li>CPL Prodi dan CPMK yang dibebankan</li>
+                        <li>Daftar CPMK dan Sub-CPMK beserta korelasi capaian</li>
+                        <li>Tabel komponen dan bobot penilaian (UAS, UTS, Tugas, Praktikum, dll.)</li>
+                        <li>Target passing grade dan porsi ketercapaian CPL</li>
+                    </ul>
+                    Anda dapat memverifikasi dan menyesuaikan seluruh data di layar pratinjau sebelum disimpan.
+                </div>
+
+                <form method="POST" action="{{ route('admin.obe.rps.preview') }}" enctype="multipart/form-data">
+                    @csrf
+                    <input type="hidden" name="prodi_id" value="{{ $selectedProdiId }}">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label style="font-weight: 600; font-size: 13px;">File Dokumen RPS (PDF Resmi STTMI) *</label>
+                        <input type="file" name="file_rps" class="form-control" accept="application/pdf" required>
+                        <small style="color: #64748b;">Maksimal ukuran file: 10 MB (.pdf).</small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label style="font-weight: 600; font-size: 13px;">Target Mata Kuliah (Opsional)</label>
+                        <select name="mata_kuliah_id" class="form-control">
+                            <option value="">-- Otomatis Deteksi dari Judul RPS --</option>
+                            @foreach($mataKuliahs as $mk)
+                                <option value="{{ $mk->id }}">{{ $mk->kode_mk }} — {{ $mk->nama_mk }}</option>
+                            @endforeach
+                        </select>
+                        <small style="color: #64748b;">Kosongkan jika ingin sistem mencocokkan kode/nama secara otomatis.</small>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px;">
+                        <button type="button" class="btn-outline" onclick="closeModal('modal-auto-extract-rps')">Batal</button>
+                        <button type="submit" class="btn-primary">
+                            <x-layout-icon name="check" />
+                            <span>Unggah &amp; Pratinjau Data</span>
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

@@ -11,6 +11,7 @@ use App\Models\MataKuliahRps;
 use App\Models\Prodi;
 use App\Models\RpsPenilaianSkema;
 use App\Models\SubCpmk;
+use App\Services\RpsPdfParserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -303,8 +304,264 @@ class ObeCurriculumController extends Controller
     }
 
     // ==========================================
-    // RPS ACTIONS
+    // RPS ACTIONS & AUTO-EXTRACT
     // ==========================================
+
+    public function previewRps(Request $request, RpsPdfParserService $parserService)
+    {
+        $validated = $request->validate([
+            'file_rps' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+            'mata_kuliah_id' => ['nullable', 'exists:mata_kuliahs,id'],
+            'prodi_id' => ['nullable', 'exists:prodis,id'],
+        ]);
+
+        try {
+            $file = $request->file('file_rps');
+            $tempPath = $file->store('temp_rps', 'public');
+            $fullTempPath = Storage::disk('public')->path($tempPath);
+
+            $extracted = $parserService->extract($fullTempPath);
+
+            $selectedMkId = $validated['mata_kuliah_id'] ?? null;
+            $matchedMk = null;
+
+            if ($selectedMkId) {
+                $matchedMk = MataKuliah::with('prodi')->find($selectedMkId);
+            } else {
+                if (! empty($extracted['metadata']['kode_mk'])) {
+                    $matchedMk = MataKuliah::with('prodi')
+                        ->where('kode_mk', $extracted['metadata']['kode_mk'])
+                        ->first();
+                }
+                if (! $matchedMk && ! empty($extracted['metadata']['nama_mk'])) {
+                    $matchedMk = MataKuliah::with('prodi')
+                        ->where('nama_mk', 'LIKE', '%' . $extracted['metadata']['nama_mk'] . '%')
+                        ->first();
+                }
+            }
+
+            $selectedProdiId = $validated['prodi_id'] ?? null;
+            if (! $selectedProdiId && $matchedMk) {
+                $selectedProdiId = $matchedMk->prodi_id;
+            }
+            if (! $selectedProdiId && ! empty($extracted['metadata']['prodi'])) {
+                $matchedProdi = Prodi::where('nama_prodi', 'LIKE', '%' . $extracted['metadata']['prodi'] . '%')->first();
+                if ($matchedProdi) {
+                    $selectedProdiId = $matchedProdi->id;
+                }
+            }
+
+            $allProdis = Prodi::orderBy('nama_prodi')->get();
+            $allMataKuliahs = MataKuliah::with('prodi')->orderBy('nama_mk')->get();
+
+            return view('admin.obe.preview-rps', [
+                'extracted' => $extracted,
+                'tempPath' => $tempPath,
+                'matchedMk' => $matchedMk,
+                'selectedMkId' => $matchedMk?->id ?? $selectedMkId,
+                'selectedProdiId' => $selectedProdiId,
+                'allProdis' => $allProdis,
+                'allMataKuliahs' => $allMataKuliahs,
+            ]);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal memproses dokumen RPS: ' . $e->getMessage());
+        }
+    }
+
+    public function applyRps(Request $request)
+    {
+        $validated = $request->validate([
+            'mata_kuliah_id' => ['required', 'exists:mata_kuliahs,id'],
+            'prodi_id' => ['required', 'exists:prodis,id'],
+            'temp_path' => ['required', 'string'],
+            'tahun_akademik' => ['nullable', 'string', 'max:20'],
+            'target_passing_grade' => ['nullable', 'numeric', 'between:0,100'],
+            'is_active' => ['nullable', 'boolean'],
+            'cpls' => ['nullable', 'array'],
+            'cpmks' => ['nullable', 'array'],
+            'sub_cpmks' => ['nullable', 'array'],
+            'komponen_nama' => ['nullable', 'array'],
+            'komponen_bobot' => ['nullable', 'array'],
+            'porsi_cpl_keys' => ['nullable', 'array'],
+            'porsi_cpl_values' => ['nullable', 'array'],
+        ]);
+
+        $mataKuliah = MataKuliah::findOrFail($validated['mata_kuliah_id']);
+        $prodiId = (int) $validated['prodi_id'];
+        $tempPath = $validated['temp_path'];
+
+        $permanentPath = null;
+        if (Storage::disk('public')->exists($tempPath)) {
+            $extension = pathinfo($tempPath, PATHINFO_EXTENSION) ?: 'pdf';
+            $cleanCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $mataKuliah->kode_mk ?: 'MK');
+            $cleanTahun = $validated['tahun_akademik'] ? preg_replace('/[^A-Za-z0-9_\-]/', '_', $validated['tahun_akademik']) : time();
+            $permanentPath = "rps/RPS_{$cleanCode}_{$cleanTahun}_" . uniqid() . ".{$extension}";
+
+            Storage::disk('public')->move($tempPath, $permanentPath);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Format Komponen Bobot Default
+            $komponenBobotDefault = [];
+            if (! empty($validated['komponen_nama']) && ! empty($validated['komponen_bobot'])) {
+                foreach ($validated['komponen_nama'] as $i => $nama) {
+                    $namaClean = trim($nama);
+                    $bobot = (float) ($validated['komponen_bobot'][$i] ?? 0);
+                    if ($namaClean !== '' && $bobot > 0) {
+                        $komponenBobotDefault[$namaClean] = $bobot;
+                    }
+                }
+            }
+
+            // 2. Format Porsi CPL
+            $porsiCpl = [];
+            if (! empty($validated['porsi_cpl_keys']) && ! empty($validated['porsi_cpl_values'])) {
+                foreach ($validated['porsi_cpl_keys'] as $i => $cplKey) {
+                    $val = (float) ($validated['porsi_cpl_values'][$i] ?? 0);
+                    if ($cplKey !== '' && $val > 0) {
+                        $porsiCpl[trim($cplKey)] = $val;
+                    }
+                }
+            }
+
+            $isActive = $request->boolean('is_active', true);
+            if ($isActive) {
+                MataKuliahRps::where('mata_kuliah_id', $mataKuliah->id)->update(['is_active' => false]);
+            }
+
+            // 3. Simpan MataKuliahRps
+            $rps = MataKuliahRps::create([
+                'mata_kuliah_id' => $mataKuliah->id,
+                'tahun_akademik' => $validated['tahun_akademik'] ?: null,
+                'file_rps' => $permanentPath,
+                'file_rps_path' => $permanentPath,
+                'target_passing_grade' => $validated['target_passing_grade'] !== null ? (float) $validated['target_passing_grade'] : 60.00,
+                'porsi_cpl' => ! empty($porsiCpl) ? $porsiCpl : null,
+                'komponen_bobot_default' => ! empty($komponenBobotDefault) ? $komponenBobotDefault : null,
+                'is_active' => $isActive,
+            ]);
+
+            // 4. Sinkronisasi CPL
+            $cplMap = [];
+            if (! empty($validated['cpls'])) {
+                foreach ($validated['cpls'] as $cplData) {
+                    $kode = trim($cplData['kode_cpl'] ?? '');
+                    if (! $kode) {
+                        continue;
+                    }
+
+                    $cpl = Cpl::where(function ($q) use ($prodiId) {
+                        $q->where('prodi_id', $prodiId)->orWhere('program_studi_id', $prodiId);
+                    })->where('kode_cpl', $kode)->first();
+
+                    if ($cpl) {
+                        if (empty($cpl->deskripsi) && ! empty($cplData['deskripsi'])) {
+                            $cpl->update(['deskripsi' => trim($cplData['deskripsi'])]);
+                        }
+                    } else {
+                        $cpl = Cpl::create([
+                            'prodi_id' => $prodiId,
+                            'program_studi_id' => $prodiId,
+                            'kode_cpl' => $kode,
+                            'nama_cpl' => ! empty($cplData['nama_cpl']) ? trim($cplData['nama_cpl']) : null,
+                            'deskripsi' => ! empty($cplData['deskripsi']) ? trim($cplData['deskripsi']) : null,
+                        ]);
+                    }
+                    $cplMap[$kode] = $cpl;
+                }
+            }
+
+            // 5. Sinkronisasi CPMK
+            $cpmkMap = [];
+            if (! empty($validated['cpmks'])) {
+                foreach ($validated['cpmks'] as $cpmkData) {
+                    $kode = trim($cpmkData['kode_cpmk'] ?? '');
+                    if (! $kode) {
+                        continue;
+                    }
+
+                    $cpmk = Cpmk::firstOrCreate(
+                        [
+                            'mata_kuliah_id' => $mataKuliah->id,
+                            'kode_cpmk' => $kode,
+                        ],
+                        [
+                            'deskripsi' => ! empty($cpmkData['deskripsi']) ? trim($cpmkData['deskripsi']) : null,
+                        ]
+                    );
+
+                    if (empty($cpmk->deskripsi) && ! empty($cpmkData['deskripsi'])) {
+                        $cpmk->update(['deskripsi' => trim($cpmkData['deskripsi'])]);
+                    }
+
+                    $cpmkMap[$kode] = $cpmk;
+                }
+            }
+
+            // 6. Sinkronisasi Sub-CPMK
+            if (! empty($validated['sub_cpmks'])) {
+                foreach ($validated['sub_cpmks'] as $subData) {
+                    $kodeSub = trim($subData['kode_sub_cpmk'] ?? '');
+                    if (! $kodeSub) {
+                        continue;
+                    }
+
+                    $cpmkKode = trim($subData['cpmk_kode'] ?? '');
+                    $cpmk = $cpmkMap[$cpmkKode] ?? (isset($cpmkMap) && count($cpmkMap) ? reset($cpmkMap) : null);
+                    if (! $cpmk) {
+                        $cpmk = Cpmk::where('mata_kuliah_id', $mataKuliah->id)->first();
+                    }
+
+                    if (! $cpmk) {
+                        $cpmk = Cpmk::create([
+                            'mata_kuliah_id' => $mataKuliah->id,
+                            'kode_cpmk' => 'CPMK 1',
+                            'deskripsi' => 'Capaian Pembelajaran Mata Kuliah ' . $mataKuliah->nama_mk,
+                        ]);
+                        $cpmkMap['CPMK 1'] = $cpmk;
+                    }
+
+                    $cplKode = trim($subData['cpl_kode'] ?? '');
+                    $cplId = null;
+                    if ($cplKode && isset($cplMap[$cplKode])) {
+                        $cplId = $cplMap[$cplKode]->id;
+                    } elseif ($cplKode) {
+                        $existingCpl = Cpl::where(function ($q) use ($prodiId) {
+                            $q->where('prodi_id', $prodiId)->orWhere('program_studi_id', $prodiId);
+                        })->where('kode_cpl', $cplKode)->first();
+                        $cplId = $existingCpl?->id;
+                    }
+
+                    SubCpmk::updateOrCreate(
+                        [
+                            'cpmk_id' => $cpmk->id,
+                            'kode_sub_cpmk' => $kodeSub,
+                        ],
+                        [
+                            'cpl_id' => $cplId,
+                            'deskripsi' => ! empty($subData['deskripsi']) ? trim($subData['deskripsi']) : null,
+                            'bobot_default' => ! empty($subData['bobot_default']) ? (float) $subData['bobot_default'] : null,
+                        ]
+                    );
+                }
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.obe.index', [
+                    'tab' => 'rps',
+                    'prodi_id' => $prodiId,
+                    'mata_kuliah_id' => $mataKuliah->id,
+                ])
+                ->with('success', "RPS Mata Kuliah {$mataKuliah->nama_mk} ({$mataKuliah->kode_mk}) beserta CPL, CPMK, Sub-CPMK, dan bobot instrumen berhasil diterapkan ke kurikulum!");
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Gagal menerapkan kurikulum RPS: ' . $e->getMessage());
+        }
+    }
 
     public function storeRps(Request $request)
     {
@@ -344,6 +601,7 @@ class ObeCurriculumController extends Controller
             'mata_kuliah_id' => $validated['mata_kuliah_id'],
             'tahun_akademik' => $validated['tahun_akademik'] ?: null,
             'file_rps' => $filePath,
+            'file_rps_path' => $filePath,
             'target_passing_grade' => $validated['target_passing_grade'] !== null ? (float) $validated['target_passing_grade'] : 60.00,
             'porsi_cpl' => ! empty($porsiCpl) ? $porsiCpl : null,
             'is_active' => $isActive,
@@ -421,13 +679,14 @@ class ObeCurriculumController extends Controller
 
     public function downloadRps(MataKuliahRps $rps)
     {
-        if (! $rps->file_rps || ! Storage::disk('public')->exists($rps->file_rps)) {
+        $filePath = $rps->effective_file_path;
+        if (! $filePath || ! Storage::disk('public')->exists($filePath)) {
             return back()->with('error', 'Dokumen file PDF RPS tidak ditemukan di server.');
         }
 
         $filename = 'RPS_' . ($rps->mataKuliah?->kode_mk ?? 'MK') . '_' . ($rps->tahun_akademik ? str_replace('/', '-', $rps->tahun_akademik) : 'Aktif') . '.pdf';
 
-        return Storage::disk('public')->download($rps->file_rps, $filename);
+        return Storage::disk('public')->download($filePath, $filename);
     }
 
     // ==========================================
@@ -450,12 +709,13 @@ class ObeCurriculumController extends Controller
     public function downloadRpsByCourse(MataKuliah $mataKuliah)
     {
         $rps = $mataKuliah->rpsAktif ?? $mataKuliah->rpsList()->latest()->first();
-        if (! $rps || ! $rps->file_rps || ! Storage::disk('public')->exists($rps->file_rps)) {
+        $filePath = $rps?->effective_file_path;
+        if (! $rps || ! $filePath || ! Storage::disk('public')->exists($filePath)) {
             return back()->with('error', 'Dokumen RPS belum tersedia untuk mata kuliah ini.');
         }
 
         $filename = 'RPS_' . ($mataKuliah->kode_mk ?? 'MK') . '.pdf';
 
-        return Storage::disk('public')->download($rps->file_rps, $filename);
+        return Storage::disk('public')->download($filePath, $filename);
     }
 }

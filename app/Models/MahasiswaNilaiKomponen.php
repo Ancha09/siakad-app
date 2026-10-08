@@ -31,3 +31,4 @@ class MahasiswaNilaiKomponen extends Model
         return $this->belongsTo(RpsPenilaianKomponen::class, 'komponen_id');
     }
 }
+

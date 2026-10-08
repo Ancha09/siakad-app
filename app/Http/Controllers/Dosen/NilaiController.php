@@ -122,7 +122,7 @@ class NilaiController extends Controller
     }
 
     // ===================== SIMPAN PENGATURAN SKEMA INSTRUMEN (TAB 1) =====================
-    public function saveSkema(Request $request, Jadwal $jadwal)
+    public function saveSkema(Request $request, Jadwal $jadwal, ObeAssessmentService $obeService)
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
         if (! $jadwal->isDosenPengampu($dosen)) {
@@ -136,6 +136,13 @@ class NilaiController extends Controller
 
         if ($skema->is_finalized) {
             return back()->with('error', 'Skema penilaian telah difinalisasi dan tidak dapat diubah tanpa izin Admin/Kaprodi.');
+        }
+
+        if ($request->input('action') === 'reset_rps') {
+            $obeService->seedDefaultKomponenFromRps($skema, $jadwal, true);
+            return redirect()
+                ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
+                ->with('success', 'Instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
         }
 
         $validated = $request->validate([

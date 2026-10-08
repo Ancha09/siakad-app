@@ -518,9 +518,12 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::delete('/kurikulum-obe/sub-cpmk/{subCpmk}', [ObeCurriculumController::class, 'destroySubCpmk'])->name('admin.obe.sub-cpmk.destroy');
 
     Route::post('/kurikulum-obe/rps', [ObeCurriculumController::class, 'storeRps'])->name('admin.obe.rps.store');
+    Route::post('/kurikulum-obe/rps/preview', [ObeCurriculumController::class, 'previewRps'])->name('admin.obe.rps.preview');
+    Route::post('/kurikulum-obe/rps/apply', [ObeCurriculumController::class, 'applyRps'])->name('admin.obe.rps.apply');
     Route::put('/kurikulum-obe/rps/{rps}', [ObeCurriculumController::class, 'updateRps'])->name('admin.obe.rps.update');
     Route::delete('/kurikulum-obe/rps/{rps}', [ObeCurriculumController::class, 'destroyRps'])->name('admin.obe.rps.destroy');
     Route::get('/kurikulum-obe/rps/{rps}/download', [ObeCurriculumController::class, 'downloadRps'])->name('admin.obe.rps.download');
+    Route::get('/rps', [ObeCurriculumController::class, 'index'])->name('admin.rps.index');
 
     Route::post('/kurikulum-obe/unlock-nilai/{skema}', [ObeCurriculumController::class, 'unlockNilai'])->name('admin.obe.unlock-nilai');
 });

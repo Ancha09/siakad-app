@@ -13,8 +13,10 @@ class MataKuliahRps extends Model
         'mata_kuliah_id',
         'tahun_akademik',
         'file_rps',
+        'file_rps_path',
         'target_passing_grade',
         'porsi_cpl',
+        'komponen_bobot_default',
         'is_active',
     ];
 
@@ -23,6 +25,7 @@ class MataKuliahRps extends Model
         return [
             'target_passing_grade' => 'float',
             'porsi_cpl' => 'array',
+            'komponen_bobot_default' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -34,12 +37,19 @@ class MataKuliahRps extends Model
 
     public function getFileUrlAttribute(): ?string
     {
-        if (! $this->file_rps) {
+        $path = $this->file_rps_path ?: $this->file_rps;
+        if (! $path) {
             return null;
         }
 
-        return Storage::disk('public')->exists($this->file_rps)
-            ? Storage::disk('public')->url($this->file_rps)
-            : asset('storage/' . $this->file_rps);
+        return Storage::disk('public')->exists($path)
+            ? Storage::disk('public')->url($path)
+            : asset('storage/' . $path);
+    }
+
+    public function getEffectiveFilePathAttribute(): ?string
+    {
+        return $this->file_rps_path ?: $this->file_rps;
     }
 }
+
