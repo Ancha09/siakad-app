@@ -363,7 +363,10 @@ class ObeCurriculumController extends Controller
                 'allProdis' => $allProdis,
                 'allMataKuliahs' => $allMataKuliahs,
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Gagal memproses dokumen RPS: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
             return back()->with('error', 'Gagal memproses dokumen RPS: ' . $e->getMessage());
         }
     }
@@ -556,8 +559,11 @@ class ObeCurriculumController extends Controller
                     'mata_kuliah_id' => $mataKuliah->id,
                 ])
                 ->with('success', "RPS Mata Kuliah {$mataKuliah->nama_mk} ({$mataKuliah->kode_mk}) beserta CPL, CPMK, Sub-CPMK, dan bobot instrumen berhasil diterapkan ke kurikulum!");
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
+            \Illuminate\Support\Facades\Log::error('Gagal menerapkan kurikulum RPS: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
 
             return back()->with('error', 'Gagal menerapkan kurikulum RPS: ' . $e->getMessage());
         }
