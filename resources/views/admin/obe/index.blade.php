@@ -119,7 +119,13 @@
                                     </td>
                                     <td style="text-align: center;">
                                         <div style="display: inline-flex; gap: 6px;">
-                                            <button type="button" class="btn-sm btn-outline" onclick="editCpl({{ json_encode($cpl) }})">
+                                            <button type="button"
+                                                    class="btn-sm btn-outline"
+                                                    data-id="{{ $cpl->id }}"
+                                                    data-kode="{{ $cpl->kode_cpl }}"
+                                                    data-nama="{{ $cpl->nama_cpl ?? '' }}"
+                                                    data-deskripsi="{{ $cpl->deskripsi ?? '' }}"
+                                                    onclick="editCplBtn(this)">
                                                 <x-layout-icon name="edit" />
                                             </button>
                                             <form method="POST" action="{{ route('admin.obe.cpl.destroy', $cpl) }}" onsubmit="return confirm('Hapus CPL {{ $cpl->kode_cpl }}? Sub-CPMK terkait akan kehilangan relasi CPL.')" style="margin: 0;">
@@ -247,11 +253,20 @@
                             <span style="font-size: 13px; font-weight: 600; color: #1e293b;">{{ $cpmk->deskripsi ?: 'Tanpa deskripsi' }}</span>
                         </div>
                         <div style="display: flex; gap: 6px;">
-                            <button type="button" class="btn-sm btn-outline" onclick="openTambahSubCpmk({{ $cpmk->id }}, '{{ $cpmk->kode_cpmk }}')">
+                            <button type="button"
+                                    class="btn-sm btn-outline"
+                                    data-id="{{ $cpmk->id }}"
+                                    data-kode="{{ $cpmk->kode_cpmk }}"
+                                    onclick="openTambahSubCpmkBtn(this)">
                                 <x-layout-icon name="plus" />
                                 <span>Tambah Sub-CPMK</span>
                             </button>
-                            <button type="button" class="btn-sm btn-outline" onclick="editCpmk({{ json_encode($cpmk) }})">
+                            <button type="button"
+                                    class="btn-sm btn-outline"
+                                    data-id="{{ $cpmk->id }}"
+                                    data-kode="{{ $cpmk->kode_cpmk }}"
+                                    data-deskripsi="{{ $cpmk->deskripsi ?? '' }}"
+                                    onclick="editCpmkBtn(this)">
                                 <x-layout-icon name="edit" />
                             </button>
                             <form method="POST" action="{{ route('admin.obe.cpmk.destroy', $cpmk) }}" onsubmit="return confirm('Hapus {{ $cpmk->kode_cpmk }} dan seluruh Sub-CPMK di dalamnya?')" style="margin: 0;">
@@ -292,7 +307,14 @@
                                         </td>
                                         <td style="text-align: center;">
                                             <div style="display: inline-flex; gap: 4px;">
-                                                <button type="button" class="btn-sm btn-outline" onclick="editSubCpmk({{ json_encode($sub) }})">
+                                                <button type="button"
+                                                        class="btn-sm btn-outline"
+                                                        data-id="{{ $sub->id }}"
+                                                        data-kode="{{ $sub->kode_sub_cpmk }}"
+                                                        data-cpl="{{ $sub->cpl_id ?? '' }}"
+                                                        data-bobot="{{ $sub->bobot_default ?? '' }}"
+                                                        data-deskripsi="{{ $sub->deskripsi ?? '' }}"
+                                                        onclick="editSubCpmkBtn(this)">
                                                     <x-layout-icon name="edit" />
                                                 </button>
                                                 <form method="POST" action="{{ route('admin.obe.sub-cpmk.destroy', $sub) }}" onsubmit="return confirm('Hapus {{ $sub->kode_sub_cpmk }}?')" style="margin: 0;">
@@ -726,7 +748,53 @@
         document.getElementById(id).style.display = 'none';
     }
 
+    function editCplBtn(btn) {
+        var id = btn.getAttribute('data-id');
+        var kode = btn.getAttribute('data-kode');
+        var nama = btn.getAttribute('data-nama') || '';
+        var deskripsi = btn.getAttribute('data-deskripsi') || '';
+        document.getElementById('form-edit-cpl').action = '{{ url("admin/kurikulum-obe/cpl") }}/' + id;
+        document.getElementById('edit-cpl-kode').value = kode;
+        document.getElementById('edit-cpl-nama').value = nama;
+        document.getElementById('edit-cpl-deskripsi').value = deskripsi;
+        openModal('modal-edit-cpl');
+    }
+
+    function editCpmkBtn(btn) {
+        var id = btn.getAttribute('data-id');
+        var kode = btn.getAttribute('data-kode');
+        var deskripsi = btn.getAttribute('data-deskripsi') || '';
+        document.getElementById('form-edit-cpmk').action = '{{ url("admin/kurikulum-obe/cpmk") }}/' + id;
+        document.getElementById('edit-cpmk-kode').value = kode;
+        document.getElementById('edit-cpmk-deskripsi').value = deskripsi;
+        openModal('modal-edit-cpmk');
+    }
+
+    function openTambahSubCpmkBtn(btn) {
+        var cpmkId = btn.getAttribute('data-id');
+        var kodeCpmk = btn.getAttribute('data-kode');
+        document.getElementById('tambah-sub-cpmk-id').value = cpmkId;
+        document.getElementById('tambah-sub-title').textContent = 'Tambah Sub-CPMK untuk ' + kodeCpmk;
+        openModal('modal-tambah-sub-cpmk');
+    }
+
+    function editSubCpmkBtn(btn) {
+        var id = btn.getAttribute('data-id');
+        var kode = btn.getAttribute('data-kode');
+        var cplId = btn.getAttribute('data-cpl') || '';
+        var bobot = btn.getAttribute('data-bobot') || '';
+        var deskripsi = btn.getAttribute('data-deskripsi') || '';
+        document.getElementById('form-edit-sub-cpmk').action = '{{ url("admin/kurikulum-obe/sub-cpmk") }}/' + id;
+        document.getElementById('edit-sub-kode').value = kode;
+        document.getElementById('edit-sub-cpl').value = cplId;
+        document.getElementById('edit-sub-bobot').value = bobot;
+        document.getElementById('edit-sub-deskripsi').value = deskripsi;
+        openModal('modal-edit-sub-cpmk');
+    }
+
+    // Fallbacks
     function editCpl(cpl) {
+        if (cpl instanceof HTMLElement) return editCplBtn(cpl);
         document.getElementById('form-edit-cpl').action = '{{ url("admin/kurikulum-obe/cpl") }}/' + cpl.id;
         document.getElementById('edit-cpl-kode').value = cpl.kode_cpl;
         document.getElementById('edit-cpl-nama').value = cpl.nama_cpl || '';
@@ -735,6 +803,7 @@
     }
 
     function editCpmk(cpmk) {
+        if (cpmk instanceof HTMLElement) return editCpmkBtn(cpmk);
         document.getElementById('form-edit-cpmk').action = '{{ url("admin/kurikulum-obe/cpmk") }}/' + cpmk.id;
         document.getElementById('edit-cpmk-kode').value = cpmk.kode_cpmk;
         document.getElementById('edit-cpmk-deskripsi').value = cpmk.deskripsi || '';
@@ -742,12 +811,14 @@
     }
 
     function openTambahSubCpmk(cpmkId, kodeCpmk) {
+        if (cpmkId instanceof HTMLElement) return openTambahSubCpmkBtn(cpmkId);
         document.getElementById('tambah-sub-cpmk-id').value = cpmkId;
         document.getElementById('tambah-sub-title').textContent = 'Tambah Sub-CPMK untuk ' + kodeCpmk;
         openModal('modal-tambah-sub-cpmk');
     }
 
     function editSubCpmk(sub) {
+        if (sub instanceof HTMLElement) return editSubCpmkBtn(sub);
         document.getElementById('form-edit-sub-cpmk').action = '{{ url("admin/kurikulum-obe/sub-cpmk") }}/' + sub.id;
         document.getElementById('edit-sub-kode').value = sub.kode_sub_cpmk;
         document.getElementById('edit-sub-cpl').value = sub.cpl_id || '';
@@ -758,3 +829,4 @@
 </script>
 @endpush
 @endsection
+
