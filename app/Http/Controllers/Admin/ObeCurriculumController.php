@@ -507,7 +507,7 @@ class ObeCurriculumController extends Controller
                         continue;
                     }
 
-                    $cpmkKode = trim($subData['cpmk_kode'] ?? '');
+                    $cpmkKode = trim($subData['cpmk_kode'] ?? ($subData['cpmk_terkait'] ?? ''));
                     $cpmk = $cpmkMap[$cpmkKode] ?? (isset($cpmkMap) && count($cpmkMap) ? reset($cpmkMap) : null);
                     if (! $cpmk) {
                         $cpmk = Cpmk::where('mata_kuliah_id', $mataKuliah->id)->first();
@@ -522,7 +522,7 @@ class ObeCurriculumController extends Controller
                         $cpmkMap['CPMK 1'] = $cpmk;
                     }
 
-                    $cplKode = trim($subData['cpl_kode'] ?? '');
+                    $cplKode = trim($subData['cpl_kode'] ?? ($subData['cpl_terkait'] ?? ''));
                     $cplId = null;
                     if ($cplKode && isset($cplMap[$cplKode])) {
                         $cplId = $cplMap[$cplKode]->id;

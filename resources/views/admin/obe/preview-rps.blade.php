@@ -530,14 +530,14 @@
                                         <input type="text"
                                                name="sub_cpmks[{{ $idx }}][kode_sub_cpmk]"
                                                class="form-control"
-                                               value="{{ $sub['kode_sub_cpmk'] }}"
+                                               value="{{ $sub['kode_sub_cpmk'] ?? '' }}"
                                                required>
                                     </td>
                                     <td>
                                         <input type="text"
                                                name="sub_cpmks[{{ $idx }}][cpmk_kode]"
                                                class="form-control"
-                                               value="{{ $sub['cpmk_kode'] ?: 'CPMK 1' }}"
+                                               value="{{ $sub['cpmk_kode'] ?? ($sub['cpmk_terkait'] ?? 'CPMK 1') }}"
                                                placeholder="CPMK 1"
                                                required>
                                     </td>
@@ -545,14 +545,14 @@
                                         <input type="text"
                                                name="sub_cpmks[{{ $idx }}][cpl_kode]"
                                                class="form-control"
-                                               value="{{ $sub['cpl_kode'] ?: '' }}"
+                                               value="{{ $sub['cpl_kode'] ?? ($sub['cpl_terkait'] ?? '') }}"
                                                placeholder="CPL 1">
                                     </td>
                                     <td>
                                         <textarea name="sub_cpmks[{{ $idx }}][deskripsi]"
                                                   class="form-control"
                                                   rows="2"
-                                                  required>{{ $sub['deskripsi'] }}</textarea>
+                                                  required>{{ $sub['deskripsi'] ?? '' }}</textarea>
                                     </td>
                                 </tr>
                             @empty
@@ -735,3 +735,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 @endpush
+

@@ -248,7 +248,9 @@ class RpsPdfParserService
                     $subCpmks[] = [
                         'kode_sub_cpmk' => $kodeSub,
                         'deskripsi' => $descClean,
+                        'cpmk_kode' => $cpmkInduk,
                         'cpmk_terkait' => $cpmkInduk,
+                        'cpl_kode' => $cplTerkait,
                         'cpl_terkait' => $cplTerkait,
                         'bobot_default' => null,
                     ];
