@@ -257,6 +257,242 @@
         font-weight: 600;
         padding: 6px 4px;
     }
+
+    /* ================= MATRIX ALOKASI BOBOT CSS ================= */
+    .matrix-container {
+        width: 100%;
+        overflow-x: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        background: #ffffff;
+        margin-bottom: 20px;
+    }
+    .table-matrix {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+        min-width: 850px;
+    }
+    .table-matrix th, .table-matrix td {
+        border: 1px solid #e2e8f0;
+        padding: 7px 10px;
+        vertical-align: middle;
+    }
+    .matrix-cpmk-head {
+        background: #eff6ff;
+        color: #1e3a8a;
+        font-size: 11.5px;
+        font-weight: 700;
+        text-align: center;
+        letter-spacing: 0.5px;
+        padding: 6px 4px;
+    }
+    .matrix-sub-head {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 11px;
+        font-weight: 700;
+        text-align: center;
+        min-width: 48px;
+        padding: 6px 4px;
+    }
+    .matrix-row-nama {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: 13px;
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 2px 0;
+        outline: none;
+    }
+    .matrix-row-nama:focus {
+        border-bottom: 1px solid #3b82f6;
+    }
+    .matrix-row-ket {
+        font-size: 11px;
+        color: #64748b;
+        border: none;
+        background: transparent;
+        width: 100%;
+        padding: 2px 0;
+        outline: none;
+    }
+    .matrix-row-ket:focus {
+        border-bottom: 1px dashed #94a3b8;
+    }
+    .matrix-input-cell {
+        width: 44px;
+        height: 32px;
+        text-align: center;
+        font-weight: 700;
+        font-size: 13px;
+        color: #0f172a;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 2px 4px;
+        background: #ffffff;
+        transition: all 0.15s ease;
+        margin: 0 auto;
+        display: block;
+    }
+    .matrix-input-cell:focus {
+        border-color: #2563eb;
+        background: #eff6ff;
+        box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+        outline: none;
+    }
+    .matrix-input-cell:disabled {
+        background: #f8fafc;
+        color: #64748b;
+        border-color: #e2e8f0;
+    }
+    .row-bobot-val {
+        font-weight: 800;
+        color: #0f172a;
+        font-size: 13px;
+        display: block;
+        text-align: center;
+    }
+    .col-bobot-val {
+        font-weight: 800;
+        color: #0f172a;
+        font-size: 13px;
+        display: block;
+        text-align: center;
+    }
+    .grand-total-val {
+        font-weight: 800;
+        font-size: 14px;
+        color: #15803d;
+        text-align: center;
+        display: block;
+    }
+    .grand-total-val.invalid {
+        color: #dc2626;
+    }
+
+    /* 3-Column Analytics Layout */
+    .obe-analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+        margin-top: 22px;
+        align-items: stretch;
+    }
+    @media (max-width: 1024px) {
+        .obe-analytics-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    .analytics-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+    }
+    .analytics-card-head {
+        padding: 14px 18px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .analytics-card-head h4 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .analytics-card-head .subtitle {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 3px;
+    }
+    .analytics-card-body {
+        padding: 16px 18px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .rollup-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12.5px;
+        padding: 7px 0;
+        border-bottom: 1px dashed #f1f5f9;
+        color: #334155;
+    }
+    .rollup-item:last-child {
+        border-bottom: none;
+    }
+    .badge-findings {
+        background: #ffedd5;
+        color: #c2410c;
+        border: 1px solid #fed7aa;
+        border-radius: 999px;
+        padding: 4px 12px;
+        font-size: 11.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .pill-compare {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 5px;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: monospace;
+    }
+    .pill-diff {
+        background: #2563eb;
+        color: #ffffff;
+    }
+    .pill-same {
+        background: #f1f5f9;
+        color: #334155;
+    }
+    .pill-total {
+        background: #ecfdf5;
+        color: #047857;
+        font-weight: 800;
+    }
+    .finding-item {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        margin-bottom: 12px;
+        font-size: 12px;
+        color: #334155;
+        line-height: 1.45;
+    }
+    .finding-num {
+        width: 19px;
+        height: 19px;
+        border-radius: 50%;
+        background: #ffedd5;
+        color: #c2410c;
+        font-weight: 700;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+    .badge-target-empty {
+        font-size: 11px;
+        color: #c2410c;
+        background: #fff7ed;
+        border: 1px solid #ffedd5;
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+    }
 </style>
 @endpush
 
@@ -360,129 +596,197 @@
          ========================================================================= --}}
     @if($tab === 'pengaturan')
         @php
-            // Kumpulkan seluruh Sub-CPMK dari mata kuliah ini
+            $cpmks = $jadwal->mataKuliah?->cpmks()->with(['subCpmks.cpl'])->orderBy('id')->get() ?? collect();
             $allSubCpmks = collect();
-            if ($jadwal->mataKuliah && $jadwal->mataKuliah->cpmks) {
-                foreach ($jadwal->mataKuliah->cpmks as $cpmk) {
-                    foreach ($cpmk->subCpmks as $sub) {
-                        $allSubCpmks->push($sub);
-                    }
+            foreach ($cpmks as $cpmk) {
+                foreach ($cpmk->subCpmks as $sub) {
+                    $allSubCpmks->push($sub);
                 }
             }
+
+            $matrixRows = $matrixData['rows'] ?? [];
+            $komponenRps = $matrixData['komponen_rps'] ?? [];
+            $temuanList = $matrixData['temuan'] ?? [];
+
+            // Group Sub-CPMK codes for label S1-S2, S3-S6, etc.
+            $cpmkSubRanges = [];
+            $subCounter = 1;
+            foreach ($cpmks as $cpmk) {
+                $count = $cpmk->subCpmks->count();
+                if ($count > 0) {
+                    $start = $subCounter;
+                    $end = $subCounter + $count - 1;
+                    $cpmkSubRanges[$cpmk->id] = ($start === $end) ? "S{$start}" : "S{$start}–S{$end}";
+                    $subCounter += $count;
+                } else {
+                    $cpmkSubRanges[$cpmk->id] = '-';
+                }
+            }
+
+            // Target porsi CPL dari prodi / RPS
+            $targetPorsiCpl = $rps?->porsi_cpl ?? [];
         @endphp
 
-        <div class="obe-layout-split">
-            {{-- Panel Kiri: Form Instrumen Penilaian --}}
+        @if($allSubCpmks->isEmpty())
             <div class="obe-card">
-                <div class="obe-card-head">
-                    <h3>
-                        <x-layout-icon name="services" />
-                        <span>Instrumen Penilaian Kelas</span>
-                    </h3>
-                    @if($skema->is_finalized)
-                        <span class="badge badge-success">Mode Terkunci</span>
-                    @else
-                        <span class="badge badge-warning">Dapat Diubah</span>
-                    @endif
+                <div class="obe-card-body" style="text-align: center; padding: 48px 20px;">
+                    <div style="max-width: 520px; margin: 0 auto;">
+                        <span class="empty-state-icon" style="font-size: 38px; display: inline-block; margin-bottom: 14px; color: #f59e0b;">
+                            <x-layout-icon name="book" />
+                        </span>
+                        <h3 style="margin-top: 0; color: #0f172a;">Data CPMK &amp; Sub-CPMK Belum Tersedia</h3>
+                        <p style="color: #64748b; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;">
+                            Mata kuliah <strong>{{ $jadwal->mataKuliah->nama_mk ?? 'ini' }}</strong> belum memiliki data pemetaan CPMK dan Sub-CPMK pada kurikulum aktif. Matriks alokasi instrumen membutuhkan data Sub-CPMK untuk membagi persentase penilaian.
+                        </p>
+                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                            <a href="{{ route('admin.obe.index', ['tab' => 'cpmk']) }}" class="btn-primary" target="_blank">
+                                <x-layout-icon name="plus" />
+                                <span>Atur CPMK &amp; Sub-CPMK di Kurikulum</span>
+                            </a>
+                            <a href="{{ route('admin.obe.index', ['tab' => 'rps']) }}" class="btn-outline" target="_blank">
+                                <x-layout-icon name="upload" />
+                                <span>Ekstrak dari Dokumen RPS PDF</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @else
+            {{-- Card Matriks Utama --}}
+            <div class="obe-card">
+                <div class="obe-card-head" style="align-items: flex-start;">
+                    <div>
+                        <h3 style="margin-bottom: 4px;">
+                            <x-layout-icon name="services" />
+                            <span>Alokasi bobot instrumen ke Sub-CPMK</span>
+                        </h3>
+                        <div style="font-size: 12.5px; color: #64748b; font-weight: 500;">
+                            Diisi otomatis dari rincian pertemuan di RPS. UTS dan UAS dipecah per bagian soal agar setiap Sub-CPMK punya skor sendiri.
+                        </div>
+                    </div>
+                    <div>
+                        <span class="badge-findings">
+                            <svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                            <span>{{ count($temuanList) }} temuan perlu diselesaikan</span>
+                        </span>
+                    </div>
                 </div>
 
-                <div class="obe-card-body">
-                    @if($skema->is_finalized)
-                        <div class="alert alert-info" style="margin-bottom:16px;">
-                            Skema instrumen penilaian telah difinalisasi dan terkunci. Jika memerlukan perbaikan bobot atau instrumen, silakan mengajukan pembukaan kunci kepada Admin/Kaprodi.
-                        </div>
-                    @else
-                        <p style="font-size:13px; color:#64748b; margin-top:0; margin-bottom:16px;">
-                            Tentukan komponen instrumen penilaian semester (misal: Tugas 1, Kuis, Proyek, UTS, UAS), kaitkan dengan Sub-CPMK, dan tetapkan bobot persen hingga total tepat <strong>100%</strong>.
-                        </p>
-                    @endif
-
-                    <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-skema">
+                <div class="obe-card-body" style="padding: 18px 20px;">
+                    <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-matrix-skema">
                         @csrf
 
-                        <div class="table-wrap">
-                            <table style="width:100%;" id="table-instrumen">
+                        <div class="matrix-container">
+                            <table class="table-matrix" id="table-matrix-alokasi">
                                 <thead>
+                                    {{-- Baris 1: Grup Header CPMK --}}
                                     <tr>
-                                        <th style="width:40px;">No</th>
-                                        <th>Nama Instrumen</th>
-                                        <th>Sub-CPMK &amp; CPL</th>
-                                        <th style="width:110px;">Bobot (%)</th>
-                                        <th style="width:50px; text-align:center;">Aksi</th>
+                                        <th style="min-width: 220px; background: #ffffff; border-bottom: none;"></th>
+                                        <th style="width: 75px; background: #ffffff; border-bottom: none; text-align: center;"></th>
+                                        @foreach($cpmks as $cpmk)
+                                            @if($cpmk->subCpmks->count() > 0)
+                                                <th colspan="{{ $cpmk->subCpmks->count() }}" class="matrix-cpmk-head" title="{{ $cpmk->deskripsi }}">
+                                                    {{ $cpmk->kode_cpmk }}
+                                                </th>
+                                            @endif
+                                        @endforeach
+                                        @if(! $skema->is_finalized)
+                                            <th style="width: 44px; background: #ffffff; border-bottom: none;"></th>
+                                        @endif
+                                    </tr>
+                                    {{-- Baris 2: Header Komponen, Bobot, dan Sub-CPMK --}}
+                                    <tr>
+                                        <th style="background: #f8fafc; font-weight: 700; color: #334155;">Komponen</th>
+                                        <th style="background: #f8fafc; font-weight: 700; color: #334155; text-align: center;">Bobot</th>
+                                        @php $subIter = 1; @endphp
+                                        @foreach($cpmks as $cpmk)
+                                            @foreach($cpmk->subCpmks as $sub)
+                                                <th class="matrix-sub-head matrix-sub-col"
+                                                    data-sub-id="{{ $sub->id }}"
+                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})">
+                                                    S{{ $subIter++ }}
+                                                </th>
+                                            @endforeach
+                                        @endforeach
+                                        @if(! $skema->is_finalized)
+                                            <th style="background: #f8fafc; text-align: center; font-size: 11px; color: #64748b;">Aksi</th>
+                                        @endif
                                     </tr>
                                 </thead>
-                                <tbody id="skema-rows">
-                                    @forelse($skema->komponens as $idx => $komp)
-                                        <tr class="skema-row">
-                                            <td class="row-number" style="text-align:center; font-weight:600;">{{ $loop->iteration }}</td>
+                                <tbody id="matrix-rows-body">
+                                    @forelse($matrixRows as $rIdx => $row)
+                                        @php
+                                            $rowSum = 0;
+                                            foreach ($allSubCpmks as $sub) {
+                                                $val = $row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? 0);
+                                                $rowSum += (float) $val;
+                                            }
+                                        @endphp
+                                        <tr class="matrix-data-row" data-row-index="{{ $rIdx }}">
                                             <td>
                                                 <input type="text"
-                                                       name="nama_instrumen[]"
-                                                       class="form-control input-nama-instrumen"
-                                                       placeholder="Contoh: Tugas 1 / UTS"
-                                                       value="{{ $komp->nama_instrumen }}"
+                                                       name="matrix_rows[{{ $rIdx }}][nama]"
+                                                       class="matrix-row-nama"
+                                                       placeholder="Nama Komponen (mis: Kuis)"
+                                                       value="{{ $row['nama'] }}"
                                                        required
+                                                       {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                <input type="text"
+                                                       name="matrix_rows[{{ $rIdx }}][keterangan]"
+                                                       class="matrix-row-ket"
+                                                       placeholder="Rincian pertemuan (mis: P1, 2, 5...)"
+                                                       value="{{ $row['keterangan'] ?? '' }}"
                                                        {{ $skema->is_finalized ? 'disabled' : '' }}>
                                             </td>
                                             <td>
-                                                <select name="sub_cpmk_id[]" class="form-control select-sub-cpmk" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                                                    <option value="">-- Tanpa Sub-CPMK --</option>
-                                                    @foreach($allSubCpmks as $sub)
-                                                        <option value="{{ $sub->id }}"
-                                                                data-cpl="{{ $sub->cpl?->kode_cpl ?? '' }}"
-                                                                data-cpmk="{{ $sub->cpmk?->kode_cpmk ?? '' }}"
-                                                                @selected($komp->sub_cpmk_id == $sub->id)>
-                                                            {{ $sub->kode_sub_cpmk }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }}) - {{ Str::limit($sub->deskripsi, 35) }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                                <span class="row-bobot-val" id="row-bobot-{{ $rIdx }}">{{ $rowSum > 0 ? (round($rowSum, 1) . '%') : '0%' }}</span>
                                             </td>
-                                            <td>
-                                                <input type="number"
-                                                       name="bobot[]"
-                                                       class="form-control input-bobot"
-                                                       min="0"
-                                                       max="100"
-                                                       step="0.01"
-                                                       placeholder="0"
-                                                       value="{{ $komp->bobot }}"
-                                                       required
-                                                       {{ $skema->is_finalized ? 'disabled' : '' }}>
-                                            </td>
-                                            <td style="text-align:center;">
-                                                @if(! $skema->is_finalized)
-                                                    <button type="button" class="btn-outline btn-remove-row" style="padding:6px 9px; color:#dc2626; border-color:#fca5a5;">
+                                            @foreach($allSubCpmks as $sub)
+                                                @php
+                                                    $allocVal = $row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? null);
+                                                    $allocDisplay = ($allocVal !== null && (float)$allocVal > 0) ? (float)$allocVal : '';
+                                                @endphp
+                                                <td style="text-align: center; padding: 4px;">
+                                                    <input type="number"
+                                                           step="0.5"
+                                                           min="0"
+                                                           max="100"
+                                                           class="matrix-input-cell"
+                                                           name="matrix_rows[{{ $rIdx }}][allocations][{{ $sub->id }}]"
+                                                           value="{{ $allocDisplay }}"
+                                                           placeholder="-"
+                                                           data-row="{{ $rIdx }}"
+                                                           data-sub="{{ $sub->id }}"
+                                                           data-cpmk="{{ $sub->cpmk_id }}"
+                                                           data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                </td>
+                                            @endforeach
+                                            @if(! $skema->is_finalized)
+                                                <td style="text-align: center; padding: 4px;">
+                                                    <button type="button" class="btn-outline btn-remove-matrix-row" style="padding: 4px 7px; color: #dc2626; border-color: #fca5a5;" title="Hapus komponen">
                                                         <x-layout-icon name="trash" />
                                                     </button>
-                                                @else
-                                                    -
-                                                @endif
-                                            </td>
+                                                </td>
+                                            @endif
                                         </tr>
                                     @empty
-                                        {{-- Default row jika belum ada komponen --}}
-                                        <tr class="skema-row">
-                                            <td class="row-number" style="text-align:center; font-weight:600;">1</td>
+                                        {{-- Default 1 row jika belum ada data --}}
+                                        <tr class="matrix-data-row" data-row-index="0">
                                             <td>
-                                                <input type="text" name="nama_instrumen[]" class="form-control input-nama-instrumen" placeholder="Contoh: Tugas 1" value="Tugas 1" required>
+                                                <input type="text" name="matrix_rows[0][nama]" class="matrix-row-nama" placeholder="Nama Komponen" value="Tugas 1" required>
+                                                <input type="text" name="matrix_rows[0][keterangan]" class="matrix-row-ket" placeholder="Rincian pertemuan" value="Pertemuan 3">
                                             </td>
                                             <td>
-                                                <select name="sub_cpmk_id[]" class="form-control select-sub-cpmk">
-                                                    <option value="">-- Pilih Sub-CPMK --</option>
-                                                    @foreach($allSubCpmks as $sub)
-                                                        <option value="{{ $sub->id }}"
-                                                                data-cpl="{{ $sub->cpl?->kode_cpl ?? '' }}"
-                                                                data-cpmk="{{ $sub->cpmk?->kode_cpmk ?? '' }}">
-                                                            {{ $sub->kode_sub_cpmk }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }}) - {{ Str::limit($sub->deskripsi, 35) }}
-                                                        </option>
-                                                    @endforeach
-                                                </select>
+                                                <span class="row-bobot-val" id="row-bobot-0">0%</span>
                                             </td>
-                                            <td>
-                                                <input type="number" name="bobot[]" class="form-control input-bobot" min="0" max="100" step="0.01" placeholder="20" value="20" required>
-                                            </td>
-                                            <td style="text-align:center;">
-                                                <button type="button" class="btn-outline btn-remove-row" style="padding:6px 9px; color:#dc2626; border-color:#fca5a5;">
+                                            @foreach($allSubCpmks as $sub)
+                                                <td style="text-align: center; padding: 4px;">
+                                                    <input type="number" step="0.5" min="0" max="100" class="matrix-input-cell" name="matrix_rows[0][allocations][{{ $sub->id }}]" value="" placeholder="-" data-row="0" data-sub="{{ $sub->id }}" data-cpmk="{{ $sub->cpmk_id }}" data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}">
+                                                </td>
+                                            @endforeach
+                                            <td style="text-align: center; padding: 4px;">
+                                                <button type="button" class="btn-outline btn-remove-matrix-row" style="padding: 4px 7px; color: #dc2626; border-color: #fca5a5;" title="Hapus komponen">
                                                     <x-layout-icon name="trash" />
                                                 </button>
                                             </td>
@@ -490,151 +794,161 @@
                                     @endforelse
                                 </tbody>
                                 <tfoot>
-                                    <tr style="background:#f8fafc; font-weight:700;">
-                                        <td colspan="3" style="text-align:right; padding:10px 14px;">Total Bobot Terinput:</td>
-                                        <td style="padding:10px 14px;">
-                                            <span id="label-total-bobot">{{ $skema->total_bobot }}%</span>
+                                    <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                                        <td style="padding: 10px 12px; color: #0f172a; font-weight: 800;">Bobot Sub-CPMK</td>
+                                        <td style="text-align: center;">
+                                            <span class="grand-total-val" id="grand-total-bobot">100%</span>
                                         </td>
-                                        <td></td>
+                                        @foreach($allSubCpmks as $sub)
+                                            <td style="text-align: center;">
+                                                <span class="col-bobot-val" id="col-bobot-{{ $sub->id }}">-</span>
+                                            </td>
+                                        @endforeach
+                                        @if(! $skema->is_finalized)
+                                            <td></td>
+                                        @endif
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
                         @if(! $skema->is_finalized)
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:12px;">
-                                <div style="display:flex; gap:8px; align-items:center;">
-                                    <button type="button" class="btn-outline" id="btn-add-row">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 10px;">
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" class="btn-outline" id="btn-add-matrix-row">
                                         <x-layout-icon name="plus" />
-                                        <span>Tambah Baris Instrumen</span>
+                                        <span>Tambah Komponen</span>
                                     </button>
-                                    @if($rps && !empty($rps->komponen_bobot_default))
-                                        <button type="submit" name="action" value="reset_rps" class="btn-outline" style="color:#0369a1; border-color:#bae6fd; background:#f0f9ff;" onclick="return confirm('Muat ulang seluruh instrumen default dari dokumen RPS baku? Komponen yang belum disimpan akan ditimpa.')">
-                                            <x-layout-icon name="refresh" />
-                                            <span>Muat Default dari RPS</span>
-                                        </button>
-                                    @endif
-                                </div>
-
-                                <div style="display:flex; gap:10px;">
-                                    <button type="submit" name="action" value="draft" class="btn-outline">
-                                        <x-layout-icon name="save" />
-                                        <span>Simpan Draf</span>
-                                    </button>
-
-                                    <button type="submit" name="action" value="save" class="btn-primary" id="btn-submit-skema">
-                                        <x-layout-icon name="check" />
-                                        <span>Simpan &amp; Lanjut ke Nilai</span>
+                                    <button type="submit" name="action" value="reset_rps" class="btn-outline" style="color: #0369a1; border-color: #bae6fd; background: #f0f9ff;" onclick="return confirm('Muat ulang matriks alokasi dari template RPS? Perubahan yang belum disimpan akan direset.')">
+                                        <x-layout-icon name="refresh" />
+                                        <span>Muat Ulang dari RPS</span>
                                     </button>
                                 </div>
                             </div>
                         @endif
+
+                        {{-- 3-Column Analytics Grid Sesuai Mockup Mas Dello --}}
+                        <div class="obe-analytics-grid">
+                            {{-- KOTAK 1: Turunan ke CPMK dan CPL --}}
+                            <div class="analytics-card">
+                                <div class="analytics-card-head">
+                                    <h4>Turunan ke CPMK dan CPL</h4>
+                                </div>
+                                <div class="analytics-card-body">
+                                    <div style="margin-bottom: 14px;">
+                                        @foreach($cpmks as $cpmk)
+                                            @php
+                                                $firstSubCpl = $cpmk->subCpmks->first()?->cpl?->kode_cpl ?? 'CPL';
+                                            @endphp
+                                            <div class="rollup-item">
+                                                <span>
+                                                    <strong>{{ $cpmk->kode_cpmk }}</strong>
+                                                    <span style="color: #64748b; font-size: 11px;">{{ $cpmkSubRanges[$cpmk->id] ?? '' }}</span>
+                                                    &rarr; <span class="cpl-pill">{{ $firstSubCpl }}*</span>
+                                                </span>
+                                                <span style="font-weight: 700; color: #0f172a;" id="rollup-cpmk-{{ $cpmk->id }}">0%</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-top: auto; padding-top: 10px; border-top: 1px solid #e2e8f0; margin-bottom: 8px;">
+                                        Bobot CPL hasil turunan vs ketetapan prodi
+                                    </div>
+
+                                    @php
+                                        $uniqueCpls = $allSubCpmks->pluck('cpl')->filter()->unique('id');
+                                    @endphp
+                                    @foreach($uniqueCpls as $cpl)
+                                        @php
+                                            $targetVal = $targetPorsiCpl[$cpl->kode_cpl] ?? null;
+                                        @endphp
+                                        <div class="rollup-item">
+                                            <span><strong>{{ $cpl->kode_cpl }}</strong></span>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <strong id="rollup-cpl-{{ $cpl->kode_cpl }}">0%</strong>
+                                                @if($targetVal !== null)
+                                                    <span style="font-size: 11px; color: #047857;">target: {{ $targetVal }}%</span>
+                                                @else
+                                                    <span class="badge-target-empty">target: belum ada</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            {{-- KOTAK 2: Cek tabel komponen RPS --}}
+                            <div class="analytics-card">
+                                <div class="analytics-card-head">
+                                    <h4>Cek tabel komponen RPS</h4>
+                                    <div class="subtitle">Jumlah bobot mingguan vs tabel "Komponen dan bobot penilaian"</div>
+                                </div>
+                                <div class="analytics-card-body">
+                                    <div class="rollup-item">
+                                        <span style="max-width: 200px;">Kuis, keaktifan, kerja sama tim</span>
+                                        <span class="pill-compare pill-diff" id="comp-kuis">20 / 15</span>
+                                    </div>
+                                    <div class="rollup-item">
+                                        <span style="max-width: 200px;">Tugas (terstruktur, studi kasus, proyek)</span>
+                                        <span class="pill-compare pill-diff" id="comp-tugas">25 / 30</span>
+                                    </div>
+                                    <div class="rollup-item">
+                                        <span>UTS</span>
+                                        <span class="pill-compare pill-same" id="comp-uts">25 / 25</span>
+                                    </div>
+                                    <div class="rollup-item">
+                                        <span>UAS</span>
+                                        <span class="pill-compare pill-same" id="comp-uas">30 / 30</span>
+                                    </div>
+                                    <div class="rollup-item" style="margin-top: auto; padding-top: 12px; border-top: 1px solid #e2e8f0; font-weight: 800;">
+                                        <span>Total</span>
+                                        <span class="pill-compare pill-total" id="comp-total">100 / 100</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- KOTAK 3: Temuan pada RPS & Aksi --}}
+                            <div class="analytics-card">
+                                <div class="analytics-card-head">
+                                    <h4>Temuan pada RPS</h4>
+                                </div>
+                                <div class="analytics-card-body">
+                                    <div style="margin-bottom: 16px;">
+                                        @forelse($temuanList as $fIdx => $temuan)
+                                            <div class="finding-item">
+                                                <div class="finding-num">{{ $loop->iteration }}</div>
+                                                <div>{{ $temuan }}</div>
+                                            </div>
+                                        @empty
+                                            <div style="font-size: 12.5px; color: #16a34a; font-weight: 600;">
+                                                Seluruh pemetaan dan pembagian bobot RPS telah selaras dan terverifikasi.
+                                            </div>
+                                        @endforelse
+                                    </div>
+
+                                    @if(! $skema->is_finalized)
+                                        <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+                                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                                <button type="submit" name="action" value="draft" class="btn-outline" style="flex: 1; text-align: center; font-size: 12.5px;">
+                                                    Simpan draf
+                                                </button>
+                                                <button type="button" class="btn-primary" style="flex: 1.3; background: #0f766e; border-color: #0f766e; text-align: center; font-size: 12.5px;" onclick="openModal('modal-return-rps')">
+                                                    Kembalikan ke penyusun RPS
+                                                </button>
+                                            </div>
+                                            <button type="submit" name="action" value="save" class="btn-primary" style="width: 100%; text-align: center; justify-content: center; font-size: 13px;">
+                                                <x-layout-icon name="check" />
+                                                <span>Simpan &amp; Lanjut ke Input Nilai</span>
+                                            </button>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
                     </form>
                 </div>
             </div>
-
-            {{-- Panel Kanan: Ketetapan Program Studi & Validasi Target --}}
-            <div>
-                {{-- Card Validasi Status Bobot --}}
-                <div class="obe-card">
-                    <div class="obe-card-head">
-                        <h3>
-                            <x-layout-icon name="file-chart" />
-                            <span>Validasi Bobot &amp; Porsi CPL</span>
-                        </h3>
-                    </div>
-                    <div class="obe-card-body">
-                        <div id="box-status-100" style="padding:12px 14px; border-radius:8px; margin-bottom:16px; display:flex; align-items:center; gap:10px;">
-                            {{-- Diisi secara dinamis oleh JavaScript --}}
-                        </div>
-
-                        <div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:8px; text-transform:uppercase;">
-                            Distribusi Bobot ke CPL Terpetakan:
-                        </div>
-                        <div id="live-cpl-distribution" style="margin-bottom:16px;">
-                            {{-- Diisi via JS --}}
-                        </div>
-
-                        @if($rps && !empty($rps->porsi_cpl))
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-top:12px;">
-                                <div style="font-size:12px; font-weight:700; color:#334155; margin-bottom:6px;">
-                                    Target Porsi CPL dari Program Studi (RPS):
-                                </div>
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                                    @foreach($rps->porsi_cpl as $cplCode => $targetVal)
-                                        <div style="font-size:12px; color:#475569; display:flex; justify-content:space-between;">
-                                            <span><strong>{{ $cplCode }}</strong>:</span>
-                                            <span>{{ $targetVal }}%</span>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Card Dokumen RPS Resmi --}}
-                <div class="obe-card">
-                    <div class="obe-card-head">
-                        <h3>
-                            <x-layout-icon name="file-check" />
-                            <span>Dokumen RPS Resmi</span>
-                        </h3>
-                    </div>
-                    <div class="obe-card-body">
-                        @if($rps && $rps->file_rps)
-                            <p style="font-size:13px; color:#475569; margin-top:0; margin-bottom:12px;">
-                                Dokumen RPS resmi Program Studi telah tersedia untuk mata kuliah ini.
-                            </p>
-                            <a href="{{ route('admin.obe.rps.download', $rps->id) }}" class="btn-outline" target="_blank" style="display:inline-flex; align-items:center; gap:8px;">
-                                <x-layout-icon name="download" />
-                                <span>Unduh RPS Resmi (PDF)</span>
-                            </a>
-                        @else
-                            <div style="font-size:13px; color:#64748b; font-style:italic;">
-                                Dokumen PDF RPS resmi belum diunggah oleh Admin/Kaprodi. Penilaian tetap dapat dilakukan sesuai kurikulum aktif.
-                            </div>
-                        @endif
-                    </div>
-                </div>
-
-                {{-- Card Referensi Sub-CPMK Kurikulum --}}
-                <div class="obe-card">
-                    <div class="obe-card-head">
-                        <h3>
-                            <x-layout-icon name="book" />
-                            <span>Katalog Sub-CPMK Mata Kuliah</span>
-                        </h3>
-                        <span class="badge badge-info">{{ $allSubCpmks->count() }} Sub-CPMK</span>
-                    </div>
-                    <div class="obe-card-body" style="max-height: 380px; overflow-y:auto;">
-                        @forelse($jadwal->mataKuliah->cpmks as $cpmk)
-                            <div style="margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed #e2e8f0;">
-                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                                    <span class="cpmk-pill">{{ $cpmk->kode_cpmk }}</span>
-                                    <span style="font-size:13px; font-weight:600; color:#1e293b;">{{ $cpmk->deskripsi }}</span>
-                                </div>
-                                <div style="padding-left:12px; display:flex; flex-direction:column; gap:6px;">
-                                    @foreach($cpmk->subCpmks as $sub)
-                                        <div style="font-size:12px; color:#475569; background:#f8fafc; padding:6px 8px; border-radius:6px; border:1px solid #f1f5f9;">
-                                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                                <strong>{{ $sub->kode_sub_cpmk }}</strong>
-                                                <span class="cpl-pill">{{ $sub->cpl?->kode_cpl ?? 'CPL' }}</span>
-                                            </div>
-                                            <div style="margin-top:2px;">{{ $sub->deskripsi }}</div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @empty
-                            <div style="font-size:13px; color:#64748b; text-align:center; padding:16px;">
-                                Belum ada CPMK / Sub-CPMK yang terdaftar untuk mata kuliah ini di Master Kurikulum OBE.
-                            </div>
-                        @endforelse
-                    </div>
-                </div>
-            </div>
-        </div>
+        @endif
 
     {{-- =========================================================================
          TAB 2: INPUT NILAI MAHASISWA
@@ -1180,6 +1494,44 @@
 </div>
 
 {{-- =========================================================================
+     MODAL: KEMBALIKAN KE PENYUSUN RPS
+     ========================================================================= --}}
+<div id="modal-return-rps" class="modal-backdrop-custom" style="display:none;">
+    <div class="modal-box-custom">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="margin:0; font-size:16px; font-weight:700; color:#0f172a;">Kembalikan Temuan ke Penyusun RPS</h3>
+            <button type="button" onclick="closeModal('modal-return-rps')" style="background:none; border:none; cursor:pointer; color:#64748b; font-size:20px; line-height:1;">
+                &times;
+            </button>
+        </div>
+
+        <p style="font-size:13px; color:#475569; margin-top:0; margin-bottom:14px; line-height:1.5;">
+            Kirimkan catatan temuan audit RPS ini kembali kepada <strong>Tim Pengembang Kurikulum Program Studi</strong> atau <strong>Dosen Koordinator RPS</strong> untuk dilakukan revisi sinkronisasi rincian mingguan dan ringkasan bobot.
+        </p>
+
+        <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST">
+            @csrf
+            <input type="hidden" name="action" value="return_rps">
+
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Catatan Temuan / Rekomendasi Revisi:</label>
+                <textarea name="catatan_revisi" class="form-control" rows="5" style="width:100%; font-size:12.5px; line-height:1.5;">@foreach($matrixData['temuan'] ?? [] as $t)
+{{ $loop->iteration }}. {{ $t }}
+@endforeach</textarea>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" class="btn-outline" onclick="closeModal('modal-return-rps')">Batal</button>
+                <button type="submit" class="btn-primary" style="background:#0f766e; border-color:#0f766e;">
+                    <x-layout-icon name="arrow-left" />
+                    <span>Kirim Catatan ke Tim RPS</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- =========================================================================
      JAVASCRIPT LOGIC
      ========================================================================= --}}
 @push('scripts')
@@ -1206,126 +1558,207 @@
     }
 
     // -------------------------------------------------------------------------
-    // TAB 1: KALKULASI DINAMIS SKEMA PENILAIAN
+    // TAB 1: KALKULASI DINAMIS MATRIKS ALOKASI BOBOT INSTRUMEN KE SUB-CPMK
     // -------------------------------------------------------------------------
     @if($tab === 'pengaturan')
     (function(){
-        const tableBody = document.getElementById('skema-rows');
-        const labelTotal = document.getElementById('label-total-bobot');
-        const boxStatus100 = document.getElementById('box-status-100');
-        const liveCplBox = document.getElementById('live-cpl-distribution');
-        const btnAddRow = document.getElementById('btn-add-row');
+        const tableMatrix = document.getElementById('table-matrix-alokasi');
+        const rowsBody = document.getElementById('matrix-rows-body');
+        const btnAddRow = document.getElementById('btn-add-matrix-row');
 
-        function hitungSkema() {
-            let total = 0;
-            const cplWeights = {};
+        function hitungMatrix() {
+            let grandTotal = 0;
+            const colTotals = {};
+            const cpmkTotals = {};
+            const cplTotals = {};
 
-            const rows = document.querySelectorAll('.skema-row');
-            rows.forEach((row, i) => {
-                const numEl = row.querySelector('.row-number');
-                if (numEl) numEl.textContent = (i + 1);
+            // Inisialisasi total kolom Sub-CPMK
+            document.querySelectorAll('.matrix-sub-col').forEach(th => {
+                const subId = th.getAttribute('data-sub-id');
+                if (subId) colTotals[subId] = 0;
+            });
 
-                const bobotInput = row.querySelector('.input-bobot');
-                const bVal = parseFloat(bobotInput?.value || 0);
-                if (!isNaN(bVal)) {
-                    total += bVal;
+            // Loop setiap baris instrumen
+            const rows = document.querySelectorAll('.matrix-data-row');
+            rows.forEach((row, rIdx) => {
+                row.setAttribute('data-row-index', rIdx);
+                let rowSum = 0;
 
-                    const selectSub = row.querySelector('.select-sub-cpmk');
-                    const selectedOpt = selectSub ? selectSub.options[selectSub.selectedIndex] : null;
-                    const cplCode = selectedOpt ? selectedOpt.getAttribute('data-cpl') : '';
+                row.querySelectorAll('.matrix-input-cell').forEach(inp => {
+                    const val = parseFloat(inp.value) || 0;
+                    const subId = inp.getAttribute('data-sub');
+                    const cpmkId = inp.getAttribute('data-cpmk');
+                    const cplCode = inp.getAttribute('data-cpl');
 
-                    if (cplCode) {
-                        cplWeights[cplCode] = (cplWeights[cplCode] || 0) + bVal;
-                    }
+                    rowSum += val;
+
+                    if (subId) colTotals[subId] = (colTotals[subId] || 0) + val;
+                    if (cpmkId) cpmkTotals[cpmkId] = (cpmkTotals[cpmkId] || 0) + val;
+                    if (cplCode) cplTotals[cplCode] = (cplTotals[cplCode] || 0) + val;
+                });
+
+                grandTotal += rowSum;
+
+                // Update badge bobot baris
+                const rowBobotBadge = row.querySelector('.row-bobot-val');
+                if (rowBobotBadge) {
+                    rowBobotBadge.textContent = (Math.round(rowSum * 10) / 10) + '%';
                 }
             });
 
-            total = Math.round(total * 100) / 100;
-            if (labelTotal) labelTotal.textContent = total + '%';
-
-            // Status 100% box
-            if (boxStatus100) {
-                if (Math.abs(total - 100) < 0.05) {
-                    boxStatus100.style.background = '#dcfce7';
-                    boxStatus100.style.border = '1px solid #bbf7d0';
-                    boxStatus100.style.color = '#166534';
-                    boxStatus100.innerHTML = '<strong>Total Bobot Tepat 100%</strong> — Pengaturan siap disimpan.';
-                } else {
-                    const selisih = Math.round((100 - total) * 100) / 100;
-                    boxStatus100.style.background = '#fef2f2';
-                    boxStatus100.style.border = '1px solid #fecaca';
-                    boxStatus100.style.color = '#991b1b';
-                    boxStatus100.innerHTML = '<strong>Total Bobot Saat Ini: ' + total + '%</strong>. Kurang / lebih ' + selisih + '%. Total harus tepat 100% saat disimpan.';
+            // Update badge total per kolom Sub-CPMK
+            for (const [subId, sum] of Object.entries(colTotals)) {
+                const colBadge = document.getElementById('col-bobot-' + subId);
+                if (colBadge) {
+                    colBadge.textContent = sum > 0 ? (Math.round(sum * 10) / 10) : '-';
                 }
             }
 
-            // Live CPL Distribution
-            if (liveCplBox) {
-                if (Object.keys(cplWeights).length === 0) {
-                    liveCplBox.innerHTML = '<span style="font-size:12px; color:#94a3b8; font-style:italic;">Belum ada instrumen yang dihubungkan ke Sub-CPMK &amp; CPL.</span>';
+            // Update grand total
+            const grandBadge = document.getElementById('grand-total-bobot');
+            if (grandBadge) {
+                const roundedGrand = Math.round(grandTotal * 10) / 10;
+                grandBadge.textContent = roundedGrand + '%';
+                if (Math.abs(roundedGrand - 100) < 0.1) {
+                    grandBadge.classList.remove('invalid');
+                    grandBadge.style.color = '#15803d';
                 } else {
-                    let html = '<div style="display:flex; flex-direction:column; gap:6px;">';
-                    for (const [code, w] of Object.entries(cplWeights)) {
-                        const pctOf100 = total > 0 ? Math.round((w / total) * 100) : 0;
-                        html += `
-                            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; font-size:12px;">
-                                <div><span class="cpl-pill">${code}</span> <span style="color:#475569; margin-left:4px;">Alokasi Bobot:</span></div>
-                                <div><strong>${w}%</strong> <span style="color:#64748b;">(${pctOf100}% porsi)</span></div>
-                            </div>
-                        `;
-                    }
-                    html += '</div>';
-                    liveCplBox.innerHTML = html;
+                    grandBadge.classList.add('invalid');
+                    grandBadge.style.color = '#dc2626';
                 }
+            }
+
+            // Update Card 1: Turunan ke CPMK
+            for (const [cpmkId, sum] of Object.entries(cpmkTotals)) {
+                const cpmkBadge = document.getElementById('rollup-cpmk-' + cpmkId);
+                if (cpmkBadge) {
+                    cpmkBadge.textContent = (Math.round(sum * 10) / 10) + '%';
+                }
+            }
+
+            // Update Card 1: Turunan ke CPL
+            for (const [cplCode, sum] of Object.entries(cplTotals)) {
+                const cplBadge = document.getElementById('rollup-cpl-' + cplCode);
+                if (cplBadge) {
+                    cplBadge.textContent = (Math.round(sum * 10) / 10) + '%';
+                }
+            }
+
+            // Update Card 2: Cek tabel komponen RPS
+            let kuisWeekly = 0;
+            let tugasWeekly = 0;
+            let utsWeekly = 0;
+            let uasWeekly = 0;
+
+            rows.forEach(row => {
+                const nameInp = row.querySelector('.matrix-row-nama');
+                const name = (nameInp ? nameInp.value : '').toLowerCase();
+                let rSum = 0;
+                row.querySelectorAll('.matrix-input-cell').forEach(inp => {
+                    rSum += parseFloat(inp.value) || 0;
+                });
+
+                if (name.includes('kuis') || name.includes('keaktifan')) {
+                    kuisWeekly += rSum;
+                } else if (name.includes('uts') || name.includes('tengah')) {
+                    utsWeekly += rSum;
+                } else if (name.includes('uas') || name.includes('akhir')) {
+                    uasWeekly += rSum;
+                } else {
+                    tugasWeekly += rSum;
+                }
+            });
+
+            updatePillDiff('comp-kuis', kuisWeekly, 15);
+            updatePillDiff('comp-tugas', tugasWeekly, 30);
+            updatePillDiff('comp-uts', utsWeekly, 25);
+            updatePillDiff('comp-uas', uasWeekly, 30);
+
+            const compTotal = document.getElementById('comp-total');
+            if (compTotal) {
+                compTotal.textContent = Math.round(grandTotal) + ' / 100';
             }
         }
 
-        // Listener input bobot & select change
-        if (tableBody) {
-            tableBody.addEventListener('input', e => {
-                if (e.target.classList.contains('input-bobot')) hitungSkema();
+        function updatePillDiff(elId, weeklyVal, targetVal) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            const w = Math.round(weeklyVal * 10) / 10;
+            el.textContent = w + ' / ' + targetVal;
+            if (Math.abs(w - targetVal) > 0.1) {
+                el.className = 'pill-compare pill-diff';
+            } else {
+                el.className = 'pill-compare pill-same';
+            }
+        }
+
+        // Event listener delegasi input pada tabel matriks
+        if (rowsBody) {
+            rowsBody.addEventListener('input', e => {
+                if (e.target.classList.contains('matrix-input-cell') || e.target.classList.contains('matrix-row-nama')) {
+                    hitungMatrix();
+                }
             });
-            tableBody.addEventListener('change', e => {
-                if (e.target.classList.contains('select-sub-cpmk')) hitungSkema();
-            });
-            tableBody.addEventListener('click', e => {
-                const btnRemove = e.target.closest('.btn-remove-row');
+
+            rowsBody.addEventListener('click', e => {
+                const btnRemove = e.target.closest('.btn-remove-matrix-row');
                 if (btnRemove) {
-                    const row = btnRemove.closest('.skema-row');
-                    const rows = document.querySelectorAll('.skema-row');
-                    if (rows.length <= 1) {
-                        alert('Minimal harus ada 1 baris instrumen penilaian.');
+                    const row = btnRemove.closest('.matrix-data-row');
+                    const allRows = rowsBody.querySelectorAll('.matrix-data-row');
+                    if (allRows.length <= 1) {
+                        alert('Minimal harus ada 1 komponen penilaian pada matriks.');
                         return;
                     }
-                    row.remove();
-                    hitungSkema();
+                    if (confirm('Hapus baris komponen ini dari matriks?')) {
+                        row.remove();
+                        hitungMatrix();
+                    }
                 }
             });
         }
 
-        // Add row
-        if (btnAddRow) {
+        // Tambah baris baru ke matriks
+        if (btnAddRow && rowsBody) {
             btnAddRow.addEventListener('click', () => {
-                const rows = document.querySelectorAll('.skema-row');
-                const lastRow = rows[rows.length - 1];
+                const allRows = rowsBody.querySelectorAll('.matrix-data-row');
+                const lastRow = allRows[allRows.length - 1];
+                const newIdx = allRows.length;
                 const clone = lastRow.cloneNode(true);
 
-                // Reset values
-                const nameInput = clone.querySelector('.input-nama-instrumen');
-                const bobotInput = clone.querySelector('.input-bobot');
-                const selectSub = clone.querySelector('.select-sub-cpmk');
+                clone.setAttribute('data-row-index', newIdx);
 
-                if (nameInput) nameInput.value = '';
-                if (bobotInput) bobotInput.value = '10';
-                if (selectSub) selectSub.selectedIndex = 0;
+                const namaInp = clone.querySelector('.matrix-row-nama');
+                if (namaInp) {
+                    namaInp.name = `matrix_rows[${newIdx}][nama]`;
+                    namaInp.value = 'Tugas Baru';
+                }
 
-                tableBody.appendChild(clone);
-                hitungSkema();
+                const ketInp = clone.querySelector('.matrix-row-ket');
+                if (ketInp) {
+                    ketInp.name = `matrix_rows[${newIdx}][keterangan]`;
+                    ketInp.value = 'Rincian pertemuan';
+                }
+
+                const rowBadge = clone.querySelector('.row-bobot-val');
+                if (rowBadge) {
+                    rowBadge.id = 'row-bobot-' + newIdx;
+                    rowBadge.textContent = '0%';
+                }
+
+                clone.querySelectorAll('.matrix-input-cell').forEach(inp => {
+                    const subId = inp.getAttribute('data-sub');
+                    inp.name = `matrix_rows[${newIdx}][allocations][${subId}]`;
+                    inp.value = '';
+                    inp.setAttribute('data-row', newIdx);
+                });
+
+                rowsBody.appendChild(clone);
+                hitungMatrix();
             });
         }
 
-        // Jalankan saat load
-        hitungSkema();
+        // Jalankan perhitungan awal saat halaman dibuka
+        hitungMatrix();
     })();
     @endif
 

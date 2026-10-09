@@ -13,6 +13,7 @@ class RpsPenilaianSkema extends Model
         'dosen_id',
         'is_finalized',
         'finalized_at',
+        'matrix_alokasi',
     ];
 
     protected function casts(): array
@@ -20,6 +21,7 @@ class RpsPenilaianSkema extends Model
         return [
             'is_finalized' => 'boolean',
             'finalized_at' => 'datetime',
+            'matrix_alokasi' => 'array',
         ];
     }
 

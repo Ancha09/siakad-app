@@ -97,6 +97,15 @@ class NilaiController extends Controller
             ->where('status', 'Disetujui')
             ->get();
 
+        // Data matriks alokasi bobot instrumen ke Sub-CPMK
+        $matrixData = $skema->matrix_alokasi;
+        if (empty($matrixData) || empty($matrixData['rows'])) {
+            $matrixData = $obeService->getDefaultMatrixForJadwal($jadwal);
+            if ($skema->komponens()->count() === 0 && ! empty($matrixData['rows'])) {
+                $obeService->syncKomponensFromMatrix($skema, $matrixData);
+            }
+        }
+
         // Hitung nilai mahasiswa dan status CPL
         $studentAssessments = [];
         foreach ($krsList as $krs) {
@@ -114,6 +123,7 @@ class NilaiController extends Controller
             'jadwal',
             'rps',
             'skema',
+            'matrixData',
             'krsList',
             'studentAssessments',
             'capaianKelas',
@@ -142,9 +152,76 @@ class NilaiController extends Controller
             $obeService->seedDefaultKomponenFromRps($skema, $jadwal, true);
             return redirect()
                 ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
-                ->with('success', 'Instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
+                ->with('success', 'Matriks alokasi instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
         }
 
+        if ($request->input('action') === 'return_rps') {
+            $catatan = $request->input('catatan_revisi', 'Dosen meminta tinjauan ulang terkait temuan ketidaksesuaian tabel komponen dan pembagian soal pada RPS.');
+            // Rekam log atau kirim notifikasi jika diperlukan
+            return redirect()
+                ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
+                ->with('success', 'Temuan audit RPS dan permohonan revisi berhasil dikembalikan kepada Tim Penyusun Kurikulum / Kaprodi.');
+        }
+
+        // Cek jika request berasal dari Matriks 2D Alokasi
+        if ($request->has('matrix_rows')) {
+            $rawRows = $request->input('matrix_rows', []);
+            $rows = [];
+            $totalBobot = 0.0;
+
+            foreach ($rawRows as $r) {
+                $nama = trim($r['nama'] ?? '');
+                if (empty($nama)) {
+                    continue;
+                }
+
+                $keterangan = trim($r['keterangan'] ?? '');
+                $allocations = [];
+
+                if (! empty($r['allocations']) && is_array($r['allocations'])) {
+                    foreach ($r['allocations'] as $subId => $val) {
+                        $v = (float) $val;
+                        if ($v > 0) {
+                            $allocations[(string) $subId] = $v;
+                            $totalBobot += $v;
+                        }
+                    }
+                }
+
+                $rows[] = [
+                    'nama' => $nama,
+                    'keterangan' => $keterangan,
+                    'allocations' => $allocations,
+                ];
+            }
+
+            $isDraft = $request->input('action') === 'draft';
+
+            if (! $isDraft && round($totalBobot, 1) != 100.0) {
+                return back()->withInput()->with('error', "Total bobot Sub-CPMK harus tepat 100%. Saat ini terhitung: " . round($totalBobot, 1) . "%. Anda dapat memilih 'Simpan Draf' jika pengaturan belum selesai.");
+            }
+
+            $defaultPreset = $obeService->getDefaultMatrixForJadwal($jadwal);
+            $matrixData = [
+                'rows' => $rows,
+                'komponen_rps' => $skema->matrix_alokasi['komponen_rps'] ?? $defaultPreset['komponen_rps'],
+                'temuan' => $skema->matrix_alokasi['temuan'] ?? $defaultPreset['temuan'],
+            ];
+
+            $obeService->syncKomponensFromMatrix($skema, $matrixData);
+
+            $msg = $isDraft
+                ? 'Draf matriks alokasi bobot RPS berhasil disimpan.'
+                : 'Matriks alokasi bobot RPS berhasil disimpan dan disinkronkan ke daftar nilai mahasiswa.';
+
+            $targetTab = $isDraft ? 'pengaturan' : 'input';
+
+            return redirect()
+                ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => $targetTab])
+                ->with('success', $msg);
+        }
+
+        // Fallback untuk format linear lama jika ada
         $validated = $request->validate([
             'nama_instrumen' => ['required', 'array', 'min:1'],
             'nama_instrumen.*' => ['required', 'string', 'max:100'],
@@ -162,8 +239,6 @@ class NilaiController extends Controller
         }
 
         DB::transaction(function () use ($skema, $validated) {
-            // Hapus komponen lama yang tidak ada nilai atau update
-            // Untuk menjaga integritas nilai mahasiswa, kita lakukan replace bersih
             $skema->komponens()->delete();
 
             foreach ($validated['nama_instrumen'] as $i => $nama) {

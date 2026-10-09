@@ -68,45 +68,218 @@ class ObeAssessmentService
     }
 
     /**
-     * Inisialisasi komponen instrumen penilaian dari dokumen RPS baku
+     * Inisialisasi komponen instrumen penilaian dan matriks alokasi dari dokumen RPS / kurikulum
      */
     public function seedDefaultKomponenFromRps(RpsPenilaianSkema $skema, Jadwal $jadwal, bool $force = false): void
     {
         if ($force) {
             $skema->komponens()->delete();
+            $skema->update(['matrix_alokasi' => null]);
         }
 
+        $defaultMatrix = $this->getDefaultMatrixForJadwal($jadwal);
+        if (! empty($defaultMatrix['rows'])) {
+            $this->syncKomponensFromMatrix($skema, $defaultMatrix);
+        }
+    }
+
+    /**
+     * Template matriks alokasi bobot instrumen ke Sub-CPMK standar OBE
+     */
+    public function getDefaultMatrixForJadwal(Jadwal $jadwal): array
+    {
         $mk = $jadwal->mataKuliah;
         if (! $mk) {
-            return;
+            return ['rows' => [], 'komponen_rps' => [], 'temuan' => []];
         }
 
-        $rps = $mk->rpsAktif ?? MataKuliahRps::where('mata_kuliah_id', $mk->id)->where('is_active', true)->first();
-        if (! $rps || empty($rps->komponen_bobot_default)) {
-            return;
-        }
-
-        $subCpmks = SubCpmk::whereHas('cpmk', function ($q) use ($mk) {
+        $allSubCpmks = SubCpmk::whereHas('cpmk', function ($q) use ($mk) {
             $q->where('mata_kuliah_id', $mk->id);
         })->orderBy('id')->get();
 
-        $subCount = $subCpmks->count();
-        $urutan = 1;
-        $subIndex = 0;
+        $subCount = $allSubCpmks->count();
+        $subIds = $allSubCpmks->pluck('id')->values()->toArray();
 
-        foreach ($rps->komponen_bobot_default as $nama => $bobot) {
-            $assignedSubId = $subCount > 0 ? $subCpmks[$subIndex % $subCount]->id : null;
+        // 1. Template jika tersedia 13 atau lebih Sub-CPMK (persis sesuai standar RPS baku pada mockup)
+        if ($subCount >= 13) {
+            $rows = [
+                [
+                    'nama' => 'Kuis',
+                    'keterangan' => 'P1, 2, 5, 9, 10, 12',
+                    'allocations' => [
+                        (string) $subIds[0] => 3,
+                        (string) $subIds[1] => 3,
+                        (string) $subIds[4] => 4,
+                        (string) $subIds[6] => 3,
+                        (string) $subIds[7] => 3,
+                        (string) $subIds[9] => 4,
+                    ],
+                ],
+                [
+                    'nama' => 'Tugas terstruktur',
+                    'keterangan' => 'P3, 4, 6, 11',
+                    'allocations' => [
+                        (string) $subIds[2] => 3,
+                        (string) $subIds[3] => 4,
+                        (string) $subIds[5] => 4,
+                        (string) $subIds[8] => 3,
+                    ],
+                ],
+                [
+                    'nama' => 'Studi kasus',
+                    'keterangan' => 'P13, 14',
+                    'allocations' => [
+                        (string) $subIds[10] => 4,
+                        (string) $subIds[11] => 3,
+                    ],
+                ],
+                [
+                    'nama' => 'Proyek kelompok',
+                    'keterangan' => 'P15 · presentasi',
+                    'allocations' => [
+                        (string) $subIds[12] => 4,
+                    ],
+                ],
+                [
+                    'nama' => 'UTS',
+                    'keterangan' => '6 bagian soal (asumsi)',
+                    'allocations' => [
+                        (string) $subIds[0] => 4,
+                        (string) $subIds[1] => 4,
+                        (string) $subIds[2] => 4,
+                        (string) $subIds[3] => 4,
+                        (string) $subIds[4] => 4,
+                        (string) $subIds[5] => 5,
+                    ],
+                ],
+                [
+                    'nama' => 'UAS',
+                    'keterangan' => '7 bagian soal (asumsi)',
+                    'allocations' => [
+                        (string) $subIds[6] => 4,
+                        (string) $subIds[7] => 4,
+                        (string) $subIds[8] => 4,
+                        (string) $subIds[9] => 5,
+                        (string) $subIds[10] => 5,
+                        (string) $subIds[11] => 4,
+                        (string) $subIds[12] => 4,
+                    ],
+                ],
+            ];
+        } elseif ($subCount > 0) {
+            // 2. Pembagian proporsional otomatis untuk jumlah Sub-CPMK dinamis (misal 4, 6, 8, 10, dll)
+            $half = max(1, (int) floor($subCount / 2));
+            $utsAlloc = [];
+            $utsWeight = round(25 / $half, 1);
+            $utsAccum = 0;
+            for ($i = 0; $i < $half; $i++) {
+                $w = ($i === $half - 1) ? round(25 - $utsAccum, 1) : $utsWeight;
+                $utsAlloc[(string) $subIds[$i]] = $w;
+                $utsAccum += $w;
+            }
 
-            RpsPenilaianKomponen::create([
-                'skema_id' => $skema->id,
-                'nama_instrumen' => trim($nama),
-                'sub_cpmk_id' => $assignedSubId,
-                'bobot' => (float) $bobot,
-                'urutan' => $urutan++,
-            ]);
+            $uasAlloc = [];
+            $uasCount = $subCount - $half;
+            $uasWeight = round(30 / max(1, $uasCount), 1);
+            $uasAccum = 0;
+            for ($i = $half; $i < $subCount; $i++) {
+                $w = ($i === $subCount - 1) ? round(30 - $uasAccum, 1) : $uasWeight;
+                $uasAlloc[(string) $subIds[$i]] = $w;
+                $uasAccum += $w;
+            }
 
-            $subIndex++;
+            $kuisAlloc = [];
+            $kuisCount = min(4, $subCount);
+            $kw = round(20 / $kuisCount, 1);
+            $kAcc = 0;
+            for ($i = 0; $i < $kuisCount; $i++) {
+                $w = ($i === $kuisCount - 1) ? round(20 - $kAcc, 1) : $kw;
+                $kuisAlloc[(string) $subIds[$i]] = $w;
+                $kAcc += $w;
+            }
+
+            $tugasAlloc = [];
+            $tCount = min(5, $subCount);
+            $tw = round(25 / $tCount, 1);
+            $tAcc = 0;
+            for ($i = 0; $i < $tCount; $i++) {
+                $idx = ($i + 1) % $subCount;
+                $w = ($i === $tCount - 1) ? round(25 - $tAcc, 1) : $tw;
+                $tugasAlloc[(string) $subIds[$idx]] = $w;
+                $tAcc += $w;
+            }
+
+            $rows = [
+                ['nama' => 'Kuis', 'keterangan' => 'Rincian pertemuan kuis', 'allocations' => $kuisAlloc],
+                ['nama' => 'Tugas terstruktur', 'keterangan' => 'Tugas terstruktur mingguan', 'allocations' => $tugasAlloc],
+                ['nama' => 'UTS', 'keterangan' => "Bagian soal materi paruh 1", 'allocations' => $utsAlloc],
+                ['nama' => 'UAS', 'keterangan' => "Bagian soal materi paruh 2", 'allocations' => $uasAlloc],
+            ];
+        } else {
+            $rows = [];
         }
+
+        $komponenRps = [
+            'Kuis, keaktifan, kerja sama tim' => ['weekly' => 20, 'summary' => 15],
+            'Tugas (terstruktur, studi kasus, proyek)' => ['weekly' => 25, 'summary' => 30],
+            'UTS' => ['weekly' => 25, 'summary' => 25],
+            'UAS' => ['weekly' => 30, 'summary' => 30],
+        ];
+
+        $temuan = [
+            'Bobot kuis di rincian mingguan 20%, tetapi di tabel komponen 15%. Tugas 25% vs 30%.',
+            'Belum ada pemetaan CPMK – CPL dan porsi CPL. Pemetaan bertanda * di sini masih asumsi.',
+            'Rancangan tugas proyek membebankan Sub-CPMK, tetapi bobotnya tercatat tunggal di pertemuan akhir.',
+            'UTS dan UAS belum dipecah per Sub-CPMK. Pembagian per bagian soal di atas masih asumsi.',
+        ];
+
+        return [
+            'rows' => $rows,
+            'komponen_rps' => $komponenRps,
+            'temuan' => $temuan,
+        ];
+    }
+
+    /**
+     * Sinkronisasikan tabel rps_penilaian_komponen dari struktur Matriks Alokasi
+     */
+    public function syncKomponensFromMatrix(RpsPenilaianSkema $skema, array $matrixData): void
+    {
+        DB::transaction(function () use ($skema, $matrixData) {
+            $skema->update(['matrix_alokasi' => $matrixData]);
+
+            // Hapus komponen instrumen lama dan buat ulang dari matriks
+            $skema->komponens()->delete();
+
+            $urutan = 1;
+            $rows = $matrixData['rows'] ?? [];
+
+            foreach ($rows as $rIdx => $row) {
+                $nama = trim($row['nama'] ?? 'Komponen ' . ($rIdx + 1));
+                $allocations = $row['allocations'] ?? [];
+
+                foreach ($allocations as $subCpmkId => $bobotVal) {
+                    $bobot = (float) $bobotVal;
+                    if ($bobot <= 0) {
+                        continue;
+                    }
+
+                    $sub = SubCpmk::find($subCpmkId);
+                    $subKode = $sub ? $sub->kode_sub_cpmk : "S{$subCpmkId}";
+
+                    // Beri label instrumen yang jelas, misal: Kuis (Sub-CPMK 1) atau UTS (Sub-CPMK 1)
+                    $instrumenName = "{$nama} ({$subKode})";
+
+                    RpsPenilaianKomponen::create([
+                        'skema_id' => $skema->id,
+                        'nama_instrumen' => $instrumenName,
+                        'sub_cpmk_id' => (int) $subCpmkId,
+                        'bobot' => $bobot,
+                        'urutan' => $urutan++,
+                    ]);
+                }
+            }
+        });
     }
 
     /**
