@@ -115,6 +115,12 @@ class NilaiController extends Controller
         // Hitung analitik agregat kelas untuk Tab 3
         $capaianKelas = $obeService->hitungCapaianKelas($jadwal, $skema, $rps);
 
+        // Peta komponen matriks [rowIndex][subCpmkId] => RpsPenilaianKomponen
+        $komponenMatrixMap = $obeService->getKomponenMatrixMap($skema, $matrixData);
+
+        // Status kunci matriks jika RPS resmi terunggah atau skema final
+        $isMatrixLocked = (bool) ($skema->is_finalized || ($rps && $rps->file_rps));
+
         // Tentukan tab aktif
         $defaultTab = $skema->komponens->count() > 0 ? 'input' : 'pengaturan';
         $tab = $request->query('tab', $defaultTab);
@@ -124,6 +130,8 @@ class NilaiController extends Controller
             'rps',
             'skema',
             'matrixData',
+            'komponenMatrixMap',
+            'isMatrixLocked',
             'krsList',
             'studentAssessments',
             'capaianKelas',
@@ -144,8 +152,9 @@ class NilaiController extends Controller
             ['dosen_id' => $dosen->id]
         );
 
-        if ($skema->is_finalized) {
-            return back()->with('error', 'Skema penilaian telah difinalisasi dan tidak dapat diubah tanpa izin Admin/Kaprodi.');
+        $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
+        if ($skema->is_finalized || ($rps && $rps->file_rps)) {
+            return back()->with('error', 'Matriks alokasi penilaian telah terkunci mengacu pada dokumen RPS resmi yang telah ditetapkan prodi.');
         }
 
         if ($request->input('action') === 'reset_rps') {
@@ -153,14 +162,6 @@ class NilaiController extends Controller
             return redirect()
                 ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
                 ->with('success', 'Matriks alokasi instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
-        }
-
-        if ($request->input('action') === 'return_rps') {
-            $catatan = $request->input('catatan_revisi', 'Dosen meminta tinjauan ulang terkait temuan ketidaksesuaian tabel komponen dan pembagian soal pada RPS.');
-            // Rekam log atau kirim notifikasi jika diperlukan
-            return redirect()
-                ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
-                ->with('success', 'Temuan audit RPS dan permohonan revisi berhasil dikembalikan kepada Tim Penyusun Kurikulum / Kaprodi.');
         }
 
         // Cek jika request berasal dari Matriks 2D Alokasi
@@ -271,6 +272,12 @@ class NilaiController extends Controller
 
         $skema = RpsPenilaianSkema::where('jadwal_id', $jadwal->id)->firstOrFail();
         if ($skema->is_finalized) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Nilai kelas telah difinalisasi dan terkunci.',
+                ], 403);
+            }
             return back()->with('error', 'Nilai kelas telah difinalisasi dan terkunci.');
         }
 
@@ -305,6 +312,23 @@ class NilaiController extends Controller
         // Update draf KHS
         $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
         $obeService->sinkronisasiKeKhs($jadwal, $skema, $rps);
+
+        if ($request->ajax() || $request->wantsJson()) {
+            $updatedKrsIds = array_keys($scores);
+            $assessments = [];
+            foreach ($updatedKrsIds as $krsId) {
+                $krs = Krs::with(['nilaiKomponens', 'mahasiswa'])->find($krsId);
+                if ($krs) {
+                    $assessments[$krsId] = $obeService->hitungNilaiMahasiswa($krs, $skema, $rps);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Nilai mahasiswa berhasil disimpan.',
+                'assessments' => $assessments,
+            ]);
+        }
 
         return redirect()
             ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])

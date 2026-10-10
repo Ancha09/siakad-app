@@ -240,6 +240,51 @@
         padding: 24px;
         box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
+    .modal-box-large {
+        max-width: 1180px;
+        width: 95%;
+        max-height: 92vh;
+        padding: 22px 26px;
+    }
+    .mhs-row-clickable {
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .mhs-row-clickable:hover {
+        background: #f8fafc;
+    }
+    .mhs-name-btn {
+        color: #1d4ed8;
+        font-weight: 700;
+        text-decoration: none;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 0;
+        font-size: 13.5px;
+        text-align: left;
+    }
+    .mhs-name-btn:hover {
+        text-decoration: underline;
+        color: #1e40af;
+    }
+    .toast-popup {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+        z-index: 10000;
+        font-size: 13px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity 0.3s ease;
+    }
 
     .table-input-nilai td {
         vertical-align: middle;
@@ -667,12 +712,21 @@
                     <div>
                         <span class="badge-findings">
                             <svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                            <span>{{ count($temuanList) }} temuan perlu diselesaikan</span>
+                            <span>{{ count($temuanList) }} temuan pada RPS</span>
                         </span>
                     </div>
                 </div>
 
                 <div class="obe-card-body" style="padding: 18px 20px;">
+                    @if($isMatrixLocked)
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:12.5px; color:#1e40af; display:flex; align-items:center; gap:10px;">
+                            <x-layout-icon name="lock" />
+                            <div>
+                                <strong>Matriks Terkunci (Baku):</strong> Bobot penilaian mengacu pada dokumen kurikulum RPS resmi yang telah ditetapkan program studi. Seluruh sel bobot bersifat read-only untuk menjaga konsistensi OBE. Pembukaan kunci hanya dapat dilakukan melalui perizinan Administrator / Kaprodi.
+                            </div>
+                        </div>
+                    @endif
+
                     <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-matrix-skema">
                         @csrf
 
@@ -690,7 +744,7 @@
                                                 </th>
                                             @endif
                                         @endforeach
-                                        @if(! $skema->is_finalized)
+                                        @if(! $isMatrixLocked)
                                             <th style="width: 44px; background: #ffffff; border-bottom: none;"></th>
                                         @endif
                                     </tr>
@@ -708,7 +762,7 @@
                                                 </th>
                                             @endforeach
                                         @endforeach
-                                        @if(! $skema->is_finalized)
+                                        @if(! $isMatrixLocked)
                                             <th style="background: #f8fafc; text-align: center; font-size: 11px; color: #64748b;">Aksi</th>
                                         @endif
                                     </tr>
@@ -730,13 +784,13 @@
                                                        placeholder="Nama Komponen (mis: Kuis)"
                                                        value="{{ $row['nama'] }}"
                                                        required
-                                                       {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                       {{ $isMatrixLocked ? 'disabled' : '' }}>
                                                 <input type="text"
                                                        name="matrix_rows[{{ $rIdx }}][keterangan]"
                                                        class="matrix-row-ket"
                                                        placeholder="Rincian pertemuan (mis: P1, 2, 5...)"
                                                        value="{{ $row['keterangan'] ?? '' }}"
-                                                       {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                       {{ $isMatrixLocked ? 'disabled' : '' }}>
                                             </td>
                                             <td>
                                                 <span class="row-bobot-val" id="row-bobot-{{ $rIdx }}">{{ $rowSum > 0 ? (round($rowSum, 1) . '%') : '0%' }}</span>
@@ -759,10 +813,10 @@
                                                            data-sub="{{ $sub->id }}"
                                                            data-cpmk="{{ $sub->cpmk_id }}"
                                                            data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
-                                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                           {{ $isMatrixLocked ? 'disabled' : '' }}>
                                                 </td>
                                             @endforeach
-                                            @if(! $skema->is_finalized)
+                                            @if(! $isMatrixLocked)
                                                 <td style="text-align: center; padding: 4px;">
                                                     <button type="button" class="btn-outline btn-remove-matrix-row" style="padding: 4px 7px; color: #dc2626; border-color: #fca5a5;" title="Hapus komponen">
                                                         <x-layout-icon name="trash" />
@@ -804,7 +858,7 @@
                                                 <span class="col-bobot-val" id="col-bobot-{{ $sub->id }}">-</span>
                                             </td>
                                         @endforeach
-                                        @if(! $skema->is_finalized)
+                                        @if(! $isMatrixLocked)
                                             <td></td>
                                         @endif
                                     </tr>
@@ -812,7 +866,7 @@
                             </table>
                         </div>
 
-                        @if(! $skema->is_finalized)
+                        @if(! $isMatrixLocked)
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 10px;">
                                 <div style="display: flex; gap: 8px;">
                                     <button type="button" class="btn-outline" id="btn-add-matrix-row">
@@ -842,7 +896,7 @@
                                             @endphp
                                             <div class="rollup-item">
                                                 <span>
-                                                    <strong>{{ $cpmk->kode_cpmk }}</strong>
+                                                     <strong>{{ $cpmk->kode_cpmk }}</strong>
                                                     <span style="color: #64748b; font-size: 11px;">{{ $cpmkSubRanges[$cpmk->id] ?? '' }}</span>
                                                     &rarr; <span class="cpl-pill">{{ $firstSubCpl }}*</span>
                                                 </span>
@@ -911,6 +965,7 @@
                             <div class="analytics-card">
                                 <div class="analytics-card-head">
                                     <h4>Temuan pada RPS</h4>
+                                    <div class="subtitle">Catatan audit sinkronisasi rincian vs ringkasan bobot</div>
                                 </div>
                                 <div class="analytics-card-body">
                                     <div style="margin-bottom: 16px;">
@@ -926,22 +981,24 @@
                                         @endforelse
                                     </div>
 
-                                    @if(! $skema->is_finalized)
-                                        <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
-                                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <div style="margin-top: auto; padding-top: 14px; border-top: 1px solid #e2e8f0;">
+                                        @if(! $isMatrixLocked)
+                                            <div style="display: flex; gap: 8px;">
                                                 <button type="submit" name="action" value="draft" class="btn-outline" style="flex: 1; text-align: center; font-size: 12.5px;">
                                                     Simpan draf
                                                 </button>
-                                                <button type="button" class="btn-primary" style="flex: 1.3; background: #0f766e; border-color: #0f766e; text-align: center; font-size: 12.5px;" onclick="openModal('modal-return-rps')">
-                                                    Kembalikan ke penyusun RPS
+                                                <button type="submit" name="action" value="save" class="btn-primary" style="flex: 1.5; text-align: center; justify-content: center; font-size: 13px;">
+                                                    <x-layout-icon name="check" />
+                                                    <span>Simpan &amp; Lanjut ke Input Nilai</span>
                                                 </button>
                                             </div>
-                                            <button type="submit" name="action" value="save" class="btn-primary" style="width: 100%; text-align: center; justify-content: center; font-size: 13px;">
-                                                <x-layout-icon name="check" />
-                                                <span>Simpan &amp; Lanjut ke Input Nilai</span>
-                                            </button>
-                                        </div>
-                                    @endif
+                                        @else
+                                            <a href="{{ route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input']) }}" class="btn-primary" style="width: 100%; text-align: center; justify-content: center; font-size: 13px; text-decoration: none;">
+                                                <span>Lanjut ke Input Nilai</span>
+                                                <x-layout-icon name="arrow-right" />
+                                            </a>
+                                        @endif
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1001,9 +1058,9 @@
                             <span>Impor Excel</span>
                         </button>
 
-                        <button type="button" class="btn-primary" onclick="submitNilaiForm()">
-                            <x-layout-icon name="save" />
-                            <span>Simpan Nilai</span>
+                        <button type="button" class="btn-primary" onclick="openFirstStudent()">
+                            <x-layout-icon name="edit" />
+                            <span>Mulai Input Nilai</span>
                         </button>
 
                         <button type="button" class="btn-primary" style="background:#16a34a; border-color:#16a34a;" onclick="openModal('modal-finalize')">
@@ -1019,125 +1076,300 @@
                 </div>
             </div>
 
-            {{-- Form & Tabel Input Nilai Mahasiswa --}}
-            <form action="{{ route('dosen.nilai.input-obe', $jadwal->id) }}" method="POST" id="form-input-nilai">
-                @csrf
+            {{-- Master Table: Daftar Nilai Mahasiswa (Clean Master View) --}}
+            <div class="page-card">
+                <div class="page-card-head" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <h2 style="margin:0;">Daftar Nilai Mahasiswa — Kelas {{ $jadwal->kelas }}</h2>
+                        <div style="font-size:12.5px; color:#64748b; margin-top:3px;">
+                            Klik pada nama mahasiswa atau tombol <strong>Detail &amp; Input</strong> untuk membuka formulir matriks OBE per mahasiswa.
+                        </div>
+                    </div>
+                    <span class="badge badge-info">{{ $krsList->count() }} Mahasiswa Terdaftar</span>
+                </div>
 
-                <div class="page-card">
-                    <div class="page-card-head">
-                        <h2>Daftar Nilai Mahasiswa — Kelas {{ $jadwal->kelas }}</h2>
-                        <span class="badge badge-info">{{ $krsList->count() }} Mahasiswa Terdaftar</span>
+                <div class="page-card-body" style="padding:0;">
+                    <div class="table-wrap">
+                        <table class="table-input-nilai" style="width:100%; border-collapse:collapse;" id="table-nilai">
+                            <thead>
+                                <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                                    <th style="width:45px; text-align:center;">No</th>
+                                    <th style="width:115px;">NIM</th>
+                                    <th style="min-width:200px;">Nama Mahasiswa</th>
+                                    <th style="text-align:center; width:110px; background:#eff6ff;">Nilai Akhir</th>
+                                    <th style="text-align:center; width:80px; background:#eff6ff;">Huruf</th>
+                                    <th style="text-align:center; width:80px; background:#eff6ff;">Mutu</th>
+                                    <th style="text-align:center; width:170px;">Status Ketercapaian CPL</th>
+                                    <th style="text-align:center; width:150px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($krsList as $krs)
+                                    @php
+                                        $ass = $studentAssessments[$krs->id] ?? [
+                                            'na' => 0,
+                                            'nilai_huruf' => 'E',
+                                            'bobot' => 0.0,
+                                            'all_cpl_achieved' => false,
+                                            'unachieved_cpls' => [],
+                                        ];
+                                    @endphp
+                                    <tr class="mhs-row mhs-row-clickable"
+                                        data-nim="{{ strtolower($krs->mahasiswa?->nim ?? '') }}"
+                                        data-nama="{{ strtolower($krs->mahasiswa?->nama ?? '') }}"
+                                        onclick="openStudentDrilldown({{ $krs->id }})">
+                                        <td style="text-align:center; font-weight:600; color:#64748b;">{{ $loop->iteration }}</td>
+                                        <td style="font-weight:700; font-family:monospace; color:#334155;">{{ $krs->mahasiswa?->nim ?? '-' }}</td>
+                                        <td>
+                                            <button type="button" class="mhs-name-btn" onclick="event.stopPropagation(); openStudentDrilldown({{ $krs->id }})">
+                                                <strong>{{ $krs->mahasiswa?->nama ?? '-' }}</strong>
+                                            </button>
+                                        </td>
+                                        <td style="text-align:center; font-weight:800; font-size:14px; background:#eff6ff; color:#0f172a;" id="cell-na-{{ $krs->id }}">
+                                            {{ number_format($ass['na'], 2) }}
+                                        </td>
+                                        <td style="text-align:center; background:#eff6ff;" id="cell-huruf-{{ $krs->id }}">
+                                            <span class="grade-chip grade-{{ substr($ass['nilai_huruf'], 0, 1) }}">
+                                                {{ $ass['nilai_huruf'] }}
+                                            </span>
+                                        </td>
+                                        <td style="text-align:center; font-weight:600; background:#eff6ff;" id="cell-mutu-{{ $krs->id }}">
+                                            {{ number_format($ass['bobot'], 2) }}
+                                        </td>
+                                        <td style="text-align:center;" id="cell-cpl-{{ $krs->id }}">
+                                            @if($ass['all_cpl_achieved'])
+                                                <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
+                                                    <x-layout-icon name="check" /> Lulus CPL
+                                                </span>
+                                            @else
+                                                <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
+                                                    Belum Lulus
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td style="text-align:center;" onclick="event.stopPropagation();">
+                                            <button type="button"
+                                                    class="btn-primary"
+                                                    style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px;"
+                                                    onclick="openStudentDrilldown({{ $krs->id }})">
+                                                <x-layout-icon name="edit" />
+                                                <span>Detail &amp; Input</span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" style="text-align:center; padding:40px; color:#64748b;">
+                                            Belum ada mahasiswa yang mengambil kelas ini.
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            {{-- =========================================================================
+                 MODAL DRILLDOWN INPUT NILAI OBE PER MAHASISWA (MATRIKS 2D)
+                 ========================================================================= --}}
+            <div id="modal-drilldown-mhs" class="modal-backdrop-custom" style="display:none;">
+                <div class="modal-box-custom modal-box-large">
+                    {{-- Header Modal --}}
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; gap:12px; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:12px;">
+                            <div id="modal-mhs-avatar" style="width:44px; height:44px; border-radius:50%; background:#dbeafe; color:#1d4ed8; font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                M
+                            </div>
+                            <div>
+                                <h3 style="margin:0; font-size:17px; font-weight:800; color:#0f172a;" id="modal-mhs-nama">Nama Mahasiswa</h3>
+                                <div style="font-size:12.5px; color:#64748b; margin-top:2px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                    <span>NIM: <strong id="modal-mhs-nim" style="font-family:monospace; color:#0f172a;">-</strong></span>
+                                    <span>&bull;</span>
+                                    <span>Kelas: <strong>{{ $jadwal->kelas }}</strong></span>
+                                    <span>&bull;</span>
+                                    <span>SKS: <strong>{{ $jadwal->mataKuliah->sks ?? '-' }} SKS</strong></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Navigasi Cepat Mahasiswa --}}
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <button type="button" class="btn-outline" id="btn-modal-prev" onclick="navigateStudent(-1)" style="font-size:12px; padding:6px 10px;" title="Mahasiswa Sebelumnya (Alt + Panah Kiri)">
+                                &larr; Sebelumnya
+                            </button>
+                            <span id="modal-student-counter" style="font-size:12px; font-weight:700; color:#475569; min-width:55px; text-align:center;">1 / 1</span>
+                            <button type="button" class="btn-outline" id="btn-modal-next" onclick="navigateStudent(1)" style="font-size:12px; padding:6px 10px;" title="Mahasiswa Berikutnya (Alt + Panah Kanan)">
+                                Berikutnya &rarr;
+                            </button>
+                            <button type="button" onclick="closeDrilldownModal()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#64748b; line-height:1; margin-left:8px;" title="Tutup (Esc)">
+                                &times;
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="page-card-body" style="padding:0;">
-                        <div class="table-wrap" style="overflow-x:auto;">
-                            <table class="table-input-nilai" style="width:100%; border-collapse:collapse;" id="table-nilai">
+                    {{-- Live KPI Summary Banner --}}
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:18px;">
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700;">Nilai Akhir (NA)</div>
+                            <div id="modal-kpi-na" style="font-size:24px; font-weight:800; color:#0f172a; margin-top:2px;">0.00</div>
+                        </div>
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700;">Nilai Huruf</div>
+                            <div id="modal-kpi-huruf" style="margin-top:4px;">
+                                <span class="grade-chip grade-E" style="font-size:14px; padding:4px 12px;">E</span>
+                            </div>
+                        </div>
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center;">
+                            <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700;">Bobot Mutu</div>
+                            <div id="modal-kpi-mutu" style="font-size:24px; font-weight:800; color:#0f172a; margin-top:2px;">0.00</div>
+                        </div>
+                        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; text-align:center; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                            <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700; margin-bottom:4px;">Ketercapaian CPL</div>
+                            <div id="modal-kpi-cpl">
+                                <span class="badge badge-warning" style="font-size:11.5px; padding:4px 10px;">Belum Lulus</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 2D Matrix Input Table --}}
+                    <div style="margin-bottom:16px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="font-size:12.5px; font-weight:700; color:#0f172a;">
+                                Matriks Instrumen Penilaian &times; Sub-CPMK:
+                            </div>
+                            <div style="font-size:11.5px; color:#64748b;">
+                                Input skor mentah (skala 0 - 100). Bobot (%) telah baku dari RPS.
+                            </div>
+                        </div>
+
+                        <div class="matrix-container" style="margin-bottom:0; max-height:42vh; overflow-y:auto;">
+                            <table class="table-matrix" id="table-modal-matrix">
                                 <thead>
-                                    <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
-                                        <th style="width:40px; text-align:center;">No</th>
-                                        <th style="width:110px;">NIM</th>
-                                        <th style="min-width:180px;">Nama Mahasiswa</th>
-                                        {{-- Kolom Dinamis Instrumen --}}
-                                        @foreach($komponens as $komp)
-                                            <th style="text-align:center; min-width:90px;">
-                                                <div>{{ $komp->nama_instrumen }}</div>
-                                                <div style="font-size:11px; color:#64748b; font-weight:400;">{{ $komp->bobot }}%</div>
-                                                @if($komp->subCpmk?->cpl)
-                                                    <span class="cpl-pill" style="margin-top:2px;">{{ $komp->subCpmk->cpl->kode_cpl }}</span>
-                                                @endif
-                                            </th>
+                                    {{-- Baris 1: Header CPMK --}}
+                                    <tr>
+                                        <th style="min-width:200px; background:#ffffff; border-bottom:none;"></th>
+                                        <th style="width:70px; background:#ffffff; border-bottom:none; text-align:center;"></th>
+                                        @foreach($cpmks as $cpmk)
+                                            @if($cpmk->subCpmks->count() > 0)
+                                                <th colspan="{{ $cpmk->subCpmks->count() }}" class="matrix-cpmk-head" title="{{ $cpmk->deskripsi }}">
+                                                    {{ $cpmk->kode_cpmk }}
+                                                </th>
+                                            @endif
                                         @endforeach
-                                        <th style="text-align:center; min-width:80px; background:#eff6ff;">Nilai Akhir</th>
-                                        <th style="text-align:center; min-width:60px; background:#eff6ff;">Huruf</th>
-                                        <th style="text-align:center; min-width:60px; background:#eff6ff;">Mutu</th>
-                                        <th style="text-align:center; min-width:120px;">Status CPL</th>
+                                    </tr>
+                                    {{-- Baris 2: Header Komponen, Bobot, Sub-CPMK --}}
+                                    <tr>
+                                        <th style="background:#f8fafc; font-weight:700; color:#334155;">Komponen Penilaian</th>
+                                        <th style="background:#f8fafc; font-weight:700; color:#334155; text-align:center;">Bobot</th>
+                                        @php $subIter = 1; @endphp
+                                        @foreach($cpmks as $cpmk)
+                                            @foreach($cpmk->subCpmks as $sub)
+                                                <th class="matrix-sub-head" style="min-width:54px;" title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})">
+                                                    S{{ $subIter++ }}
+                                                </th>
+                                            @endforeach
+                                        @endforeach
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @forelse($krsList as $krs)
+                                    @foreach($matrixRows as $rIdx => $row)
                                         @php
-                                            $ass = $studentAssessments[$krs->id] ?? [
-                                                'na' => 0,
-                                                'nilai_huruf' => 'E',
-                                                'bobot' => 0.0,
-                                                'all_cpl_achieved' => false,
-                                                'unachieved_cpls' => [],
-                                            ];
-                                            $nilaiMap = $krs->nilaiKomponens->pluck('nilai_angka', 'komponen_id');
+                                            $rowSum = 0;
+                                            foreach ($allSubCpmks as $sub) {
+                                                $val = $row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? 0);
+                                                $rowSum += (float) $val;
+                                            }
                                         @endphp
-                                        <tr class="mhs-row" data-nim="{{ strtolower($krs->mahasiswa?->nim ?? '') }}" data-nama="{{ strtolower($krs->mahasiswa?->nama ?? '') }}">
-                                            <td style="text-align:center; font-weight:600; color:#64748b;">{{ $loop->iteration }}</td>
-                                            <td style="font-weight:600; font-family:monospace;">{{ $krs->mahasiswa?->nim ?? '-' }}</td>
-                                            <td style="font-weight:600; color:#0f172a;">{{ $krs->mahasiswa?->nama ?? '-' }}</td>
-
-                                            {{-- Input Skor Komponen --}}
-                                            @foreach($komponens as $komp)
-                                                @php
-                                                    $val = $nilaiMap->get($komp->id);
-                                                @endphp
-                                                <td style="text-align:center;">
-                                                    <input type="number"
-                                                           name="nilai[{{ $krs->id }}][{{ $komp->id }}]"
-                                                           class="form-control input-skor mhs-input"
-                                                           min="0"
-                                                           max="100"
-                                                           step="0.01"
-                                                           placeholder="0"
-                                                           value="{{ $val !== null ? $val : '' }}"
-                                                           data-krs="{{ $krs->id }}"
-                                                           data-komponen="{{ $komp->id }}"
-                                                           data-bobot="{{ $komp->bobot }}"
-                                                           data-cpl="{{ $komp->subCpmk?->cpl?->kode_cpl ?? '' }}"
-                                                           {{ $skema->is_finalized ? 'readonly' : '' }}>
-                                                </td>
-                                            @endforeach
-
-                                            {{-- Hasil Hitung Live --}}
-                                            <td style="text-align:center; font-weight:800; font-size:14px; background:#eff6ff;" id="cell-na-{{ $krs->id }}">
-                                                {{ number_format($ass['na'], 2) }}
-                                            </td>
-                                            <td style="text-align:center; background:#eff6ff;" id="cell-huruf-{{ $krs->id }}">
-                                                <span class="grade-chip grade-{{ substr($ass['nilai_huruf'], 0, 1) }}">
-                                                    {{ $ass['nilai_huruf'] }}
-                                                </span>
-                                            </td>
-                                            <td style="text-align:center; font-weight:600; background:#eff6ff;" id="cell-mutu-{{ $krs->id }}">
-                                                {{ number_format($ass['bobot'], 2) }}
-                                            </td>
-                                            <td style="text-align:center;" id="cell-cpl-{{ $krs->id }}">
-                                                @if($ass['all_cpl_achieved'])
-                                                    <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
-                                                        <x-layout-icon name="check" /> Lulus CPL
-                                                    </span>
-                                                @else
-                                                    <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
-                                                        Belum Lulus
-                                                    </span>
+                                        <tr>
+                                            <td>
+                                                <div style="font-weight:700; color:#0f172a; font-size:12.5px;">{{ $row['nama'] }}</div>
+                                                @if(!empty($row['keterangan']))
+                                                    <div style="font-size:11px; color:#64748b;">{{ $row['keterangan'] }}</div>
                                                 @endif
                                             </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="{{ 7 + $komponens->count() }}" style="text-align:center; padding:40px; color:#64748b;">
-                                                Belum ada mahasiswa yang mengambil kelas ini.
+                                            <td style="text-align:center; font-weight:800; font-size:12.5px; color:#0f172a;">
+                                                {{ round($rowSum, 1) }}%
                                             </td>
+                                            @foreach($allSubCpmks as $sub)
+                                                @php
+                                                    $alloc = (float) ($row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? 0));
+                                                    $komp = $komponenMatrixMap[$rIdx][$sub->id] ?? null;
+                                                @endphp
+                                                @if($alloc > 0 && $komp)
+                                                    <td style="text-align:center; padding:5px 4px; vertical-align:middle; background:#ffffff;">
+                                                        <input type="number"
+                                                               step="0.5"
+                                                               min="0"
+                                                               max="100"
+                                                               class="matrix-score-input"
+                                                               data-komponen-id="{{ $komp->id }}"
+                                                               data-row="{{ $rIdx }}"
+                                                               data-sub="{{ $sub->id }}"
+                                                               data-weight="{{ $alloc }}"
+                                                               data-cpl="{{ $sub->cpl?->kode_cpl ?? '' }}"
+                                                               placeholder="0"
+                                                               {{ $skema->is_finalized ? 'disabled' : '' }}
+                                                               style="width:50px; height:32px; text-align:center; font-weight:700; font-size:13px; border:1px solid #cbd5e1; border-radius:6px; margin:0 auto; display:block;">
+                                                        <span style="font-size:10px; color:#64748b; font-weight:600; display:block; margin-top:2px;">{{ $alloc }}%</span>
+                                                    </td>
+                                                @else
+                                                    <td style="text-align:center; background:#f8fafc; color:#cbd5e1; font-weight:700; font-size:13px;">
+                                                        -
+                                                    </td>
+                                                @endif
+                                            @endforeach
                                         </tr>
-                                    @endforelse
+                                    @endforeach
                                 </tbody>
+                                <tfoot>
+                                    <tr style="background:#f8fafc; font-weight:700; border-top:2px solid #cbd5e1;">
+                                        <td style="padding:8px 10px; color:#0f172a; font-weight:800; font-size:12px;">Bobot Sub-CPMK</td>
+                                        <td style="text-align:center; font-weight:800; color:#15803d; font-size:12px;">100%</td>
+                                        @foreach($allSubCpmks as $sub)
+                                            @php
+                                                $colSum = 0;
+                                                foreach ($matrixRows as $r) {
+                                                    $colSum += (float) ($r['allocations'][$sub->id] ?? ($r['allocations'][(string)$sub->id] ?? 0));
+                                                }
+                                            @endphp
+                                            <td style="text-align:center; font-weight:800; font-size:12px; color:#0f172a;">
+                                                {{ $colSum > 0 ? (round($colSum, 1) . '%') : '-' }}
+                                            </td>
+                                        @endforeach
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
                     </div>
-                </div>
 
-                @if(! $skema->is_finalized && $krsList->isNotEmpty())
-                    <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
-                        <button type="submit" class="btn-primary">
-                            <x-layout-icon name="save" />
-                            <span>Simpan Draf Nilai</span>
-                        </button>
+                    {{-- Rincian Ketercapaian CPL --}}
+                    <div style="margin-bottom:18px;">
+                        <div style="font-size:12.5px; font-weight:700; color:#0f172a; margin-bottom:8px;">
+                            Status Ketercapaian CPL Mahasiswa:
+                        </div>
+                        <div id="modal-cpl-list" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px;">
+                            {{-- Diisi secara dinamis oleh JavaScript --}}
+                        </div>
                     </div>
-                @endif
-            </form>
+
+                    {{-- Modal Footer Actions --}}
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:14px; gap:12px; flex-wrap:wrap;">
+                        <div style="font-size:12px; color:#64748b;">
+                            Gunakan tombol <kbd style="background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; padding:2px 5px; font-size:11px;">Tab</kbd> untuk berpindah antar sel nilai.
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center;">
+                            <button type="button" class="btn-outline" onclick="closeDrilldownModal()">Tutup</button>
+                            @if(! $skema->is_finalized)
+                                <button type="button" class="btn-primary" id="btn-save-current-mhs" onclick="saveCurrentStudent()">
+                                    <x-layout-icon name="save" />
+                                    <span id="label-btn-save-mhs">Simpan Nilai Mahasiswa</span>
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
 
     {{-- =========================================================================
@@ -1493,43 +1725,7 @@
     </div>
 </div>
 
-{{-- =========================================================================
-     MODAL: KEMBALIKAN KE PENYUSUN RPS
-     ========================================================================= --}}
-<div id="modal-return-rps" class="modal-backdrop-custom" style="display:none;">
-    <div class="modal-box-custom">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="margin:0; font-size:16px; font-weight:700; color:#0f172a;">Kembalikan Temuan ke Penyusun RPS</h3>
-            <button type="button" onclick="closeModal('modal-return-rps')" style="background:none; border:none; cursor:pointer; color:#64748b; font-size:20px; line-height:1;">
-                &times;
-            </button>
-        </div>
 
-        <p style="font-size:13px; color:#475569; margin-top:0; margin-bottom:14px; line-height:1.5;">
-            Kirimkan catatan temuan audit RPS ini kembali kepada <strong>Tim Pengembang Kurikulum Program Studi</strong> atau <strong>Dosen Koordinator RPS</strong> untuk dilakukan revisi sinkronisasi rincian mingguan dan ringkasan bobot.
-        </p>
-
-        <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST">
-            @csrf
-            <input type="hidden" name="action" value="return_rps">
-
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Catatan Temuan / Rekomendasi Revisi:</label>
-                <textarea name="catatan_revisi" class="form-control" rows="5" style="width:100%; font-size:12.5px; line-height:1.5;">@foreach($matrixData['temuan'] ?? [] as $t)
-{{ $loop->iteration }}. {{ $t }}
-@endforeach</textarea>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" class="btn-outline" onclick="closeModal('modal-return-rps')">Batal</button>
-                <button type="submit" class="btn-primary" style="background:#0f766e; border-color:#0f766e;">
-                    <x-layout-icon name="arrow-left" />
-                    <span>Kirim Catatan ke Tim RPS</span>
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 
 {{-- =========================================================================
      JAVASCRIPT LOGIC
@@ -1798,76 +1994,324 @@
             return { huruf: 'E', bobot: '0.00', cls: 'grade-E' };
         }
 
-        // Live calculation per row on input
-        const tableNilai = document.getElementById('table-nilai');
-        if (tableNilai) {
-            tableNilai.addEventListener('input', function(e){
-                if (!e.target.classList.contains('mhs-input')) return;
-
-                const tr = e.target.closest('tr');
-                if (!tr) return;
-
-                const krsId = e.target.getAttribute('data-krs');
-                const inputs = tr.querySelectorAll('.mhs-input');
-
-                let totalWeightedScore = 0;
-                let cplData = {};
-
-                inputs.forEach(inp => {
-                    const val = parseFloat(inp.value) || 0;
-                    const weight = parseFloat(inp.getAttribute('data-bobot')) || 0;
-                    const cplCode = inp.getAttribute('data-cpl') || '';
-
-                    totalWeightedScore += (val * weight) / 100.0;
-
-                    if (cplCode) {
-                        if (!cplData[cplCode]) {
-                            cplData[cplCode] = { score: 0, weight: 0 };
-                        }
-                        cplData[cplCode].score += (val * weight);
-                        cplData[cplCode].weight += weight;
-                    }
-                });
-
-                const na = Math.min(100, Math.max(0, Math.round(totalWeightedScore * 100) / 100));
-                const conv = konversiNilai(na);
-
-                // Update NA cell
-                const cellNa = document.getElementById('cell-na-' + krsId);
-                if (cellNa) cellNa.textContent = na.toFixed(2);
-
-                // Update Huruf cell
-                const cellHuruf = document.getElementById('cell-huruf-' + krsId);
-                if (cellHuruf) {
-                    cellHuruf.innerHTML = `<span class="grade-chip ${conv.cls}">${conv.huruf}</span>`;
+        @php
+            $studentsJs = [];
+            foreach ($krsList as $krs) {
+                $ass = $studentAssessments[$krs->id] ?? [
+                    'na' => 0,
+                    'nilai_huruf' => 'E',
+                    'bobot' => 0.0,
+                    'all_cpl_achieved' => false,
+                    'unachieved_cpls' => [],
+                    'cpl_results' => [],
+                ];
+                $mScores = [];
+                foreach ($krs->nilaiKomponens as $nk) {
+                    $mScores[(int)$nk->komponen_id] = (float) $nk->nilai_angka;
                 }
+                $studentsJs[] = [
+                    'id' => (int) $krs->id,
+                    'nim' => $krs->mahasiswa?->nim ?? '-',
+                    'nama' => $krs->mahasiswa?->nama ?? '-',
+                    'na' => (float) ($ass['na'] ?? 0),
+                    'huruf' => $ass['nilai_huruf'] ?? 'E',
+                    'mutu' => (float) ($ass['bobot'] ?? 0),
+                    'all_cpl_achieved' => (bool) ($ass['all_cpl_achieved'] ?? false),
+                    'unachieved_cpls' => $ass['unachieved_cpls'] ?? [],
+                    'cpl_results' => $ass['cpl_results'] ?? [],
+                    'scores' => $mScores,
+                ];
+            }
+        @endphp
 
-                // Update Mutu cell
-                const cellMutu = document.getElementById('cell-mutu-' + krsId);
-                if (cellMutu) cellMutu.textContent = conv.bobot;
+        const studentsData = @json($studentsJs);
+        let currentStudentIndex = 0;
 
-                // Update CPL Status cell
-                let allCplAchieved = true;
-                const unachieved = [];
+        function showToast(message, type = 'success') {
+            let toast = document.getElementById('global-toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'global-toast';
+                toast.className = 'toast-popup';
+                document.body.appendChild(toast);
+            }
+            const iconSvg = type === 'success'
+                ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>'
+                : '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+            toast.innerHTML = iconSvg + `<span>${message}</span>`;
+            toast.style.display = 'flex';
+            toast.style.opacity = '1';
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => { toast.style.display = 'none'; }, 300);
+            }, 3000);
+        }
 
-                for (const [code, item] of Object.entries(cplData)) {
-                    const cplScore = item.weight > 0 ? (item.score / item.weight) : 0;
-                    if (cplScore < passingGrade) {
-                        allCplAchieved = false;
-                        unachieved.push(code);
-                    }
+        window.openFirstStudent = function() {
+            if (studentsData && studentsData.length > 0) {
+                openStudentDrilldown(studentsData[0].id);
+            }
+        };
+
+        window.openStudentDrilldown = function(krsId) {
+            const idx = studentsData.findIndex(s => s.id === krsId);
+            if (idx === -1) return;
+            currentStudentIndex = idx;
+            renderModalStudent();
+            openModal('modal-drilldown-mhs');
+        };
+
+        window.closeDrilldownModal = function() {
+            closeModal('modal-drilldown-mhs');
+        };
+
+        window.navigateStudent = function(dir) {
+            captureModalInputsToMemory();
+
+            const newIdx = currentStudentIndex + dir;
+            if (newIdx < 0 || newIdx >= studentsData.length) return;
+            currentStudentIndex = newIdx;
+            renderModalStudent();
+        };
+
+        function captureModalInputsToMemory() {
+            if (!studentsData[currentStudentIndex]) return;
+            const currentScores = studentsData[currentStudentIndex].scores || {};
+            document.querySelectorAll('#table-modal-matrix .matrix-score-input').forEach(inp => {
+                const kompId = inp.getAttribute('data-komponen-id');
+                if (kompId) {
+                    currentScores[kompId] = inp.value !== '' ? parseFloat(inp.value) : '';
                 }
+            });
+            studentsData[currentStudentIndex].scores = currentScores;
+        }
 
-                const cellCpl = document.getElementById('cell-cpl-' + krsId);
-                if (cellCpl) {
-                    if (allCplAchieved) {
-                        cellCpl.innerHTML = `<span class="badge badge-success" style="font-size:11px; padding:3px 8px;"><svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lulus CPL</span>`;
-                    } else {
-                        cellCpl.innerHTML = `<span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: ${unachieved.join(', ')}">Belum Lulus</span>`;
+        function renderModalStudent() {
+            const s = studentsData[currentStudentIndex];
+            if (!s) return;
+
+            // Update Header Mahasiswa
+            const avatarEl = document.getElementById('modal-mhs-avatar');
+            if (avatarEl) {
+                avatarEl.textContent = s.nama ? s.nama.trim().charAt(0).toUpperCase() : 'M';
+            }
+            const namaEl = document.getElementById('modal-mhs-nama');
+            if (namaEl) namaEl.textContent = s.nama;
+            const nimEl = document.getElementById('modal-mhs-nim');
+            if (nimEl) nimEl.textContent = s.nim;
+
+            // Navigasi
+            const counterEl = document.getElementById('modal-student-counter');
+            if (counterEl) {
+                counterEl.textContent = `${currentStudentIndex + 1} / ${studentsData.length}`;
+            }
+            const prevBtn = document.getElementById('btn-modal-prev');
+            if (prevBtn) prevBtn.disabled = (currentStudentIndex === 0);
+            const nextBtn = document.getElementById('btn-modal-next');
+            if (nextBtn) nextBtn.disabled = (currentStudentIndex === studentsData.length - 1);
+
+            // Isi nilai-nilai input matriks
+            const inputs = document.querySelectorAll('#table-modal-matrix .matrix-score-input');
+            inputs.forEach(inp => {
+                const kompId = inp.getAttribute('data-komponen-id');
+                const val = (s.scores && s.scores[kompId] !== undefined) ? s.scores[kompId] : '';
+                inp.value = (val !== '' && val !== null && !isNaN(val)) ? val : '';
+            });
+
+            // Jalankan kalkulasi live untuk modal
+            hitungLiveModal();
+        }
+
+        function hitungLiveModal() {
+            let totalWeightedScore = 0;
+            let cplData = {};
+
+            const inputs = document.querySelectorAll('#table-modal-matrix .matrix-score-input');
+            inputs.forEach(inp => {
+                const val = parseFloat(inp.value) || 0;
+                const weight = parseFloat(inp.getAttribute('data-weight')) || 0;
+                const cplCode = inp.getAttribute('data-cpl') || '';
+
+                totalWeightedScore += (val * weight) / 100.0;
+
+                if (cplCode) {
+                    if (!cplData[cplCode]) {
+                        cplData[cplCode] = { score: 0, weight: 0 };
                     }
+                    cplData[cplCode].score += (val * weight);
+                    cplData[cplCode].weight += weight;
+                }
+            });
+
+            const na = Math.min(100, Math.max(0, Math.round(totalWeightedScore * 100) / 100));
+            const conv = konversiNilai(na);
+
+            // Update KPI cards di modal
+            const kpiNa = document.getElementById('modal-kpi-na');
+            if (kpiNa) kpiNa.textContent = na.toFixed(2);
+
+            const kpiHuruf = document.getElementById('modal-kpi-huruf');
+            if (kpiHuruf) {
+                kpiHuruf.innerHTML = `<span class="grade-chip ${conv.cls}" style="font-size:14px; padding:4px 12px;">${conv.huruf}</span>`;
+            }
+
+            const kpiMutu = document.getElementById('modal-kpi-mutu');
+            if (kpiMutu) kpiMutu.textContent = conv.bobot;
+
+            // Update CPL cards di modal
+            let allCplAchieved = true;
+            const cplCardsHtml = [];
+
+            for (const [code, item] of Object.entries(cplData)) {
+                const cplScore = item.weight > 0 ? (item.score / item.weight) : 0;
+                const passed = cplScore >= passingGrade;
+                if (!passed) allCplAchieved = false;
+
+                cplCardsHtml.push(`
+                    <div style="background:${passed ? '#f0fdf4' : '#fef2f2'}; border:1px solid ${passed ? '#bbf7d0' : '#fecaca'}; border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong style="color:${passed ? '#15803d' : '#b91c1c'}; font-size:12.5px;">${code}</strong>
+                            <span style="font-size:11px; color:#64748b; margin-left:4px;">(Bobot: ${Math.round(item.weight*10)/10}%)</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-weight:800; font-size:13px; color:${passed ? '#15803d' : '#b91c1c'};">${cplScore.toFixed(1)}</div>
+                            <span class="badge ${passed ? 'badge-success' : 'badge-danger'}" style="font-size:10px; padding:2px 6px;">${passed ? 'Lulus' : 'Belum'}</span>
+                        </div>
+                    </div>
+                `);
+            }
+
+            const kpiCpl = document.getElementById('modal-kpi-cpl');
+            if (kpiCpl) {
+                kpiCpl.innerHTML = allCplAchieved
+                    ? `<span class="badge badge-success" style="font-size:11.5px; padding:4px 10px;"><svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lulus Semua CPL</span>`
+                    : `<span class="badge badge-warning" style="font-size:11.5px; padding:4px 10px;">Perbaikan CPL</span>`;
+            }
+
+            const cplListEl = document.getElementById('modal-cpl-list');
+            if (cplListEl) {
+                cplListEl.innerHTML = cplCardsHtml.length > 0
+                    ? cplCardsHtml.join('')
+                    : '<div style="color:#64748b; font-size:12px; grid-column:1/-1;">Belum ada bobot CPL yang terpetakan.</div>';
+            }
+        }
+
+        // Live calculation pada table modal matriks
+        const tableModalMatrix = document.getElementById('table-modal-matrix');
+        if (tableModalMatrix) {
+            tableModalMatrix.addEventListener('input', function(e) {
+                if (e.target.classList.contains('matrix-score-input')) {
+                    hitungLiveModal();
                 }
             });
         }
+
+        // Simpan nilai mahasiswa aktif via AJAX
+        window.saveCurrentStudent = async function() {
+            const s = studentsData[currentStudentIndex];
+            if (!s) return;
+
+            captureModalInputsToMemory();
+
+            const btnSave = document.getElementById('btn-save-current-mhs');
+            const lblBtn = document.getElementById('label-btn-save-mhs');
+            const origText = lblBtn ? lblBtn.textContent : 'Simpan Nilai Mahasiswa';
+
+            if (btnSave) {
+                btnSave.disabled = true;
+                if (lblBtn) lblBtn.textContent = 'Menyimpan...';
+            }
+
+            const payloadScores = {};
+            const inputs = document.querySelectorAll('#table-modal-matrix .matrix-score-input');
+            inputs.forEach(inp => {
+                const kompId = inp.getAttribute('data-komponen-id');
+                if (kompId) {
+                    payloadScores[kompId] = inp.value !== '' ? parseFloat(inp.value) : 0;
+                }
+            });
+
+            try {
+                const res = await fetch("{{ route('dosen.nilai.input', $jadwal->id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nilai: {
+                            [s.id]: payloadScores
+                        }
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(`Nilai untuk ${s.nama} berhasil disimpan!`, 'success');
+
+                    const updatedAss = data.assessments ? data.assessments[s.id] : null;
+                    if (updatedAss) {
+                        s.na = parseFloat(updatedAss.na) || 0;
+                        s.huruf = updatedAss.nilai_huruf;
+                        s.mutu = parseFloat(updatedAss.bobot) || 0;
+                        s.all_cpl_achieved = !!updatedAss.all_cpl_achieved;
+                        s.unachieved_cpls = updatedAss.unachieved_cpls || [];
+                        s.cpl_results = updatedAss.cpl_results || [];
+
+                        // Perbarui baris tabel luar
+                        const cellNa = document.getElementById('cell-na-' + s.id);
+                        if (cellNa) cellNa.textContent = s.na.toFixed(2);
+
+                        const cellHuruf = document.getElementById('cell-huruf-' + s.id);
+                        if (cellHuruf) {
+                            const conv = konversiNilai(s.na);
+                            cellHuruf.innerHTML = `<span class="grade-chip ${conv.cls}">${s.huruf}</span>`;
+                        }
+
+                        const cellMutu = document.getElementById('cell-mutu-' + s.id);
+                        if (cellMutu) cellMutu.textContent = s.mutu.toFixed(2);
+
+                        const cellCpl = document.getElementById('cell-cpl-' + s.id);
+                        if (cellCpl) {
+                            if (s.all_cpl_achieved) {
+                                cellCpl.innerHTML = `<span class="badge badge-success" style="font-size:11px; padding:3px 8px;"><svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg> Lulus CPL</span>`;
+                            } else {
+                                const unachievedStr = s.unachieved_cpls.join(', ');
+                                cellCpl.innerHTML = `<span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: ${unachievedStr}">Belum Lulus</span>`;
+                            }
+                        }
+                    }
+                } else {
+                    showToast(data.message || 'Gagal menyimpan nilai.', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Terjadi kesalahan koneksi saat menyimpan nilai.', 'error');
+            } finally {
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    if (lblBtn) lblBtn.textContent = origText;
+                }
+            }
+        };
+
+        // Keyboard Shortcuts: Esc to close, Alt+Left/Right for prev/next
+        window.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('modal-drilldown-mhs');
+            if (modal && modal.style.display !== 'none') {
+                if (e.key === 'Escape') {
+                    closeDrilldownModal();
+                } else if (e.altKey && e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    navigateStudent(-1);
+                } else if (e.altKey && e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    navigateStudent(1);
+                }
+            }
+        });
     })();
     @endif
 

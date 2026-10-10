@@ -31,6 +31,7 @@ class KhsController extends Controller
         $khs = Khs::with([
             'dosenManual',
             'krs.jadwal.mataKuliah.rpsAktif',
+            'krs.jadwal.mataKuliah.cpmks.subCpmks.cpl',
             'krs.jadwal.skemaPenilaian.komponens.subCpmk.cpl',
             'krs.jadwal.skemaPenilaian.komponens.subCpmk.cpmk',
             'krs.nilaiKomponens.komponen.subCpmk.cpl',

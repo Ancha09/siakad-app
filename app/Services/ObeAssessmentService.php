@@ -283,6 +283,42 @@ class ObeAssessmentService
     }
 
     /**
+     * Peta komponen matriks [rowIndex][subCpmkId] => RpsPenilaianKomponen
+     */
+    public function getKomponenMatrixMap(RpsPenilaianSkema $skema, array $matrixData): array
+    {
+        $komponens = $skema->komponens()->with('subCpmk')->get();
+        $rows = $matrixData['rows'] ?? [];
+        $map = [];
+
+        foreach ($rows as $rIdx => $row) {
+            $nama = trim($row['nama'] ?? '');
+            $allocations = $row['allocations'] ?? [];
+
+            foreach ($allocations as $subCpmkId => $bobotVal) {
+                if ((float) $bobotVal <= 0) {
+                    continue;
+                }
+
+                $subId = (int) $subCpmkId;
+                $matched = $komponens->first(function ($k) use ($subId, $nama) {
+                    return (int) $k->sub_cpmk_id === $subId && str_starts_with($k->nama_instrumen, $nama);
+                });
+
+                if (! $matched) {
+                    $matched = $komponens->firstWhere('sub_cpmk_id', $subId);
+                }
+
+                if ($matched) {
+                    $map[$rIdx][$subId] = $matched;
+                }
+            }
+        }
+
+        return $map;
+    }
+
+    /**
      * Hitung Nilai Akhir (NA) dan status ketercapaian CPL per mahasiswa
      */
     public function hitungNilaiMahasiswa(Krs $krs, RpsPenilaianSkema $skema, ?MataKuliahRps $rps = null): array
