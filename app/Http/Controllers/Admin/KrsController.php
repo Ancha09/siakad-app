@@ -587,6 +587,10 @@ class KrsController extends Controller
     public function destroy(Krs $kr)
     {
         abort_if($kr->is_manual, 404);
+        $kr->presensis()->delete();
+        $kr->nilaiKomponens()->delete();
+        $kr->khs()->delete();
+        $kr->kuesioner()->delete();
         $kr->delete();
 
         return redirect()

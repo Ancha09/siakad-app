@@ -206,3 +206,38 @@ test('admin announcement targets period program cohort or one student without le
         ->and(Pengumuman::terlihat($data['students'][1])->count())->toBe(3)
         ->and(Pengumuman::terlihat($outsideUser)->count())->toBe(0);
 });
+
+test('student can cancel a course during admin revision even if attendance records exist', function () {
+    $data = makeKrsResetFixture();
+    $period = $data['period'];
+    $student = $data['mahasiswas'][0];
+    $record = $data['records'][0];
+
+    // Reset persetujuan KRS oleh admin
+    $this->actingAs($data['admin'])->post(route('admin.periode-krs.reset-persetujuan', $period), [
+        'mode' => 'single', 'mahasiswa_id' => $student->id,
+        'alasan' => 'Perbaikan KRS karena ingin ganti mata kuliah',
+    ])->assertRedirect();
+
+    expect($record->fresh()->status)->toBe('Menunggu')
+        ->and($record->fresh()->admin_revision_open)->toBeTrue();
+
+    // Simulasikan perkuliahan sudah berjalan dan ada catatan absensi (presensi)
+    \App\Models\Presensi::create([
+        'krs_id' => $record->id,
+        'tanggal' => now()->toDateString(),
+        'pertemuan' => 1,
+        'status' => 'Hadir',
+        'keterangan' => 'Hadir pertemuan 1',
+    ]);
+    expect($record->presensis()->exists())->toBeTrue();
+
+    // Mahasiswa membatalkan mata kuliah tersebut
+    $this->actingAs($data['students'][0])->delete(route('mahasiswa.krs.destroy', $record->id))
+        ->assertRedirect(route('mahasiswa.krs'))
+        ->assertSessionHas('success', 'Mata kuliah berhasil dibatalkan dari KRS.');
+
+    expect(Krs::whereKey($record->id)->exists())->toBeFalse()
+        ->and(\App\Models\Presensi::where('krs_id', $record->id)->exists())->toBeFalse();
+});
+

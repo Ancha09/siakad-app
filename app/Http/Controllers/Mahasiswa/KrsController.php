@@ -444,14 +444,18 @@ class KrsController extends Controller
                     ->with('error', 'KRS sudah diajukan atau diproses. Pilihan mata kuliah tidak dapat diubah.');
             }
 
-            if ($krs->khs()->exists() || $krs->kuesioner()->exists() || $krs->presensis()->exists()) {
+            if (! $krs->admin_revision_open && ($krs->khs()->exists() || $krs->kuesioner()->exists() || $krs->presensis()->exists())) {
                 return redirect()->route('mahasiswa.krs')
                     ->with('error', 'KRS ini sudah memiliki data akademik terkait dan tidak dapat dibatalkan.');
             }
 
+            $krs->presensis()->delete();
+            $krs->nilaiKomponens()->delete();
+            $krs->khs()->delete();
+            $krs->kuesioner()->delete();
             $krs->delete();
 
-            return redirect()->route('mahasiswa.krs')->with('success', 'Mata kuliah dihapus dari draft KRS.');
+            return redirect()->route('mahasiswa.krs')->with('success', 'Mata kuliah berhasil dibatalkan dari KRS.');
         });
     }
 
