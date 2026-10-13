@@ -126,4 +126,28 @@ class Krs extends Model
     {
         return $this->hasMany(MahasiswaNilaiKomponen::class, 'krs_id');
     }
+
+    /**
+     * Memeriksa apakah mahasiswa pada KRS ini memenuhi syarat penilaian kurikulum OBE
+     * Syarat:
+     * 1. Program Studi mahasiswa aktif OBE (is_obe_active == true)
+     * 2. Mata Kuliah memiliki RPS resmi aktif dan pemetaan CPMK
+     */
+    public function isObeApplicable(): bool
+    {
+        $prodi = $this->mahasiswa?->prodi ?? $this->prodiEfektif;
+        if (! $prodi || ! (bool) $prodi->is_obe_active) {
+            return false;
+        }
+
+        $mk = $this->mata_kuliah_efektif;
+        if (! $mk) {
+            return false;
+        }
+
+        $hasRps = (bool) ($mk->rpsAktif ?? ($mk->relationLoaded('rpsList') ? $mk->rpsList->first() : $mk->rpsList()->latest()->first()));
+        $hasCpmk = $mk->relationLoaded('cpmks') ? $mk->cpmks->isNotEmpty() : $mk->cpmks()->exists();
+
+        return $hasRps && $hasCpmk;
+    }
 }

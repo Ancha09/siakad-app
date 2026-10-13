@@ -63,6 +63,10 @@
             <x-layout-icon name="lock" />
             <span>4. Monitoring &amp; Buka Kunci Nilai</span>
         </a>
+        <a href="{{ route('admin.obe.index', ['tab' => 'aktivasi', 'prodi_id' => $selectedProdiId]) }}" class="obe-nav-tab {{ $tab === 'aktivasi' ? 'active' : '' }}">
+            <x-layout-icon name="check-circle" />
+            <span>5. Aktivasi OBE Prodi</span>
+        </a>
     </div>
 
     {{-- ========================================================
@@ -793,6 +797,83 @@
 
                 <div style="margin-top: 16px;">
                     {{ $monitoringJadwals->links() }}
+                </div>
+            </div>
+        </div>
+    {{-- ========================================================
+         TAB 5: AKTIVASI KURIKULUM OBE PROGRAM STUDI
+         ======================================================== --}}
+    @elseif($tab === 'aktivasi')
+        <div class="page-card">
+            <div class="page-card-head" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2><x-layout-icon name="check-circle" /> Aktivasi Kurikulum OBE Program Studi</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #64748b;">
+                        Tentukan program studi yang memberlakukan Kurikulum OBE. Mahasiswa dari Prodi berstatus <strong>ON (Aktif)</strong> akan dinilai dengan matriks Sub-CPMK dan CPL pada portal dosen. Mahasiswa dari Prodi berstatus <strong>OFF (Nonaktif)</strong> akan tetap menggunakan format penilaian reguler konvensional di KHS.
+                    </p>
+                </div>
+            </div>
+            <div class="page-card-body">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">No</th>
+                                <th>Kode Prodi</th>
+                                <th>Nama Program Studi</th>
+                                <th>Jenjang</th>
+                                <th style="text-align: center;">Jumlah CPL Terdaftar</th>
+                                <th style="text-align: center;">Status Kurikulum OBE</th>
+                                <th style="text-align: center; width: 170px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($prodis as $idx => $prodiItem)
+                                <tr>
+                                    <td>{{ $idx + 1 }}</td>
+                                    <td><strong>{{ $prodiItem->kode_prodi }}</strong></td>
+                                    <td>{{ $prodiItem->nama_prodi }}</td>
+                                    <td><span class="badge" style="background:#f1f5f9; color:#475569;">{{ $prodiItem->jenjang }}</span></td>
+                                    <td style="text-align: center;">
+                                        <span class="badge" style="background:#e0f2fe; color:#0369a1; font-weight:700;">
+                                            {{ $prodiItem->cpls()->count() }} CPL
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        @if($prodiItem->is_obe_active)
+                                            <span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 5px;">
+                                                <x-layout-icon name="check" /> OBE Aktif (ON)
+                                            </span>
+                                        @else
+                                            <span class="badge" style="background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; display: inline-flex; align-items: center; gap: 5px;">
+                                                Non-OBE / Reguler (OFF)
+                                            </span>
+                                        @endif
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <form method="POST" action="{{ route('admin.obe.toggle-prodi', $prodiItem->id) }}" onsubmit="return confirm('Apakah Anda yakin ingin mengubah status Kurikulum OBE untuk Prodi {{ $prodiItem->nama_prodi }}?');">
+                                            @csrf
+                                            @if($prodiItem->is_obe_active)
+                                                <button type="submit" class="btn-outline" style="color: #dc2626; border-color: #fca5a5; font-size: 12px; padding: 5px 12px;">
+                                                    <x-layout-icon name="x" /> Nonaktifkan (OFF)
+                                                </button>
+                                            @else
+                                                <button type="submit" class="btn-primary" style="font-size: 12px; padding: 5px 12px;">
+                                                    <x-layout-icon name="check" /> Aktifkan (ON)
+                                                </button>
+                                            @endif
+                                        </form>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: #94a3b8; padding: 30px;">
+                                        Belum ada data program studi.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

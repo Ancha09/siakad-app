@@ -724,4 +724,30 @@ class ObeCurriculumController extends Controller
 
         return Storage::disk('public')->download($filePath, $filename);
     }
+
+    // ==========================================
+    // TOGGLE STATUS AKTIVASI OBE PROGRAM STUDI
+    // ==========================================
+
+    public function toggleProdi(Request $request, Prodi $prodi)
+    {
+        $status = $request->has('is_obe_active')
+            ? (bool) $request->input('is_obe_active')
+            : ! $prodi->is_obe_active;
+
+        $prodi->update(['is_obe_active' => $status]);
+
+        $statusText = $status ? 'diaktifkan (ON)' : 'dinonaktifkan (OFF)';
+        $msg = "Status Kurikulum OBE untuk Program Studi {$prodi->nama_prodi} berhasil {$statusText}.";
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'is_obe_active' => $status,
+                'message' => $msg,
+            ]);
+        }
+
+        return back()->with('success', $msg);
+    }
 }

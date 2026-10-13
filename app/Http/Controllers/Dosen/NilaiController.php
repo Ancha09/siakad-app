@@ -91,7 +91,7 @@ class NilaiController extends Controller
         $skema = $obeService->getOrCreateSkema($jadwal, $dosen->id);
         $skema->load(['komponens.subCpmk.cpl', 'komponens.subCpmk.cpmk']);
 
-        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens', 'khs'])
+        $krsList = Krs::with(['mahasiswa.prodi', 'nilaiKomponens', 'khs', 'jadwal.mataKuliah.rpsAktif', 'jadwal.mataKuliah.cpmks'])
             ->where('is_manual', false)
             ->where('jadwal_id', $jadwal->id)
             ->where('status', 'Disetujui')
@@ -288,11 +288,14 @@ class NilaiController extends Controller
 
         $validated = $request->validate([
             'nilai' => ['nullable', 'array'],
+            'nilai_reguler' => ['nullable', 'array'],
         ]);
 
         $scores = $validated['nilai'] ?? [];
+        $scoresReguler = $validated['nilai_reguler'] ?? [];
 
-        DB::transaction(function () use ($scores) {
+        DB::transaction(function () use ($scores, $scoresReguler, $obeService) {
+            // 1. Simpan nilai komponen OBE
             foreach ($scores as $krsId => $komponenScores) {
                 if (! is_array($komponenScores)) {
                     continue;
@@ -312,17 +315,37 @@ class NilaiController extends Controller
                     );
                 }
             }
+
+            // 2. Simpan nilai mahasiswa Reguler langsung ke KHS
+            foreach ($scoresReguler as $krsId => $regVal) {
+                $na = is_array($regVal) ? (float) ($regVal['na'] ?? 0) : (float) $regVal;
+                $na = round(min(100.0, max(0.0, $na)), 2);
+                $krs = Krs::find((int) $krsId);
+                if ($krs) {
+                    $konversi = $obeService->konversiNilai($na);
+                    Khs::updateOrCreate(
+                        ['krs_id' => $krs->id],
+                        [
+                            'nilai_angka' => $na,
+                            'nilai_huruf' => $konversi['huruf'],
+                            'bobot' => $konversi['bobot'],
+                            'tahun_akademik' => $krs->tahun_akademik,
+                            'semester_akademik' => $krs->semester_akademik,
+                        ]
+                    );
+                }
+            }
         });
 
-        // Update draf KHS
+        // Update draf KHS untuk mahasiswa OBE
         $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
         $obeService->sinkronisasiKeKhs($jadwal, $skema, $rps);
 
         if ($request->ajax() || $request->wantsJson()) {
-            $updatedKrsIds = array_keys($scores);
+            $updatedKrsIds = array_unique(array_merge(array_keys($scores), array_keys($scoresReguler)));
             $assessments = [];
             foreach ($updatedKrsIds as $krsId) {
-                $krs = Krs::with(['nilaiKomponens', 'mahasiswa'])->find($krsId);
+                $krs = Krs::with(['nilaiKomponens', 'mahasiswa.prodi', 'khs'])->find($krsId);
                 if ($krs) {
                     $assessments[$krsId] = $obeService->hitungNilaiMahasiswa($krs, $skema, $rps);
                 }
@@ -420,12 +443,17 @@ class NilaiController extends Controller
             // Data rows
             foreach ($krsList as $krs) {
                 $nilaiMap = $krs->nilaiKomponens->pluck('nilai_angka', 'komponen_id');
+                $isObe = $krs->isObeApplicable();
                 $row = [
                     $krs->mahasiswa?->nim ?? '',
                     $krs->mahasiswa?->nama ?? '',
                 ];
                 foreach ($komponens as $k) {
-                    $row[] = $nilaiMap->get($k->id) ?? '';
+                    if ($isObe) {
+                        $row[] = $nilaiMap->get($k->id) ?? '';
+                    } else {
+                        $row[] = ($k->id === $komponens->first()->id) ? ($krs->khs?->nilai_angka ?? '') : '';
+                    }
                 }
                 fputcsv($handle, $row, ';');
             }
@@ -482,7 +510,7 @@ class NilaiController extends Controller
 
         $headerRow = array_map('trim', $rows[0]);
         $komponens = $skema->komponens;
-        $krsList = Krs::with('mahasiswa')
+        $krsList = Krs::with(['mahasiswa.prodi', 'khs'])
             ->where('jadwal_id', $jadwal->id)
             ->where('is_manual', false)
             ->where('status', 'Disetujui')
@@ -491,7 +519,7 @@ class NilaiController extends Controller
 
         $importedCount = 0;
 
-        DB::transaction(function () use ($rows, $headerRow, $komponens, $krsList, &$importedCount) {
+        DB::transaction(function () use ($rows, $headerRow, $komponens, $krsList, $obeService, &$importedCount) {
             for ($r = 1; $r < count($rows); $r++) {
                 $row = $rows[$r];
                 if (empty($row[0])) {
@@ -503,16 +531,36 @@ class NilaiController extends Controller
                     continue;
                 }
 
-                foreach ($komponens as $idx => $komp) {
-                    $colIndex = 2 + $idx;
+                if (! $krs->isObeApplicable()) {
+                    // Mahasiswa reguler: baca kolom nilai pertama
+                    $colIndex = 2;
                     if (isset($row[$colIndex]) && is_numeric(str_replace(',', '.', trim($row[$colIndex])))) {
                         $val = (float) str_replace(',', '.', trim($row[$colIndex]));
                         $val = min(100.0, max(0.0, $val));
-
-                        MahasiswaNilaiKomponen::updateOrCreate(
-                            ['krs_id' => $krs->id, 'komponen_id' => $komp->id],
-                            ['nilai_angka' => $val]
+                        $konversi = $obeService->konversiNilai($val);
+                        Khs::updateOrCreate(
+                            ['krs_id' => $krs->id],
+                            [
+                                'nilai_angka' => $val,
+                                'nilai_huruf' => $konversi['huruf'],
+                                'bobot' => $konversi['bobot'],
+                                'tahun_akademik' => $krs->tahun_akademik,
+                                'semester_akademik' => $krs->semester_akademik,
+                            ]
                         );
+                    }
+                } else {
+                    foreach ($komponens as $idx => $komp) {
+                        $colIndex = 2 + $idx;
+                        if (isset($row[$colIndex]) && is_numeric(str_replace(',', '.', trim($row[$colIndex])))) {
+                            $val = (float) str_replace(',', '.', trim($row[$colIndex]));
+                            $val = min(100.0, max(0.0, $val));
+
+                            MahasiswaNilaiKomponen::updateOrCreate(
+                                ['krs_id' => $krs->id, 'komponen_id' => $komp->id],
+                                ['nilai_angka' => $val]
+                            );
+                        }
                     }
                 }
                 $importedCount++;

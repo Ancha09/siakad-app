@@ -531,6 +531,26 @@ class ObeAssessmentService
      */
     public function hitungNilaiMahasiswa(Krs $krs, RpsPenilaianSkema $skema, ?MataKuliahRps $rps = null): array
     {
+        // 1. Mahasiswa Non-OBE / Reguler (penilaian konvensional langsung ke KHS)
+        if (! $krs->isObeApplicable()) {
+            $khs = $krs->khs;
+            $na = $khs ? (float) $khs->nilai_angka : 0.0;
+            $na = round(min(100.0, max(0.0, $na)), 2);
+            $konversi = $this->konversiNilai($na);
+
+            return [
+                'na' => $na,
+                'nilai_huruf' => $khs?->nilai_huruf ?: $konversi['huruf'],
+                'bobot' => $khs?->bobot !== null ? (float) $khs->bobot : (float) $konversi['bobot'],
+                'cpl_results' => [],
+                'unachieved_cpls' => [],
+                'all_cpl_achieved' => true,
+                'passing_grade' => (float) ($rps?->target_passing_grade ?? 60.0),
+                'is_obe' => false,
+            ];
+        }
+
+        // 2. Mahasiswa OBE (berbasis instrumen matriks Sub-CPMK dan CPL)
         $komponens = $skema->komponens()->with(['subCpmk.cpl', 'subCpmk.cpmk'])->get();
         $nilaiMap = $krs->nilaiKomponens->pluck('nilai_angka', 'komponen_id');
 
@@ -591,6 +611,7 @@ class ObeAssessmentService
             'unachieved_cpls' => $unachievedCpls,
             'all_cpl_achieved' => empty($unachievedCpls),
             'passing_grade' => $passingGrade,
+            'is_obe' => true,
         ];
     }
 
@@ -599,7 +620,7 @@ class ObeAssessmentService
      */
     public function hitungCapaianKelas(Jadwal $jadwal, RpsPenilaianSkema $skema, ?MataKuliahRps $rps = null): array
     {
-        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens'])
+        $krsList = Krs::with(['mahasiswa.prodi', 'nilaiKomponens', 'khs'])
             ->where('jadwal_id', $jadwal->id)
             ->where('is_manual', false)
             ->where('status', 'Disetujui')
@@ -608,6 +629,7 @@ class ObeAssessmentService
         $komponens = $skema->komponens()->with(['subCpmk.cpl', 'subCpmk.cpmk'])->get();
         $passingGrade = (float) ($rps?->target_passing_grade ?? 60.0);
         $totalMahasiswa = $krsList->count();
+        $totalObeMahasiswa = $krsList->filter(fn ($k) => $k->isObeApplicable())->count();
 
         $gradeCounts = [
             'A' => 0, 'A-' => 0, 'B+' => 0, 'B' => 0,
@@ -620,6 +642,10 @@ class ObeAssessmentService
         foreach ($krsList as $krs) {
             $hasil = $this->hitungNilaiMahasiswa($krs, $skema, $rps);
             $gradeCounts[$hasil['nilai_huruf']] = ($gradeCounts[$hasil['nilai_huruf']] ?? 0) + 1;
+
+            if (! $krs->isObeApplicable()) {
+                continue;
+            }
 
             foreach ($hasil['cpl_results'] as $code => $res) {
                 if (! isset($cplStats[$code])) {
@@ -664,11 +690,11 @@ class ObeAssessmentService
             }
         }
 
-        // Hitung persentase ketercapaian CPL
+        // Hitung persentase ketercapaian CPL (berdasarkan mahasiswa OBE)
         $cplReport = [];
         foreach ($cplStats as $code => $st) {
-            $avg = $totalMahasiswa > 0 ? round($st['total_score'] / $totalMahasiswa, 2) : 0.0;
-            $passRate = $totalMahasiswa > 0 ? round(($st['lulus_count'] / $totalMahasiswa) * 100, 1) : 0.0;
+            $avg = $totalObeMahasiswa > 0 ? round($st['total_score'] / $totalObeMahasiswa, 2) : 0.0;
+            $passRate = $totalObeMahasiswa > 0 ? round(($st['lulus_count'] / $totalObeMahasiswa) * 100, 1) : 0.0;
             $cplReport[$code] = [
                 'kode_cpl' => $code,
                 'avg_score' => $avg,
@@ -678,11 +704,11 @@ class ObeAssessmentService
             ];
         }
 
-        // Hitung persentase ketercapaian CPMK
+        // Hitung persentase ketercapaian CPMK (berdasarkan mahasiswa OBE)
         $cpmkReport = [];
         foreach ($cpmkStats as $code => $st) {
-            $avg = $totalMahasiswa > 0 ? round($st['total_score'] / $totalMahasiswa, 2) : 0.0;
-            $passRate = $totalMahasiswa > 0 ? round(($st['lulus_count'] / $totalMahasiswa) * 100, 1) : 0.0;
+            $avg = $totalObeMahasiswa > 0 ? round($st['total_score'] / $totalObeMahasiswa, 2) : 0.0;
+            $passRate = $totalObeMahasiswa > 0 ? round(($st['lulus_count'] / $totalObeMahasiswa) * 100, 1) : 0.0;
             $cpmkReport[$code] = [
                 'kode_cpmk' => $code,
                 'avg_score' => $avg,
@@ -693,6 +719,7 @@ class ObeAssessmentService
 
         return [
             'total_mahasiswa' => $totalMahasiswa,
+            'total_obe_mahasiswa' => $totalObeMahasiswa,
             'passing_grade' => $passingGrade,
             'grade_counts' => $gradeCounts,
             'cpl_report' => $cplReport,
@@ -705,7 +732,7 @@ class ObeAssessmentService
      */
     public function sinkronisasiKeKhs(Jadwal $jadwal, RpsPenilaianSkema $skema, ?MataKuliahRps $rps = null): void
     {
-        $krsList = Krs::with('nilaiKomponens')
+        $krsList = Krs::with(['nilaiKomponens', 'mahasiswa.prodi'])
             ->where('jadwal_id', $jadwal->id)
             ->where('is_manual', false)
             ->where('status', 'Disetujui')
@@ -713,18 +740,21 @@ class ObeAssessmentService
 
         DB::transaction(function () use ($krsList, $skema, $rps) {
             foreach ($krsList as $krs) {
-                $hasil = $this->hitungNilaiMahasiswa($krs, $skema, $rps);
+                // Hanya perbarui otomatis dari matriks jika mahasiswa memang kurikulum OBE
+                if ($krs->isObeApplicable()) {
+                    $hasil = $this->hitungNilaiMahasiswa($krs, $skema, $rps);
 
-                Khs::updateOrCreate(
-                    ['krs_id' => $krs->id],
-                    [
-                        'nilai_angka' => $hasil['na'],
-                        'nilai_huruf' => $hasil['nilai_huruf'],
-                        'bobot' => $hasil['bobot'],
-                        'tahun_akademik' => $krs->tahun_akademik,
-                        'semester_akademik' => $krs->semester_akademik,
-                    ]
-                );
+                    Khs::updateOrCreate(
+                        ['krs_id' => $krs->id],
+                        [
+                            'nilai_angka' => $hasil['na'],
+                            'nilai_huruf' => $hasil['nilai_huruf'],
+                            'bobot' => $hasil['bobot'],
+                            'tahun_akademik' => $krs->tahun_akademik,
+                            'semester_akademik' => $krs->semester_akademik,
+                        ]
+                    );
+                }
             }
         });
     }

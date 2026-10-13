@@ -10,10 +10,18 @@ class Prodi extends Model
         'kode_prodi',
         'nama_prodi',
         'jenjang',
+        'is_obe_active',
         'fakultas_id',
         'ketua_program_studi_nama',
         'ketua_program_studi_nip',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_obe_active' => 'boolean',
+        ];
+    }
 
     public function fakultas()
     {

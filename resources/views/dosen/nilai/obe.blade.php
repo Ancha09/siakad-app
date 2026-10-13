@@ -1098,16 +1098,18 @@
                                     <th style="width:45px; text-align:center;">No</th>
                                     <th style="width:115px;">NIM</th>
                                     <th style="min-width:200px;">Nama Mahasiswa</th>
-                                    <th style="text-align:center; width:110px; background:#eff6ff;">Nilai Akhir</th>
-                                    <th style="text-align:center; width:80px; background:#eff6ff;">Huruf</th>
-                                    <th style="text-align:center; width:80px; background:#eff6ff;">Mutu</th>
-                                    <th style="text-align:center; width:170px;">Status Ketercapaian CPL</th>
-                                    <th style="text-align:center; width:150px;">Aksi</th>
+                                    <th style="width:130px; text-align:center;">Kurikulum</th>
+                                    <th style="text-align:center; width:100px; background:#eff6ff;">Nilai Akhir</th>
+                                    <th style="text-align:center; width:75px; background:#eff6ff;">Huruf</th>
+                                    <th style="text-align:center; width:75px; background:#eff6ff;">Mutu</th>
+                                    <th style="text-align:center; width:160px;">Status Ketercapaian CPL</th>
+                                    <th style="text-align:center; width:140px;">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($krsList as $krs)
                                     @php
+                                        $isObe = $krs->isObeApplicable();
                                         $ass = $studentAssessments[$krs->id] ?? [
                                             'na' => 0,
                                             'nilai_huruf' => 'E',
@@ -1119,13 +1121,27 @@
                                     <tr class="mhs-row mhs-row-clickable"
                                         data-nim="{{ strtolower($krs->mahasiswa?->nim ?? '') }}"
                                         data-nama="{{ strtolower($krs->mahasiswa?->nama ?? '') }}"
-                                        onclick="openStudentDrilldown({{ $krs->id }})">
+                                        onclick="handleStudentClick({{ $krs->id }})">
                                         <td style="text-align:center; font-weight:600; color:#64748b;">{{ $loop->iteration }}</td>
                                         <td style="font-weight:700; font-family:monospace; color:#334155;">{{ $krs->mahasiswa?->nim ?? '-' }}</td>
                                         <td>
-                                            <button type="button" class="mhs-name-btn" onclick="event.stopPropagation(); openStudentDrilldown({{ $krs->id }})">
+                                            <button type="button" class="mhs-name-btn" onclick="event.stopPropagation(); handleStudentClick({{ $krs->id }})">
                                                 <strong>{{ $krs->mahasiswa?->nama ?? '-' }}</strong>
                                             </button>
+                                            <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                                                {{ $krs->mahasiswa?->prodi?->nama_prodi ?? '-' }}
+                                            </div>
+                                        </td>
+                                        <td style="text-align:center;">
+                                            @if($isObe)
+                                                <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:11px; padding:3px 8px; font-weight:700;">
+                                                    OBE
+                                                </span>
+                                            @else
+                                                <span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #cbd5e1; font-size:11px; padding:3px 8px;">
+                                                    Reguler
+                                                </span>
+                                            @endif
                                         </td>
                                         <td style="text-align:center; font-weight:800; font-size:14px; background:#eff6ff; color:#0f172a;" id="cell-na-{{ $krs->id }}">
                                             {{ number_format($ass['na'], 2) }}
@@ -1139,29 +1155,43 @@
                                             {{ number_format($ass['bobot'], 2) }}
                                         </td>
                                         <td style="text-align:center;" id="cell-cpl-{{ $krs->id }}">
-                                            @if($ass['all_cpl_achieved'])
-                                                <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
-                                                    <x-layout-icon name="check" /> Lulus CPL
-                                                </span>
+                                            @if($isObe)
+                                                @if($ass['all_cpl_achieved'])
+                                                    <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
+                                                        <x-layout-icon name="check" /> Lulus CPL
+                                                    </span>
+                                                @else
+                                                    <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
+                                                        Belum Lulus
+                                                    </span>
+                                                @endif
                                             @else
-                                                <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
-                                                    Belum Lulus
-                                                </span>
+                                                <span style="color:#94a3b8; font-size:11px;">-</span>
                                             @endif
                                         </td>
                                         <td style="text-align:center;" onclick="event.stopPropagation();">
-                                            <button type="button"
-                                                    class="btn-primary"
-                                                    style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px;"
-                                                    onclick="openStudentDrilldown({{ $krs->id }})">
-                                                <x-layout-icon name="edit" />
-                                                <span>Detail &amp; Input</span>
-                                            </button>
+                                            @if($isObe)
+                                                <button type="button"
+                                                        class="btn-primary"
+                                                        style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px;"
+                                                        onclick="openStudentDrilldown({{ $krs->id }})">
+                                                    <x-layout-icon name="edit" />
+                                                    <span>Matriks OBE</span>
+                                                </button>
+                                            @else
+                                                <button type="button"
+                                                        class="btn-outline"
+                                                        style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px; color:#1e293b;"
+                                                        onclick="openStudentReguler({{ $krs->id }})">
+                                                    <x-layout-icon name="edit" />
+                                                    <span>Nilai Reguler</span>
+                                                </button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" style="text-align:center; padding:40px; color:#64748b;">
+                                        <td colspan="9" style="text-align:center; padding:40px; color:#64748b;">
                                             Belum ada mahasiswa yang mengambil kelas ini.
                                         </td>
                                     </tr>
@@ -1369,6 +1399,79 @@
                                 </button>
                             @endif
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- =========================================================================
+                 MODAL INPUT NILAI REGULER (MAHASISWA NON-OBE)
+                 ========================================================================= --}}
+            <div id="modal-reguler-mhs" class="modal-backdrop-custom" style="display:none;">
+                <div class="modal-box-custom" style="max-width: 560px;">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:12px;">
+                        <div>
+                            <div style="display:inline-flex; align-items:center; gap:6px; margin-bottom:4px;">
+                                <span class="badge" style="background:#f1f5f9; color:#475569; font-size:11px; border:1px solid #cbd5e1;">Kurikulum Reguler (Non-OBE)</span>
+                                <span id="modal-reg-prodi" style="font-size:11.5px; color:#64748b; font-weight:600;"></span>
+                            </div>
+                            <h3 style="margin:0; font-size:17px; color:#0f172a;" id="modal-reg-nama"></h3>
+                            <div style="font-size:12px; color:#64748b; font-family:monospace;" id="modal-reg-nim"></div>
+                        </div>
+                        <button type="button" onclick="closeRegulerModal()" style="background:transparent; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1;">&times;</button>
+                    </div>
+
+                    <div style="margin-bottom:18px;">
+                        <div style="font-size:12.5px; font-weight:700; color:#334155; margin-bottom:8px;">
+                            Komponen Penilaian Standar:
+                        </div>
+                        <p style="font-size:11.5px; color:#64748b; margin-top:0; margin-bottom:12px;">
+                            Masukkan nilai komponen (skala 0 - 100). Nilai Akhir (NA) akan dihitung otomatis sesuai bobot, atau Anda dapat langsung mengisi nilai akhir pada kolom NA di bawah.
+                        </p>
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:16px;">
+                            <div>
+                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Kehadiran (10%)</label>
+                                <input type="number" id="reg-kehadiran" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Tugas (20%)</label>
+                                <input type="number" id="reg-tugas" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Kuis (15%)</label>
+                                <input type="number" id="reg-kuis" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                            </div>
+                            <div>
+                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">UTS (25%)</label>
+                                <input type="number" id="reg-uts" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                            </div>
+                            <div style="grid-column: span 2;">
+                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">UAS (30%)</label>
+                                <input type="number" id="reg-uas" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                            </div>
+                        </div>
+
+                        {{-- Box Hasil Nilai Akhir (NA) & Mutu --}}
+                        <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <label style="font-size:12.5px; font-weight:700; color:#0f172a; margin:0; display:block;">Nilai Akhir (NA)</label>
+                                <span style="font-size:11px; color:#64748b;">Tersimpan langsung ke KHS</span>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="number" id="reg-na" class="form-control" min="0" max="100" step="0.01" style="width:85px; text-align:center; font-weight:800; font-size:15px;" oninput="syncFromNaInput()" {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                <span id="reg-badge-huruf" class="grade-chip grade-E" style="font-size:13px; padding:4px 8px;">E</span>
+                                <span id="reg-mutu" style="font-size:12px; font-weight:700; color:#475569;">0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #e2e8f0; padding-top:14px;">
+                        <button type="button" class="btn-outline" onclick="closeRegulerModal()">Tutup</button>
+                        @if(! $skema->is_finalized)
+                            <button type="button" class="btn-primary" id="btn-save-reguler-mhs" onclick="saveRegulerStudent()">
+                                <x-layout-icon name="save" />
+                                <span id="label-btn-save-reg">Simpan Nilai</span>
+                            </button>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -2015,6 +2118,8 @@
                     'id' => (int) $krs->id,
                     'nim' => $krs->mahasiswa?->nim ?? '-',
                     'nama' => $krs->mahasiswa?->nama ?? '-',
+                    'prodi' => $krs->mahasiswa?->prodi?->nama_prodi ?? '-',
+                    'is_obe' => (bool) $krs->isObeApplicable(),
                     'na' => (float) ($ass['na'] ?? 0),
                     'huruf' => $ass['nilai_huruf'] ?? 'E',
                     'mutu' => (float) ($ass['bobot'] ?? 0),
@@ -2050,9 +2155,19 @@
             }, 3000);
         }
 
+        window.handleStudentClick = function(krsId) {
+            const s = studentsData.find(st => st.id === krsId);
+            if (!s) return;
+            if (s.is_obe) {
+                openStudentDrilldown(krsId);
+            } else {
+                openStudentReguler(krsId);
+            }
+        };
+
         window.openFirstStudent = function() {
             if (studentsData && studentsData.length > 0) {
-                openStudentDrilldown(studentsData[0].id);
+                handleStudentClick(studentsData[0].id);
             }
         };
 
@@ -2068,10 +2183,148 @@
             closeModal('modal-drilldown-mhs');
         };
 
+        let currentRegulerKrsId = null;
+
+        window.openStudentReguler = function(krsId) {
+            const s = studentsData.find(st => st.id === krsId);
+            if (!s) return;
+            currentRegulerKrsId = krsId;
+
+            document.getElementById('modal-reg-nama').textContent = s.nama;
+            document.getElementById('modal-reg-nim').textContent = 'NIM: ' + s.nim;
+            document.getElementById('modal-reg-prodi').textContent = s.prodi;
+
+            const naInput = document.getElementById('reg-na');
+            if (naInput) naInput.value = s.na > 0 ? s.na.toFixed(2) : '';
+
+            ['reg-kehadiran', 'reg-tugas', 'reg-kuis', 'reg-uts', 'reg-uas'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+
+            syncFromNaInput();
+            openModal('modal-reguler-mhs');
+        };
+
+        window.closeRegulerModal = function() {
+            closeModal('modal-reguler-mhs');
+            currentRegulerKrsId = null;
+        };
+
+        window.hitungLiveReguler = function() {
+            const kehadiran = parseFloat(document.getElementById('reg-kehadiran').value) || 0;
+            const tugas = parseFloat(document.getElementById('reg-tugas').value) || 0;
+            const kuis = parseFloat(document.getElementById('reg-kuis').value) || 0;
+            const uts = parseFloat(document.getElementById('reg-uts').value) || 0;
+            const uas = parseFloat(document.getElementById('reg-uas').value) || 0;
+
+            const na = (kehadiran * 0.10) + (tugas * 0.20) + (kuis * 0.15) + (uts * 0.25) + (uas * 0.30);
+            const naInput = document.getElementById('reg-na');
+            if (naInput) {
+                naInput.value = na > 0 ? na.toFixed(2) : '';
+            }
+            syncFromNaInput();
+        };
+
+        window.syncFromNaInput = function() {
+            const naVal = parseFloat(document.getElementById('reg-na').value) || 0;
+            const conv = konversiNilai(naVal);
+
+            const badgeHuruf = document.getElementById('reg-badge-huruf');
+            if (badgeHuruf) {
+                badgeHuruf.className = `grade-chip ${conv.cls}`;
+                badgeHuruf.textContent = conv.huruf;
+            }
+
+            const mutuEl = document.getElementById('reg-mutu');
+            if (mutuEl) {
+                mutuEl.textContent = conv.bobot;
+            }
+        };
+
+        window.saveRegulerStudent = async function() {
+            if (!currentRegulerKrsId) return;
+            const s = studentsData.find(st => st.id === currentRegulerKrsId);
+            if (!s) return;
+
+            const naVal = parseFloat(document.getElementById('reg-na').value) || 0;
+            const btnSave = document.getElementById('btn-save-reguler-mhs');
+            const lblBtn = document.getElementById('label-btn-save-reg');
+            const origText = lblBtn ? lblBtn.textContent : 'Simpan Nilai';
+
+            if (btnSave) {
+                btnSave.disabled = true;
+                if (lblBtn) lblBtn.textContent = 'Menyimpan...';
+            }
+
+            try {
+                const res = await fetch("{{ route('dosen.nilai.input-obe', $jadwal->id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        nilai_reguler: {
+                            [s.id]: {
+                                na: naVal
+                            }
+                        }
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showToast(`Nilai untuk ${s.nama} berhasil disimpan!`, 'success');
+
+                    const updatedAss = data.assessments ? data.assessments[s.id] : null;
+                    if (updatedAss) {
+                        s.na = parseFloat(updatedAss.na) || 0;
+                        s.huruf = updatedAss.nilai_huruf;
+                        s.mutu = parseFloat(updatedAss.bobot) || 0;
+                    } else {
+                        const conv = konversiNilai(naVal);
+                        s.na = naVal;
+                        s.huruf = conv.huruf;
+                        s.mutu = parseFloat(conv.bobot);
+                    }
+
+                    // Update DOM tabel utama
+                    const cellNa = document.getElementById(`cell-na-${s.id}`);
+                    if (cellNa) cellNa.textContent = s.na.toFixed(2);
+
+                    const cellHuruf = document.getElementById(`cell-huruf-${s.id}`);
+                    if (cellHuruf) {
+                        cellHuruf.innerHTML = `<span class="grade-chip grade-${s.huruf.charAt(0)}">${s.huruf}</span>`;
+                    }
+
+                    const cellMutu = document.getElementById(`cell-mutu-${s.id}`);
+                    if (cellMutu) cellMutu.textContent = s.mutu.toFixed(2);
+
+                    closeRegulerModal();
+                } else {
+                    alert(data.message || 'Gagal menyimpan nilai.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Terjadi kesalahan jaringan.');
+            } finally {
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    if (lblBtn) lblBtn.textContent = origText;
+                }
+            }
+        };
+
         window.navigateStudent = function(dir) {
             captureModalInputsToMemory();
 
-            const newIdx = currentStudentIndex + dir;
+            let newIdx = currentStudentIndex + dir;
+            while (newIdx >= 0 && newIdx < studentsData.length && !studentsData[newIdx].is_obe) {
+                newIdx += dir;
+            }
+
             if (newIdx < 0 || newIdx >= studentsData.length) return;
             currentStudentIndex = newIdx;
             renderModalStudent();
