@@ -125,6 +125,14 @@ class NilaiController extends Controller
         $defaultTab = $skema->komponens->count() > 0 ? 'input' : 'pengaturan';
         $tab = $request->query('tab', $defaultTab);
 
+        $cpmks = $jadwal->mataKuliah?->cpmks ?? collect();
+        $allSubCpmks = collect();
+        foreach ($cpmks as $cpmk) {
+            foreach ($cpmk->subCpmks as $sub) {
+                $allSubCpmks->push($sub);
+            }
+        }
+
         return view('dosen.nilai.obe', compact(
             'jadwal',
             'rps',
@@ -135,7 +143,9 @@ class NilaiController extends Controller
             'krsList',
             'studentAssessments',
             'capaianKelas',
-            'tab'
+            'tab',
+            'cpmks',
+            'allSubCpmks'
         ));
     }
 

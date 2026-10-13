@@ -110,6 +110,7 @@ Route::middleware(['auth', SkripsiRole::class.':dosen'])->prefix('dosen')->name(
     Route::get('/nilai/{jadwal}/detail', [NilaiController::class, 'show'])->name('nilai.detail');
     Route::post('/nilai/{jadwal}/skema', [NilaiController::class, 'saveSkema'])->name('nilai.skema');
     Route::post('/nilai/{jadwal}/input-obe', [NilaiController::class, 'saveNilai'])->name('nilai.input-obe');
+    Route::post('/nilai/{jadwal}/input', [NilaiController::class, 'saveNilai'])->name('nilai.input');
     Route::post('/nilai/{jadwal}/finalisasi', [NilaiController::class, 'finalize'])->name('nilai.finalisasi');
     Route::get('/nilai/{jadwal}/template', [NilaiController::class, 'exportTemplate'])->name('nilai.template');
     Route::post('/nilai/{jadwal}/import', [NilaiController::class, 'importExcel'])->name('nilai.import');

@@ -636,42 +636,44 @@
         </a>
     </div>
 
-    {{-- =========================================================================
-         TAB 1: PENGATURAN INSTRUMEN PENILAIAN RPS
-         ========================================================================= --}}
-    @if($tab === 'pengaturan')
-        @php
-            $cpmks = $jadwal->mataKuliah?->cpmks()->with(['subCpmks.cpl'])->orderBy('id')->get() ?? collect();
-            $allSubCpmks = collect();
+    @php
+        $cpmks = $cpmks ?? ($jadwal->mataKuliah?->cpmks()->with(['subCpmks.cpl'])->orderBy('id')->get() ?? collect());
+        $allSubCpmks = $allSubCpmks ?? collect();
+        if ($allSubCpmks->isEmpty() && $cpmks->isNotEmpty()) {
             foreach ($cpmks as $cpmk) {
                 foreach ($cpmk->subCpmks as $sub) {
                     $allSubCpmks->push($sub);
                 }
             }
+        }
 
-            $matrixRows = $matrixData['rows'] ?? [];
-            $komponenRps = $matrixData['komponen_rps'] ?? [];
-            $temuanList = $matrixData['temuan'] ?? [];
+        $matrixRows = $matrixData['rows'] ?? [];
+        $komponenRps = $matrixData['komponen_rps'] ?? [];
+        $temuanList = $matrixData['temuan'] ?? [];
 
-            // Group Sub-CPMK codes for label S1-S2, S3-S6, etc.
-            $cpmkSubRanges = [];
-            $subCounter = 1;
-            foreach ($cpmks as $cpmk) {
-                $count = $cpmk->subCpmks->count();
-                if ($count > 0) {
-                    $start = $subCounter;
-                    $end = $subCounter + $count - 1;
-                    $cpmkSubRanges[$cpmk->id] = ($start === $end) ? "S{$start}" : "S{$start}–S{$end}";
-                    $subCounter += $count;
-                } else {
-                    $cpmkSubRanges[$cpmk->id] = '-';
-                }
+        // Group Sub-CPMK codes for label S1-S2, S3-S6, etc.
+        $cpmkSubRanges = [];
+        $subCounter = 1;
+        foreach ($cpmks as $cpmk) {
+            $count = $cpmk->subCpmks->count();
+            if ($count > 0) {
+                $start = $subCounter;
+                $end = $subCounter + $count - 1;
+                $cpmkSubRanges[$cpmk->id] = ($start === $end) ? "S{$start}" : "S{$start}–S{$end}";
+                $subCounter += $count;
+            } else {
+                $cpmkSubRanges[$cpmk->id] = '-';
             }
+        }
 
-            // Target porsi CPL dari prodi / RPS
-            $targetPorsiCpl = $rps?->porsi_cpl ?? [];
-        @endphp
+        // Target porsi CPL dari prodi / RPS
+        $targetPorsiCpl = $rps?->porsi_cpl ?? [];
+    @endphp
 
+    {{-- =========================================================================
+         TAB 1: PENGATURAN INSTRUMEN PENILAIAN RPS
+         ========================================================================= --}}
+    @if($tab === 'pengaturan')
         @if($allSubCpmks->isEmpty())
             <div class="obe-card">
                 <div class="obe-card-body" style="text-align: center; padding: 48px 20px;">
@@ -2233,7 +2235,7 @@
             });
 
             try {
-                const res = await fetch("{{ route('dosen.nilai.input', $jadwal->id) }}", {
+                const res = await fetch("{{ route('dosen.nilai.input-obe', $jadwal->id) }}", {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
