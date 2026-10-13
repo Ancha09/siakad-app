@@ -97,14 +97,8 @@ class NilaiController extends Controller
             ->where('status', 'Disetujui')
             ->get();
 
-        // Data matriks alokasi bobot instrumen ke Sub-CPMK
-        $matrixData = $skema->matrix_alokasi;
-        if (empty($matrixData) || empty($matrixData['rows'])) {
-            $matrixData = $obeService->getDefaultMatrixForJadwal($jadwal);
-            if ($skema->komponens()->count() === 0 && ! empty($matrixData['rows'])) {
-                $obeService->syncKomponensFromMatrix($skema, $matrixData);
-            }
-        }
+        // Data matriks alokasi bobot instrumen ke Sub-CPMK (memastikan seluruh Sub-CPMK termasuk CPMK 11 dan UAS terakomodasi)
+        $matrixData = $obeService->ensureCompleteMatrixForJadwal($skema, $jadwal);
 
         // Hitung nilai mahasiswa dan status CPL
         $studentAssessments = [];
@@ -118,8 +112,8 @@ class NilaiController extends Controller
         // Peta komponen matriks [rowIndex][subCpmkId] => RpsPenilaianKomponen
         $komponenMatrixMap = $obeService->getKomponenMatrixMap($skema, $matrixData);
 
-        // Status kunci matriks jika RPS resmi terunggah atau skema final
-        $isMatrixLocked = (bool) ($skema->is_finalized || ($rps && $rps->file_rps));
+        // Status kunci matriks jika skema final
+        $isMatrixLocked = (bool) $skema->is_finalized;
 
         // Tentukan tab aktif
         $defaultTab = $skema->komponens->count() > 0 ? 'input' : 'pengaturan';
@@ -163,12 +157,13 @@ class NilaiController extends Controller
         );
 
         $rps = $jadwal->mataKuliah->rpsAktif ?? $jadwal->mataKuliah->rpsList()->latest()->first();
-        if ($skema->is_finalized || ($rps && $rps->file_rps)) {
-            return back()->with('error', 'Matriks alokasi penilaian telah terkunci mengacu pada dokumen RPS resmi yang telah ditetapkan prodi.');
+        if ($skema->is_finalized) {
+            return back()->with('error', 'Matriks alokasi penilaian telah difinalisasi dan dikunci.');
         }
 
         if ($request->input('action') === 'reset_rps') {
-            $obeService->seedDefaultKomponenFromRps($skema, $jadwal, true);
+            $matrixData = $obeService->getDefaultMatrixForJadwal($jadwal);
+            $obeService->syncKomponensFromMatrix($skema, $matrixData);
             return redirect()
                 ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
                 ->with('success', 'Matriks alokasi instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
