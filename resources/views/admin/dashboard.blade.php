@@ -5,7 +5,10 @@
 @section('content')
 @php
     $number = fn ($value, $decimals = 0) => $value === null ? '—' : number_format($value, $decimals, ',', '.');
-    $mainRatePct = min(100, (float)($attendanceData['stats']['today_rate'] ?? ($stats['attendance'] ?? 0)));
+    $initialAttendanceRate = $attendanceData['distribution']['rate_hadir'] ?? ($stats['attendance'] ?? 0);
+    $mainRatePct = min(100, (float)$initialAttendanceRate);
+    $initialHadir = $attendanceData['distribution']['counts'][0] ?? ($attendanceData['stats']['today_hadir'] ?? 0);
+    $initialTotal = $attendanceData['distribution']['total'] ?? ($attendanceData['stats']['today_total'] ?? 0);
     $dosenRatePct = $stats['totalLecturers'] > 0 ? round(($stats['activeLecturers'] / $stats['totalLecturers']) * 100) : 0;
 @endphp
 <div class="inner-page academic-dashboard">
@@ -40,12 +43,12 @@
                 <span class="card-badge badge-green">Presensi</span>
             </div>
             <div class="card-body">
-                <strong class="stat-number text-green" id="stat-main-rate">{{ $attendanceData['stats']['today_rate'] ?? ($stats['attendance'] ?? 0) }}%</strong>
+                <strong class="stat-number text-green" id="stat-main-rate">{{ $initialAttendanceRate }}%</strong>
                 <div class="stat-meter-bar">
-                    <div class="meter-fill fill-green" id="stat-main-progress" style="width: {{ $mainRatePct }}%;"></div>
+                    <div class="meter-fill fill-green" id="stat-main-progress" @style(['width: ' . $mainRatePct . '%'])></div>
                 </div>
                 <small class="stat-subtext" id="stat-main-desc">
-                    <span id="stat-main-hadir">{{ $attendanceData['stats']['today_hadir'] }}</span> hadir dari <span id="stat-main-total">{{ $attendanceData['stats']['today_total'] }}</span> sesi
+                    <span id="stat-main-hadir">{{ number_format($initialHadir, 0, ',', '.') }}</span> hadir dari <span id="stat-main-total">{{ number_format($initialTotal, 0, ',', '.') }}</span> presensi
                 </small>
             </div>
         </a>
@@ -89,7 +92,7 @@
             <div class="card-body">
                 <strong class="stat-number text-amber">{{ $number($stats['activeLecturers']) }}</strong>
                 <div class="stat-meter-bar">
-                    <div class="meter-fill fill-amber" style="width: {{ $dosenRatePct }}%;"></div>
+                    <div class="meter-fill fill-amber" @style(['width: ' . $dosenRatePct . '%'])></div>
                 </div>
                 <small class="stat-subtext">Dari {{ $number($stats['totalLecturers']) }} total dosen</small>
             </div>
@@ -144,29 +147,29 @@
                     <div class="status-item line-green">
                         <div class="item-name"><span class="dot dot-green"></span> Hadir</div>
                         <div class="item-value">
-                            <strong id="donut-val-hadir">{{ $attendanceData['distribution']['counts'][0] }}</strong>
-                            <small id="donut-pct-hadir">({{ $attendanceData['distribution']['rates'][0] }}%)</small>
+                            <strong id="donut-val-hadir">{{ number_format($attendanceData['distribution']['counts'][0] ?? 0, 0, ',', '.') }}</strong>
+                            <small id="donut-pct-hadir">({{ $attendanceData['distribution']['rates'][0] ?? 0 }}%)</small>
                         </div>
                     </div>
                     <div class="status-item line-blue">
                         <div class="item-name"><span class="dot dot-blue"></span> Izin</div>
                         <div class="item-value">
-                            <strong id="donut-val-izin">{{ $attendanceData['distribution']['counts'][1] }}</strong>
-                            <small id="donut-pct-izin">({{ $attendanceData['distribution']['rates'][1] }}%)</small>
+                            <strong id="donut-val-izin">{{ number_format($attendanceData['distribution']['counts'][1] ?? 0, 0, ',', '.') }}</strong>
+                            <small id="donut-pct-izin">({{ $attendanceData['distribution']['rates'][1] ?? 0 }}%)</small>
                         </div>
                     </div>
                     <div class="status-item line-amber">
                         <div class="item-name"><span class="dot dot-amber"></span> Sakit</div>
                         <div class="item-value">
-                            <strong id="donut-val-sakit">{{ $attendanceData['distribution']['counts'][2] }}</strong>
-                            <small id="donut-pct-sakit">({{ $attendanceData['distribution']['rates'][2] }}%)</small>
+                            <strong id="donut-val-sakit">{{ number_format($attendanceData['distribution']['counts'][2] ?? 0, 0, ',', '.') }}</strong>
+                            <small id="donut-pct-sakit">({{ $attendanceData['distribution']['rates'][2] ?? 0 }}%)</small>
                         </div>
                     </div>
                     <div class="status-item line-red">
                         <div class="item-name"><span class="dot dot-red"></span> Alpa</div>
                         <div class="item-value">
-                            <strong id="donut-val-alpa">{{ $attendanceData['distribution']['counts'][3] }}</strong>
-                            <small id="donut-pct-alpa">({{ $attendanceData['distribution']['rates'][3] }}%)</small>
+                            <strong id="donut-val-alpa">{{ number_format($attendanceData['distribution']['counts'][3] ?? 0, 0, ',', '.') }}</strong>
+                            <small id="donut-pct-alpa">({{ $attendanceData['distribution']['rates'][3] ?? 0 }}%)</small>
                         </div>
                     </div>
                 </div>
@@ -678,38 +681,64 @@
         // SATU GRAFIK BULAT (Doughnut / Pie Chart)
         var canvas = document.getElementById('chartAttendanceSingle');
         var singleChart = null;
+        var currentAbortController = null;
 
-        if (canvas && rawData.distribution) {
-            singleChart = new Chart(canvas, {
-                type: 'doughnut',
-                data: {
-                    labels: rawData.distribution.labels,
-                    datasets: [{
-                        data: rawData.distribution.counts,
-                        backgroundColor: rawData.distribution.colors,
-                        borderWidth: 2,
-                        borderColor: '#ffffff',
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '72%',
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    var label = context.label || '';
-                                    var val = context.parsed || 0;
-                                    return ' ' + label + ': ' + val + ' catatan';
+        function formatNum(val) {
+            return Number(val || 0).toLocaleString('id-ID');
+        }
+
+        function createOrUpdateChart(dist) {
+            if (!canvas) return;
+            var isZero = !dist || !dist.total || dist.total === 0;
+            var labels = isZero ? ['Belum ada data'] : (dist.labels || ['Hadir', 'Izin', 'Sakit', 'Alpa']);
+            var counts = isZero ? [1] : (dist.counts || [0, 0, 0, 0]);
+            var colors = isZero ? ['#e2e8f0'] : (dist.colors || ['#10b981', '#3b82f6', '#f59e0b', '#ef4444']);
+
+            if (singleChart) {
+                singleChart.data.labels = labels;
+                singleChart.data.datasets[0].data = counts;
+                singleChart.data.datasets[0].backgroundColor = colors;
+                if (singleChart.options.plugins && singleChart.options.plugins.tooltip) {
+                    singleChart.options.plugins.tooltip.enabled = !isZero;
+                }
+                singleChart.update();
+            } else {
+                singleChart = new Chart(canvas, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: colors,
+                            borderWidth: 2,
+                            borderColor: '#ffffff',
+                            hoverOffset: isZero ? 0 : 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '72%',
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                enabled: !isZero,
+                                callbacks: {
+                                    label: function(context) {
+                                        var label = context.label || '';
+                                        var val = context.parsed || 0;
+                                        return ' ' + label + ': ' + formatNum(val) + ' catatan';
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
+        }
+
+        if (rawData.distribution) {
+            createOrUpdateChart(rawData.distribution);
         }
 
         // Filter Pills Event Handler
@@ -720,6 +749,8 @@
         filterPills.forEach(function(pill) {
             pill.addEventListener('click', function() {
                 var range = this.getAttribute('data-range');
+                if (this.classList.contains('active')) return;
+
                 filterPills.forEach(function(p) { p.classList.remove('active'); });
                 this.classList.add('active');
 
@@ -728,32 +759,55 @@
         });
 
         function loadData(range) {
+            if (currentAbortController) {
+                currentAbortController.abort();
+            }
+            currentAbortController = new AbortController();
+
             if (loadingIndicator) loadingIndicator.style.display = 'inline-flex';
+            filterPills.forEach(function(p) { p.style.pointerEvents = 'none'; });
 
             var params = new URLSearchParams({ range: range, tahun: currentTahun });
 
             fetch(apiUrl + '?' + params.toString(), {
+                signal: currentAbortController.signal,
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
             })
             .then(function(res) { return res.json(); })
             .then(function(data) {
                 if (loadingIndicator) loadingIndicator.style.display = 'none';
+                filterPills.forEach(function(p) { p.style.pointerEvents = ''; });
 
                 if (rangeLabel && data.range_label) {
                     rangeLabel.textContent = 'Menampilkan data: ' + data.range_label;
                 }
 
                 // Update Grafik Bulat
-                if (singleChart && data.distribution) {
-                    singleChart.data.labels = data.distribution.labels;
-                    singleChart.data.datasets[0].data = data.distribution.counts;
-                    singleChart.update();
+                if (data.distribution) {
+                    createOrUpdateChart(data.distribution);
+                }
+
+                // Update Kartu Utama Atas (% Kehadiran & BAP) agar sejalan dengan filter
+                if (data.distribution) {
+                    var statMainRate = document.getElementById('stat-main-rate');
+                    var statMainProgress = document.getElementById('stat-main-progress');
+                    var statMainHadir = document.getElementById('stat-main-hadir');
+                    var statMainTotal = document.getElementById('stat-main-total');
+
+                    var currentRate = data.distribution.rate_hadir ?? 0;
+                    var currentHadir = data.distribution.counts ? data.distribution.counts[0] : 0;
+                    var currentTotal = data.distribution.total ?? 0;
+
+                    if (statMainRate) statMainRate.textContent = currentRate + '%';
+                    if (statMainProgress) statMainProgress.style.width = Math.min(100, currentRate) + '%';
+                    if (statMainHadir) statMainHadir.textContent = formatNum(currentHadir);
+                    if (statMainTotal) statMainTotal.textContent = formatNum(currentTotal);
                 }
 
                 // Update Angka di Tengah Donut
                 var centerRate = document.getElementById('donut-center-rate');
                 if (centerRate && data.distribution) {
-                    centerRate.textContent = data.distribution.rate_hadir + '%';
+                    centerRate.textContent = (data.distribution.rate_hadir ?? 0) + '%';
                 }
 
                 // Update Rincian Status
@@ -767,18 +821,20 @@
                     var elAlpa = document.getElementById('donut-val-alpa');
                     var elAlpaPct = document.getElementById('donut-pct-alpa');
 
-                    if (elHadir) elHadir.textContent = data.distribution.counts[0];
-                    if (elHadirPct) elHadirPct.textContent = '(' + data.distribution.rates[0] + '%)';
-                    if (elIzin) elIzin.textContent = data.distribution.counts[1];
-                    if (elIzinPct) elIzinPct.textContent = '(' + data.distribution.rates[1] + '%)';
-                    if (elSakit) elSakit.textContent = data.distribution.counts[2];
-                    if (elSakitPct) elSakitPct.textContent = '(' + data.distribution.rates[2] + '%)';
-                    if (elAlpa) elAlpa.textContent = data.distribution.counts[3];
-                    if (elAlpaPct) elAlpaPct.textContent = '(' + data.distribution.rates[3] + '%)';
+                    if (elHadir) elHadir.textContent = formatNum(data.distribution.counts[0]);
+                    if (elHadirPct) elHadirPct.textContent = '(' + (data.distribution.rates[0] ?? 0) + '%)';
+                    if (elIzin) elIzin.textContent = formatNum(data.distribution.counts[1]);
+                    if (elIzinPct) elIzinPct.textContent = '(' + (data.distribution.rates[1] ?? 0) + '%)';
+                    if (elSakit) elSakit.textContent = formatNum(data.distribution.counts[2]);
+                    if (elSakitPct) elSakitPct.textContent = '(' + (data.distribution.rates[2] ?? 0) + '%)';
+                    if (elAlpa) elAlpa.textContent = formatNum(data.distribution.counts[3]);
+                    if (elAlpaPct) elAlpaPct.textContent = '(' + (data.distribution.rates[3] ?? 0) + '%)';
                 }
             })
             .catch(function(err) {
+                if (err.name === 'AbortError') return;
                 if (loadingIndicator) loadingIndicator.style.display = 'none';
+                filterPills.forEach(function(p) { p.style.pointerEvents = ''; });
                 console.error('Gagal memperbarui grafik:', err);
             });
         }

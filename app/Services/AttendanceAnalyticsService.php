@@ -22,37 +22,60 @@ class AttendanceAnalyticsService
     ): array {
         [$start, $end, $rangeKey, $rangeLabel] = $this->resolveDateRange($range, $startDate, $endDate);
 
-        // Ambil data hari ini
-        $todayStats = $this->getTodaySummary($tahunAkademik);
+        try {
+            // Ambil data hari ini
+            $todayStats = $this->getTodaySummary($tahunAkademik);
 
-        // Ambil data tren harian (Line/Area Chart)
-        $trend = $this->getDailyTrend($start, $end, $tahunAkademik);
+            // Ambil data tren harian (Line/Area Chart)
+            $trend = $this->getDailyTrend($start, $end, $tahunAkademik);
 
-        // Ambil distribusi status untuk Donut/Pie Chart
-        $distribution = $this->getStatusDistribution($start, $end, $todayStats, $tahunAkademik);
+            // Cek apakah ada data nyata di database untuk konteks akademik ini atau secara keseluruhan
+            $hasAnyRealData = Presensi::when($tahunAkademik, function ($q) use ($tahunAkademik) {
+                $q->whereHas('krs', fn ($sq) => $sq->where('tahun_akademik', $tahunAkademik));
+            })->exists();
 
-        // Ambil perbandingan antar Program Studi / Departemen (Bar Chart)
-        $prodiComparison = $this->getProdiComparison($start, $end, $tahunAkademik);
+            // Jika tidak ada data sama sekali di sistem/tahun akademik ini, sediakan simulasi
+            if (! $hasAnyRealData) {
+                return $this->generateSimulatedAnalytics($start, $end, $rangeKey, $rangeLabel, $todayStats);
+            }
 
-        // Cek apakah ada data nyata di database
-        $hasRealData = $trend['total_records'] > 0 || $todayStats['today_total'] > 0;
+            // Ambil distribusi status untuk Donut/Pie Chart sesuai rentang tanggal terpilih
+            $distribution = $this->getStatusDistribution($start, $end, $todayStats, $tahunAkademik, $rangeKey, $rangeLabel);
 
-        // Jika tidak ada data sama sekali di rentang ini, buat data simulasi yang realistis
-        if (! $hasRealData) {
-            return $this->generateSimulatedAnalytics($start, $end, $rangeKey, $rangeLabel, $todayStats);
+            // Ambil perbandingan antar Program Studi / Departemen (Bar Chart)
+            $prodiComparison = $this->getProdiComparison($start, $end, $tahunAkademik);
+
+            return [
+                'range' => $rangeKey,
+                'range_label' => $rangeLabel,
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString(),
+                'has_real_data' => true,
+                'stats' => $todayStats,
+                'trend' => $trend,
+                'distribution' => $distribution,
+                'prodi_comparison' => $prodiComparison,
+            ];
+        } catch (\Throwable $e) {
+            return $this->generateSimulatedAnalytics(
+                $start,
+                $end,
+                $rangeKey,
+                $rangeLabel,
+                [
+                    'total_students' => 150,
+                    'today_total' => 0,
+                    'today_hadir' => 0,
+                    'today_izin' => 0,
+                    'today_sakit' => 0,
+                    'today_izin_sakit' => 0,
+                    'today_alpa' => 0,
+                    'today_terlambat' => 0,
+                    'today_rate' => 0,
+                    'date_formatted' => Carbon::today()->translatedFormat('l, d F Y'),
+                ]
+            );
         }
-
-        return [
-            'range' => $rangeKey,
-            'range_label' => $rangeLabel,
-            'start_date' => $start->toDateString(),
-            'end_date' => $end->toDateString(),
-            'has_real_data' => true,
-            'stats' => $todayStats,
-            'trend' => $trend,
-            'distribution' => $distribution,
-            'prodi_comparison' => $prodiComparison,
-        ];
     }
 
     /**
@@ -256,10 +279,11 @@ class AttendanceAnalyticsService
         Carbon $start,
         Carbon $end,
         array $todayStats,
-        ?string $tahunAkademik = null
+        ?string $tahunAkademik = null,
+        string $rangeKey = '30_days',
+        string $rangeLabel = ''
     ): array {
-        // Prioritaskan status hari ini jika ada log
-        if ($todayStats['today_total'] > 0) {
+        if ($rangeKey === 'today' && $todayStats['today_total'] > 0) {
             $total = $todayStats['today_total'];
             $hadir = $todayStats['today_hadir'];
             $izin = $todayStats['today_izin'];
@@ -267,7 +291,7 @@ class AttendanceAnalyticsService
             $alpa = $todayStats['today_alpa'];
             $title = 'Hari Ini (' . Carbon::today()->translatedFormat('d M Y') . ')';
         } else {
-            // Jika hari ini belum ada perkuliahan/absensi, hitung dari rentang tanggal aktif
+            // Hitung agregat status presensi pada rentang tanggal aktif ($start s/d $end)
             $query = Presensi::whereBetween('tanggal', [$start->toDateString(), $end->toDateString()]);
             if ($tahunAkademik) {
                 $query->whereHas('krs', fn ($q) => $q->where('tahun_akademik', $tahunAkademik));
@@ -282,7 +306,7 @@ class AttendanceAnalyticsService
             $sakit = (int) ($records['Sakit'] ?? 0);
             $alpa = (int) (($records['Alpha'] ?? 0) + ($records['Alpa'] ?? 0));
             $total = $hadir + $izin + $sakit + $alpa;
-            $title = 'Periode Terpilih';
+            $title = $rangeLabel ?: ($rangeKey === 'today' ? 'Hari Ini' : 'Periode Terpilih');
         }
 
         $rates = [
@@ -472,32 +496,64 @@ class AttendanceAnalyticsService
             'date_formatted' => Carbon::today()->translatedFormat('l, d F Y'),
         ];
 
-        // Distribusi Donut Chart
+        // Distribusi Donut Chart disesuaikan dengan rentang yang dipilih ($rangeKey)
+        if ($rangeKey === 'today') {
+            $distHadir = $tHadir;
+            $distIzin  = $tIzin;
+            $distSakit = $tSakit;
+            $distAlpa  = $tAlpa;
+            $distTotal = $tTotal;
+            $distRate  = $tRate;
+            $distTitle = 'Hari Ini (' . Carbon::today()->translatedFormat('d M Y') . ')';
+        } else {
+            $distHadir = array_sum($hadirSeries);
+            $distIzin  = array_sum($izinSeries);
+            $distSakit = array_sum($sakitSeries);
+            $distAlpa  = array_sum($alpaSeries);
+            $distTotal = array_sum($totalSeries);
+
+            // Jika total 0 (misal rentang hanya jatuh di weekend), gunakan nilai hari aktif terakhir
+            if ($distTotal === 0) {
+                $distHadir = $tHadir;
+                $distIzin  = $tIzin;
+                $distSakit = $tSakit;
+                $distAlpa  = $tAlpa;
+                $distTotal = $tTotal;
+            }
+
+            $distRate  = $distTotal > 0 ? round(($distHadir / $distTotal) * 100, 1) : 0;
+            $distTitle = $rangeLabel;
+        }
+
         $distribution = [
-            'title' => 'Hari Ini (' . Carbon::today()->translatedFormat('d M Y') . ')',
+            'title' => $distTitle,
             'labels' => ['Hadir', 'Izin', 'Sakit', 'Alpa'],
-            'counts' => [$tHadir, $tIzin, $tSakit, $tAlpa],
+            'counts' => [$distHadir, $distIzin, $distSakit, $distAlpa],
             'rates' => [
-                $tTotal > 0 ? round(($tHadir / $tTotal) * 100, 1) : 0,
-                $tTotal > 0 ? round(($tIzin / $tTotal) * 100, 1) : 0,
-                $tTotal > 0 ? round(($tSakit / $tTotal) * 100, 1) : 0,
-                $tTotal > 0 ? round(($tAlpa / $tTotal) * 100, 1) : 0,
+                $distTotal > 0 ? round(($distHadir / $distTotal) * 100, 1) : 0,
+                $distTotal > 0 ? round(($distIzin / $distTotal) * 100, 1) : 0,
+                $distTotal > 0 ? round(($distSakit / $distTotal) * 100, 1) : 0,
+                $distTotal > 0 ? round(($distAlpa / $distTotal) * 100, 1) : 0,
             ],
             'colors' => ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
-            'total' => $tTotal,
-            'rate_hadir' => $tRate,
+            'total' => $distTotal,
+            'rate_hadir' => $distRate,
         ];
 
         // Perbandingan Program Studi
-        $prodis = Prodi::orderBy('nama_prodi')->get();
-        if ($prodis->isEmpty()) {
-            $mockProdis = ['Teknik Pertambangan', 'Teknik Informatika', 'Sistem Informasi', 'Manajemen Rekayasa'];
-        } else {
-            $mockProdis = $prodis->pluck('nama_prodi')->toArray();
-            if (count($mockProdis) === 1) {
-                $mockProdis[] = 'Teknik Industri';
-                $mockProdis[] = 'Sistem Informasi';
+        try {
+            $prodis = Prodi::orderBy('nama_prodi')->get();
+            if ($prodis->isEmpty()) {
+                $mockProdis = ['Teknik Pertambangan', 'Teknik Informatika', 'Sistem Informasi', 'Manajemen Rekayasa'];
+            } else {
+                $mockProdis = $prodis->pluck('nama_prodi')->toArray();
+                if (count($mockProdis) === 1) {
+                    $mockProdis[] = 'Teknik Industri';
+                    $mockProdis[] = 'Sistem Informasi';
+                }
             }
+        } catch (\Throwable $e) {
+            $mockProdis = ['Teknik Pertambangan', 'Teknik Informatika', 'Sistem Informasi', 'Manajemen Rekayasa'];
         }
 
         $pLabels = [];
