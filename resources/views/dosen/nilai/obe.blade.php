@@ -202,6 +202,7 @@
     .grade-C { background: #fef9c3; color: #854d0e; }
     .grade-D { background: #ffedd5; color: #c2410c; }
     .grade-E { background: #fee2e2; color: #b91c1c; }
+    .col-span-full { grid-column: span 2; }
 
     .progress-bar-bg {
         width: 100%;
@@ -675,27 +676,111 @@
          ========================================================================= --}}
     @if($tab === 'pengaturan')
         @if($allSubCpmks->isEmpty())
-            <div class="obe-card">
-                <div class="obe-card-body" style="text-align: center; padding: 48px 20px;">
-                    <div style="max-width: 520px; margin: 0 auto;">
-                        <span class="empty-state-icon" style="font-size: 38px; display: inline-block; margin-bottom: 14px; color: #f59e0b;">
-                            <x-layout-icon name="book" />
-                        </span>
-                        <h3 style="margin-top: 0; color: #0f172a;">Data CPMK &amp; Sub-CPMK Belum Tersedia</h3>
-                        <p style="color: #64748b; font-size: 13.5px; margin-bottom: 22px; line-height: 1.5;">
-                            Mata kuliah <strong>{{ $jadwal->mataKuliah->nama_mk ?? 'ini' }}</strong> belum memiliki data pemetaan CPMK dan Sub-CPMK pada kurikulum aktif. Matriks alokasi instrumen membutuhkan data Sub-CPMK untuk membagi persentase penilaian.
-                        </p>
-                        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
-                            <a href="{{ route('admin.obe.index', ['tab' => 'cpmk']) }}" class="btn-primary" target="_blank">
-                                <x-layout-icon name="plus" />
-                                <span>Atur CPMK &amp; Sub-CPMK di Kurikulum</span>
-                            </a>
-                            <a href="{{ route('admin.obe.index', ['tab' => 'rps']) }}" class="btn-outline" target="_blank">
-                                <x-layout-icon name="upload" />
-                                <span>Ekstrak dari Dokumen RPS PDF</span>
-                            </a>
+            <div class="obe-card" style="margin-bottom: 24px;">
+                <div class="obe-card-head" style="align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                    <div>
+                        <h3 style="margin-bottom: 4px;">
+                            <x-layout-icon name="services" />
+                            <span>Pengaturan Komponen &amp; Bobot Penilaian Standar</span>
+                        </h3>
+                        <div style="font-size: 12.5px; color: #64748b;">
+                            Mata kuliah belum memiliki dokumen RPS/CPMK aktif. Penilaian mahasiswa otomatis menggunakan format Standar (UTS, UAS, Tugas, dll.). Anda dapat menambah komponen dan menentukan persentase bobot hingga 100%.
                         </div>
                     </div>
+                    <span class="badge" style="background:#f1f5f9; color:#475569; font-size:12px; padding:4px 10px; border:1px solid #cbd5e1; font-weight: 700;">
+                        Penilaian Standar
+                    </span>
+                </div>
+
+                <div class="obe-card-body" style="padding: 22px 24px;">
+                    <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-komponen-standar">
+                        @csrf
+                        <div style="max-width: 680px;">
+                            <div class="table-wrap" style="margin-bottom: 16px;">
+                                <table class="table-input-nilai" style="width: 100%; border-collapse: collapse;" id="table-komponen-standar-editor">
+                                    <thead>
+                                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                            <th style="width: 45px; text-align: center;">No</th>
+                                            <th style="min-width: 240px;">Nama Komponen Penilaian</th>
+                                            <th style="width: 140px; text-align: center;">Bobot (%)</th>
+                                            <th style="width: 70px; text-align: center;">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-komponen-standar">
+                                        @foreach($komponenStandar as $idx => $ks)
+                                            <tr class="row-komponen-standar">
+                                                <td style="text-align: center; color: #64748b; font-weight: 600;" class="row-ks-no">{{ $loop->iteration }}</td>
+                                                <td>
+                                                    <input type="text"
+                                                           name="komponen_standar[{{ $idx }}][nama]"
+                                                           value="{{ $ks['nama'] }}"
+                                                           class="form-control ks-input-nama"
+                                                           placeholder="Contoh: Tugas / UTS / UAS"
+                                                           required
+                                                           style="width: 100%; font-size: 13px;"
+                                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                </td>
+                                                <td>
+                                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                        <input type="number"
+                                                               name="komponen_standar[{{ $idx }}][bobot]"
+                                                               value="{{ $ks['bobot'] }}"
+                                                               class="form-control ks-input-bobot"
+                                                               min="1"
+                                                               max="100"
+                                                               step="0.5"
+                                                               required
+                                                               oninput="calcTotalBobotStandar()"
+                                                               style="width: 80px; text-align: center; font-weight: 700; font-size: 13px;"
+                                                               {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                        <span style="font-weight: 700; color: #64748b; font-size: 13px;">%</span>
+                                                    </div>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    @if(! $skema->is_finalized)
+                                                        <button type="button"
+                                                                onclick="hapusBarisKomponenStandar(this)"
+                                                                class="btn-outline"
+                                                                style="padding: 4px 8px; color: #dc2626; border-color: #fca5a5;"
+                                                                title="Hapus komponen">
+                                                            <x-layout-icon name="trash" />
+                                                        </button>
+                                                    @else
+                                                        <span style="color: #cbd5e1;">-</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot>
+                                        <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                                            <td colspan="2" style="padding: 10px 14px; text-align: right; color: #0f172a;">Total Bobot:</td>
+                                            <td style="text-align: center; font-size: 14px; font-weight: 800;" id="cell-total-bobot-standar">
+                                                {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
+                                            </td>
+                                            <td></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+
+                            @if(! $skema->is_finalized)
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 10px;">
+                                    <button type="button" class="btn-outline" onclick="tambahBarisKomponenStandar()" style="display: inline-flex; align-items: center; gap: 6px;">
+                                        <x-layout-icon name="plus" />
+                                        <span>Tambah Komponen</span>
+                                    </button>
+
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="submit" name="action" value="save" class="btn-primary" id="btn-submit-standar">
+                                            <x-layout-icon name="save" />
+                                            <span>Simpan Pengaturan Bobot Standar</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        </div>
+                    </form>
                 </div>
             </div>
         @else
@@ -1015,18 +1100,19 @@
     @elseif($tab === 'input')
         @php
             $komponens = $skema->komponens;
+            $isObeClass = $allSubCpmks->isNotEmpty();
         @endphp
 
-        @if($komponens->isEmpty())
+        @if($isObeClass && $komponens->isEmpty())
             <div class="obe-card">
                 <div class="obe-card-body" style="text-align:center; padding:40px 20px;">
                     <div style="max-width:480px; margin:0 auto;">
                         <span class="empty-state-icon" style="font-size:36px; display:inline-block; margin-bottom:12px; color:#2563eb;">
                             <x-layout-icon name="services" />
                         </span>
-                        <h3 style="margin-top:0; color:#0f172a;">Pengaturan Penilaian Belum Diisi</h3>
+                        <h3 style="margin-top:0; color:#0f172a;">Pengaturan Matriks OBE Belum Disimpan</h3>
                         <p style="color:#64748b; font-size:14px; margin-bottom:20px;">
-                            Sebelum menginput nilai mahasiswa, silakan atur instrumen penilaian (Tugas, Kuis, UTS, UAS) dan bobot persentasenya terlebih dahulu pada Tab 1.
+                            Sebelum menginput nilai mahasiswa berbasis RPS, silakan simpan draf atau konfirmasi matriks alokasi instrumen pada Tab 1.
                         </p>
                         <a href="{{ route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan']) }}" class="btn-primary">
                             <x-layout-icon name="services" />
@@ -1121,11 +1207,11 @@
                                     <tr class="mhs-row mhs-row-clickable"
                                         data-nim="{{ strtolower($krs->mahasiswa?->nim ?? '') }}"
                                         data-nama="{{ strtolower($krs->mahasiswa?->nama ?? '') }}"
-                                        onclick="handleStudentClick({{ $krs->id }})">
+                                        onclick="handleStudentClick('{{ $krs->id }}')">
                                         <td style="text-align:center; font-weight:600; color:#64748b;">{{ $loop->iteration }}</td>
                                         <td style="font-weight:700; font-family:monospace; color:#334155;">{{ $krs->mahasiswa?->nim ?? '-' }}</td>
                                         <td>
-                                            <button type="button" class="mhs-name-btn" onclick="event.stopPropagation(); handleStudentClick({{ $krs->id }})">
+                                            <button type="button" class="mhs-name-btn" onclick="event.stopPropagation(); handleStudentClick('{{ $krs->id }}')">
                                                 <strong>{{ $krs->mahasiswa?->nama ?? '-' }}</strong>
                                             </button>
                                             <div style="font-size:11px; color:#64748b; margin-top:2px;">
@@ -1135,11 +1221,11 @@
                                         <td style="text-align:center;">
                                             @if($isObe)
                                                 <span class="badge" style="background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-size:11px; padding:3px 8px; font-weight:700;">
-                                                    OBE
+                                                    OBE (RPS)
                                                 </span>
                                             @else
-                                                <span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #cbd5e1; font-size:11px; padding:3px 8px;">
-                                                    Reguler
+                                                <span class="badge" style="background:#f8fafc; color:#64748b; border:1px solid #cbd5e1; font-size:11px; padding:3px 8px; font-weight:600;">
+                                                    Standar
                                                 </span>
                                             @endif
                                         </td>
@@ -1148,7 +1234,7 @@
                                         </td>
                                         <td style="text-align:center; background:#eff6ff;" id="cell-huruf-{{ $krs->id }}">
                                             <span class="grade-chip grade-{{ substr($ass['nilai_huruf'], 0, 1) }}">
-                                                {{ $ass['nilai_huruf'] }}
+                                                 {{ $ass['nilai_huruf'] }}
                                             </span>
                                         </td>
                                         <td style="text-align:center; font-weight:600; background:#eff6ff;" id="cell-mutu-{{ $krs->id }}">
@@ -1157,13 +1243,13 @@
                                         <td style="text-align:center;" id="cell-cpl-{{ $krs->id }}">
                                             @if($isObe)
                                                 @if($ass['all_cpl_achieved'])
-                                                    <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
-                                                        <x-layout-icon name="check" /> Lulus CPL
-                                                    </span>
+                                                     <span class="badge badge-success" style="font-size:11px; padding:3px 8px;">
+                                                         <x-layout-icon name="check" /> Lulus CPL
+                                                     </span>
                                                 @else
-                                                    <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
-                                                        Belum Lulus
-                                                    </span>
+                                                     <span class="badge badge-warning" style="font-size:11px; padding:3px 8px;" title="Belum: {{ implode(', ', $ass['unachieved_cpls']) }}">
+                                                         Belum Lulus
+                                                     </span>
                                                 @endif
                                             @else
                                                 <span style="color:#94a3b8; font-size:11px;">-</span>
@@ -1172,19 +1258,19 @@
                                         <td style="text-align:center;" onclick="event.stopPropagation();">
                                             @if($isObe)
                                                 <button type="button"
-                                                        class="btn-primary"
-                                                        style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px;"
-                                                        onclick="openStudentDrilldown({{ $krs->id }})">
-                                                    <x-layout-icon name="edit" />
-                                                    <span>Matriks OBE</span>
+                                                         class="btn-primary"
+                                                         style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px;"
+                                                         onclick="openStudentDrilldown('{{ $krs->id }}')">
+                                                     <x-layout-icon name="edit" />
+                                                     <span>Matriks OBE</span>
                                                 </button>
                                             @else
                                                 <button type="button"
-                                                        class="btn-outline"
-                                                        style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px; color:#1e293b;"
-                                                        onclick="openStudentReguler({{ $krs->id }})">
-                                                    <x-layout-icon name="edit" />
-                                                    <span>Nilai Reguler</span>
+                                                         class="btn-outline"
+                                                         style="font-size:12px; padding:5px 12px; display:inline-flex; align-items:center; gap:6px; color:#1e293b;"
+                                                         onclick="openStudentReguler('{{ $krs->id }}')">
+                                                     <x-layout-icon name="edit" />
+                                                     <span>Nilai Standar</span>
                                                 </button>
                                             @endif
                                         </td>
@@ -1421,33 +1507,35 @@
                     </div>
 
                     <div style="margin-bottom:18px;">
-                        <div style="font-size:12.5px; font-weight:700; color:#334155; margin-bottom:8px;">
-                            Komponen Penilaian Standar:
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="font-size:12.5px; font-weight:700; color:#334155;">
+                                Komponen Penilaian Standar:
+                            </div>
+                            <span style="font-size:11.5px; color:#15803d; font-weight:700;">
+                                Total Bobot: {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
+                            </span>
                         </div>
                         <p style="font-size:11.5px; color:#64748b; margin-top:0; margin-bottom:12px;">
-                            Masukkan nilai komponen (skala 0 - 100). Nilai Akhir (NA) akan dihitung otomatis sesuai bobot, atau Anda dapat langsung mengisi nilai akhir pada kolom NA di bawah.
+                            Masukkan nilai komponen (skala 0 - 100). Nilai Akhir (NA) akan dihitung otomatis sesuai bobot komponen, atau Anda dapat langsung menyesuaikan nilai akhir pada kotak NA.
                         </p>
-                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:16px;">
-                            <div>
-                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Kehadiran (10%)</label>
-                                <input type="number" id="reg-kehadiran" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                            </div>
-                            <div>
-                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Tugas (20%)</label>
-                                <input type="number" id="reg-tugas" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                            </div>
-                            <div>
-                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">Kuis (15%)</label>
-                                <input type="number" id="reg-kuis" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                            </div>
-                            <div>
-                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">UTS (25%)</label>
-                                <input type="number" id="reg-uts" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                            </div>
-                            <div style="grid-column: span 2;">
-                                <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">UAS (30%)</label>
-                                <input type="number" id="reg-uas" class="form-control reg-calc-input" min="0" max="100" step="0.5" placeholder="0" oninput="hitungLiveReguler()" {{ $skema->is_finalized ? 'disabled' : '' }}>
-                            </div>
+                        <div id="reguler-components-container" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:16px;">
+                            @foreach($komponenStandar as $idx => $ks)
+                                <div class="{{ (count($komponenStandar) % 2 != 0 && $loop->last) ? 'col-span-full' : '' }}">
+                                    <label style="font-size:11.5px; font-weight:600; color:#475569; display:block; margin-bottom:4px;">
+                                        {{ $ks['nama'] }} ({{ $ks['bobot'] }}%)
+                                    </label>
+                                    <input type="number"
+                                           class="form-control reg-calc-input"
+                                           data-komp-name="{{ $ks['nama'] }}"
+                                           data-komp-weight="{{ $ks['bobot'] }}"
+                                           min="0"
+                                           max="100"
+                                           step="0.5"
+                                           placeholder="0"
+                                           oninput="hitungLiveReguler()"
+                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                </div>
+                            @endforeach
                         </div>
 
                         {{-- Box Hasil Nilai Akhir (NA) & Mutu --}}
@@ -1590,7 +1678,7 @@
                                         <td>
                                             <div style="display:flex; align-items:center; gap:10px;">
                                                 <div class="progress-bar-bg" style="flex:1;">
-                                                    <div class="progress-bar-fill {{ $barColor }}" style="width: {{ min(100, $stat['pass_rate']) }}%;"></div>
+                                                    <div class="progress-bar-fill {{ $barColor }}" data-width="{{ min(100, $stat['pass_rate']) }}"></div>
                                                 </div>
                                                 <span style="font-weight:700; font-size:12px; min-width:44px;">{{ $stat['pass_rate'] }}%</span>
                                             </div>
@@ -1640,7 +1728,7 @@
                                         <span style="font-weight:700;">{{ $st['pass_rate'] }}% Lulus</span>
                                     </div>
                                     <div class="progress-bar-bg">
-                                        <div class="progress-bar-fill {{ $fillCls }}" style="width: {{ min(100, $st['pass_rate']) }}%;"></div>
+                                        <div class="progress-bar-fill {{ $fillCls }}" data-width="{{ min(100, $st['pass_rate']) }}"></div>
                                     </div>
                                 </div>
                             @endforeach
@@ -1833,10 +1921,63 @@
 
 
 {{-- =========================================================================
-     JAVASCRIPT LOGIC
+     JAVASCRIPT LOGIC & DATA INJECTION
      ========================================================================= --}}
+@php
+    $studentsJs = [];
+    foreach ($krsList as $krs) {
+        $ass = $studentAssessments[$krs->id] ?? [
+            'na' => 0,
+            'nilai_huruf' => 'E',
+            'bobot' => 0.0,
+            'all_cpl_achieved' => false,
+            'unachieved_cpls' => [],
+            'cpl_results' => [],
+        ];
+        $mScores = [];
+        foreach ($krs->nilaiKomponens as $nk) {
+            $mScores[(int)$nk->komponen_id] = (float) $nk->nilai_angka;
+        }
+        $studentsJs[] = [
+            'id' => (int) $krs->id,
+            'nim' => $krs->mahasiswa?->nim ?? '-',
+            'nama' => $krs->mahasiswa?->nama ?? '-',
+            'prodi' => $krs->mahasiswa?->prodi?->nama_prodi ?? '-',
+            'is_obe' => (bool) $krs->isObeApplicable(),
+            'na' => (float) ($ass['na'] ?? 0),
+            'huruf' => $ass['nilai_huruf'] ?? 'E',
+            'mutu' => (float) ($ass['bobot'] ?? 0),
+            'all_cpl_achieved' => (bool) ($ass['all_cpl_achieved'] ?? false),
+            'unachieved_cpls' => $ass['unachieved_cpls'] ?? [],
+            'cpl_results' => $ass['cpl_results'] ?? [],
+            'scores' => $mScores,
+            'detail_nilai' => $ass['detail_nilai'] ?? [],
+        ];
+    }
+@endphp
+
+<script id="siakad-students-data" type="application/json">{!! json_encode($studentsJs) !!}</script>
+<script id="siakad-config-data" type="application/json">{!! json_encode([
+    'passingGrade' => (float) ($rps?->target_passing_grade ?? 60.0),
+    'csrfToken' => csrf_token(),
+    'saveUrl' => route('dosen.nilai.input-obe', $jadwal->id),
+    'ksCount' => count($komponenStandar)
+]) !!}</script>
+
 @push('scripts')
 <script>
+    const siakadConfig = JSON.parse(document.getElementById('siakad-config-data') ? document.getElementById('siakad-config-data').textContent : '{}');
+    const studentsData = JSON.parse(document.getElementById('siakad-students-data') ? document.getElementById('siakad-students-data').textContent : '[]');
+    const passingGrade = siakadConfig.passingGrade || 60;
+    let ksCounter = siakadConfig.ksCount || 4;
+    const saveUrl = siakadConfig.saveUrl || '';
+    const csrfToken = siakadConfig.csrfToken || '';
+
+    // Render progress bar widths dynamically
+    document.querySelectorAll('.progress-bar-fill[data-width]').forEach(function(el) {
+        el.style.width = el.getAttribute('data-width') + '%';
+    });
+
     function openModal(id) {
         const el = document.getElementById(id);
         if (el) el.style.display = 'flex';
@@ -1861,11 +2002,11 @@
     // -------------------------------------------------------------------------
     // TAB 1: KALKULASI DINAMIS MATRIKS ALOKASI BOBOT INSTRUMEN KE SUB-CPMK
     // -------------------------------------------------------------------------
-    @if($tab === 'pengaturan')
     (function(){
         const tableMatrix = document.getElementById('table-matrix-alokasi');
         const rowsBody = document.getElementById('matrix-rows-body');
         const btnAddRow = document.getElementById('btn-add-matrix-row');
+        if (!tableMatrix) return;
 
         function hitungMatrix() {
             let grandTotal = 0;
@@ -2061,13 +2202,14 @@
         // Jalankan perhitungan awal saat halaman dibuka
         hitungMatrix();
     })();
-    @endif
 
     // -------------------------------------------------------------------------
     // TAB 2: LIVE SEARCH MAHASISWA & REAL-TIME NA CALCULATION
     // -------------------------------------------------------------------------
-    @if($tab === 'input')
     (function(){
+        const tableNilai = document.getElementById('table-nilai');
+        if (!tableNilai) return;
+
         // Live Search Filter
         const searchInput = document.getElementById('filter-mhs');
         if (searchInput) {
@@ -2085,8 +2227,6 @@
             });
         }
 
-        const passingGrade = {{ (float) ($rps?->target_passing_grade ?? 60.0) }};
-
         function konversiNilai(angka) {
             if (angka >= 85) return { huruf: 'A', bobot: '4.00', cls: 'grade-A' };
             if (angka >= 80) return { huruf: 'A-', bobot: '3.75', cls: 'grade-A' };
@@ -2099,39 +2239,6 @@
             return { huruf: 'E', bobot: '0.00', cls: 'grade-E' };
         }
 
-        @php
-            $studentsJs = [];
-            foreach ($krsList as $krs) {
-                $ass = $studentAssessments[$krs->id] ?? [
-                    'na' => 0,
-                    'nilai_huruf' => 'E',
-                    'bobot' => 0.0,
-                    'all_cpl_achieved' => false,
-                    'unachieved_cpls' => [],
-                    'cpl_results' => [],
-                ];
-                $mScores = [];
-                foreach ($krs->nilaiKomponens as $nk) {
-                    $mScores[(int)$nk->komponen_id] = (float) $nk->nilai_angka;
-                }
-                $studentsJs[] = [
-                    'id' => (int) $krs->id,
-                    'nim' => $krs->mahasiswa?->nim ?? '-',
-                    'nama' => $krs->mahasiswa?->nama ?? '-',
-                    'prodi' => $krs->mahasiswa?->prodi?->nama_prodi ?? '-',
-                    'is_obe' => (bool) $krs->isObeApplicable(),
-                    'na' => (float) ($ass['na'] ?? 0),
-                    'huruf' => $ass['nilai_huruf'] ?? 'E',
-                    'mutu' => (float) ($ass['bobot'] ?? 0),
-                    'all_cpl_achieved' => (bool) ($ass['all_cpl_achieved'] ?? false),
-                    'unachieved_cpls' => $ass['unachieved_cpls'] ?? [],
-                    'cpl_results' => $ass['cpl_results'] ?? [],
-                    'scores' => $mScores,
-                ];
-            }
-        @endphp
-
-        const studentsData = @json($studentsJs);
         let currentStudentIndex = 0;
 
         function showToast(message, type = 'success') {
@@ -2156,7 +2263,7 @@
         }
 
         window.handleStudentClick = function(krsId) {
-            const s = studentsData.find(st => st.id === krsId);
+            const s = studentsData.find(st => String(st.id) === String(krsId));
             if (!s) return;
             if (s.is_obe) {
                 openStudentDrilldown(krsId);
@@ -2172,7 +2279,7 @@
         };
 
         window.openStudentDrilldown = function(krsId) {
-            const idx = studentsData.findIndex(s => s.id === krsId);
+            const idx = studentsData.findIndex(s => String(s.id) === String(krsId));
             if (idx === -1) return;
             currentStudentIndex = idx;
             renderModalStudent();
@@ -2186,7 +2293,7 @@
         let currentRegulerKrsId = null;
 
         window.openStudentReguler = function(krsId) {
-            const s = studentsData.find(st => st.id === krsId);
+            const s = studentsData.find(st => String(st.id) === String(krsId));
             if (!s) return;
             currentRegulerKrsId = krsId;
 
@@ -2197,9 +2304,15 @@
             const naInput = document.getElementById('reg-na');
             if (naInput) naInput.value = s.na > 0 ? s.na.toFixed(2) : '';
 
-            ['reg-kehadiran', 'reg-tugas', 'reg-kuis', 'reg-uts', 'reg-uas'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.value = '';
+            const detail = s.detail_nilai || {};
+            const inputs = document.querySelectorAll('#reguler-components-container .reg-calc-input');
+            inputs.forEach(inp => {
+                const name = inp.getAttribute('data-komp-name');
+                if (detail && detail[name] !== undefined && detail[name] !== null) {
+                    inp.value = detail[name];
+                } else {
+                    inp.value = '';
+                }
             });
 
             syncFromNaInput();
@@ -2212,13 +2325,15 @@
         };
 
         window.hitungLiveReguler = function() {
-            const kehadiran = parseFloat(document.getElementById('reg-kehadiran').value) || 0;
-            const tugas = parseFloat(document.getElementById('reg-tugas').value) || 0;
-            const kuis = parseFloat(document.getElementById('reg-kuis').value) || 0;
-            const uts = parseFloat(document.getElementById('reg-uts').value) || 0;
-            const uas = parseFloat(document.getElementById('reg-uas').value) || 0;
+            let totalWeightedScore = 0;
+            const inputs = document.querySelectorAll('#reguler-components-container .reg-calc-input');
+            inputs.forEach(inp => {
+                const val = parseFloat(inp.value) || 0;
+                const weight = parseFloat(inp.getAttribute('data-komp-weight')) || 0;
+                totalWeightedScore += (val * weight) / 100.0;
+            });
 
-            const na = (kehadiran * 0.10) + (tugas * 0.20) + (kuis * 0.15) + (uts * 0.25) + (uas * 0.30);
+            const na = Math.min(100, Math.max(0, Math.round(totalWeightedScore * 100) / 100));
             const naInput = document.getElementById('reg-na');
             if (naInput) {
                 naInput.value = na > 0 ? na.toFixed(2) : '';
@@ -2244,10 +2359,17 @@
 
         window.saveRegulerStudent = async function() {
             if (!currentRegulerKrsId) return;
-            const s = studentsData.find(st => st.id === currentRegulerKrsId);
+            const s = studentsData.find(st => String(st.id) === String(currentRegulerKrsId));
             if (!s) return;
 
             const naVal = parseFloat(document.getElementById('reg-na').value) || 0;
+            const detailPayload = {};
+            const inputs = document.querySelectorAll('#reguler-components-container .reg-calc-input');
+            inputs.forEach(inp => {
+                const name = inp.getAttribute('data-komp-name');
+                detailPayload[name] = inp.value !== '' ? parseFloat(inp.value) : 0;
+            });
+
             const btnSave = document.getElementById('btn-save-reguler-mhs');
             const lblBtn = document.getElementById('label-btn-save-reg');
             const origText = lblBtn ? lblBtn.textContent : 'Simpan Nilai';
@@ -2258,17 +2380,18 @@
             }
 
             try {
-                const res = await fetch("{{ route('dosen.nilai.input-obe', $jadwal->id) }}", {
+                const res = await fetch(saveUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json',
                     },
                     body: JSON.stringify({
                         nilai_reguler: {
                             [s.id]: {
-                                na: naVal
+                                na: naVal,
+                                detail: detailPayload
                             }
                         }
                     })
@@ -2277,6 +2400,7 @@
                 const data = await res.json();
                 if (res.ok && data.success) {
                     showToast(`Nilai untuk ${s.nama} berhasil disimpan!`, 'success');
+                    s.detail_nilai = detailPayload;
 
                     const updatedAss = data.assessments ? data.assessments[s.id] : null;
                     if (updatedAss) {
@@ -2314,6 +2438,80 @@
                     btnSave.disabled = false;
                     if (lblBtn) lblBtn.textContent = origText;
                 }
+            }
+        };
+
+        // Fungsi editor komponen standar di Tab 1
+        window.calcTotalBobotStandar = function() {
+            let sum = 0;
+            document.querySelectorAll('.ks-input-bobot').forEach(inp => {
+                sum += parseFloat(inp.value) || 0;
+            });
+            const cellTotal = document.getElementById('cell-total-bobot-standar');
+            if (cellTotal) {
+                cellTotal.textContent = Math.round(sum * 10) / 10 + '%';
+                if (Math.round(sum) === 100) {
+                    cellTotal.style.color = '#15803d';
+                } else {
+                    cellTotal.style.color = '#dc2626';
+                }
+            }
+        };
+
+        window.tambahBarisKomponenStandar = function() {
+            const tbody = document.getElementById('tbody-komponen-standar');
+            if (!tbody) return;
+            const tr = document.createElement('tr');
+            tr.className = 'row-komponen-standar';
+            const no = tbody.children.length + 1;
+            tr.innerHTML = `
+                <td style="text-align: center; color: #64748b; font-weight: 600;" class="row-ks-no">${no}</td>
+                <td>
+                    <input type="text"
+                           name="komponen_standar[${ksCounter}][nama]"
+                           class="form-control ks-input-nama"
+                           placeholder="Contoh: Praktikum / Proyek"
+                           required
+                           style="width: 100%; font-size: 13px;">
+                </td>
+                <td>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                        <input type="number"
+                               name="komponen_standar[${ksCounter}][bobot]"
+                               value="10"
+                               class="form-control ks-input-bobot"
+                               min="1"
+                               max="100"
+                               step="0.5"
+                               required
+                               oninput="calcTotalBobotStandar()"
+                               style="width: 80px; text-align: center; font-weight: 700; font-size: 13px;">
+                        <span style="font-weight: 700; color: #64748b; font-size: 13px;">%</span>
+                    </div>
+                </td>
+                <td style="text-align: center;">
+                    <button type="button"
+                            onclick="hapusBarisKomponenStandar(this)"
+                            class="btn-outline"
+                            style="padding: 4px 8px; color: #dc2626; border-color: #fca5a5;"
+                            title="Hapus komponen">
+                        <svg class="layout-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+            ksCounter++;
+            calcTotalBobotStandar();
+        };
+
+        window.hapusBarisKomponenStandar = function(btn) {
+            const tr = btn.closest('tr');
+            if (tr) {
+                tr.remove();
+                document.querySelectorAll('#tbody-komponen-standar .row-ks-no').forEach((td, idx) => {
+                    td.textContent = idx + 1;
+                });
+                calcTotalBobotStandar();
             }
         };
 
@@ -2488,11 +2686,11 @@
             });
 
             try {
-                const res = await fetch("{{ route('dosen.nilai.input-obe', $jadwal->id) }}", {
+                const res = await fetch(saveUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'X-CSRF-TOKEN': csrfToken,
                         'Accept': 'application/json',
                     },
                     body: JSON.stringify({
@@ -2568,12 +2766,10 @@
             }
         });
     })();
-    @endif
 
     // -------------------------------------------------------------------------
     // TAB 3: LIVE SEARCH CAPAIAN MAHASISWA
     // -------------------------------------------------------------------------
-    @if($tab === 'capaian')
     (function(){
         const searchInput = document.getElementById('filter-mhs-capaian');
         if (searchInput) {
@@ -2590,7 +2786,6 @@
             });
         }
     })();
-    @endif
 </script>
 @endpush
 

@@ -65,6 +65,16 @@ class Prodi extends Model
         return $this->hasMany(Cpl::class, 'program_studi_id');
     }
 
+    /**
+     * Memeriksa apakah program studi telah menetapkan Capaian Pembelajaran Lulusan (CPL)
+     */
+    public function hasCpl(): bool
+    {
+        return Cpl::where(function ($q) {
+            $q->where('prodi_id', $this->id)->orWhere('program_studi_id', $this->id);
+        })->exists();
+    }
+
     public function kelas()
     {
         return $this->hasMany(

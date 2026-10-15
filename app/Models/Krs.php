@@ -129,14 +129,15 @@ class Krs extends Model
 
     /**
      * Memeriksa apakah mahasiswa pada KRS ini memenuhi syarat penilaian kurikulum OBE
-     * Syarat:
-     * 1. Program Studi mahasiswa aktif OBE (is_obe_active == true)
+     * Alur validasi:
+     * 1. Prodi mahasiswa memiliki CPL (hasCpl() == true) dan status OBE aktif (is_obe_active == true)
      * 2. Mata Kuliah memiliki RPS resmi aktif dan pemetaan CPMK
+     * Jika salah satu syarat tidak terpenuhi, penilaian otomatis dialihkan ke Penilaian Standar.
      */
     public function isObeApplicable(): bool
     {
         $prodi = $this->mahasiswa?->prodi ?? $this->prodiEfektif;
-        if (! $prodi || ! (bool) $prodi->is_obe_active) {
+        if (! $prodi || ! (bool) $prodi->is_obe_active || ! $prodi->hasCpl()) {
             return false;
         }
 

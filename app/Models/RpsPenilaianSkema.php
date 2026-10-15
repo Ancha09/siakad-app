@@ -14,6 +14,7 @@ class RpsPenilaianSkema extends Model
         'is_finalized',
         'finalized_at',
         'matrix_alokasi',
+        'komponen_standar',
     ];
 
     protected function casts(): array
@@ -22,6 +23,24 @@ class RpsPenilaianSkema extends Model
             'is_finalized' => 'boolean',
             'finalized_at' => 'datetime',
             'matrix_alokasi' => 'array',
+            'komponen_standar' => 'array',
+        ];
+    }
+
+    /**
+     * Komponen dan bobot standar efektif (default: Kehadiran 10%, Tugas 20%, UTS 30%, UAS 40%)
+     */
+    public function getKomponenStandarEfektifAttribute(): array
+    {
+        if (! empty($this->komponen_standar) && is_array($this->komponen_standar)) {
+            return $this->komponen_standar;
+        }
+
+        return [
+            ['nama' => 'Kehadiran', 'bobot' => 10],
+            ['nama' => 'Tugas', 'bobot' => 20],
+            ['nama' => 'UTS', 'bobot' => 30],
+            ['nama' => 'UAS', 'bobot' => 40],
         ];
     }
 

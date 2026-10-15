@@ -16,6 +16,7 @@ class Khs extends Model
         'nilai_angka',
         'nilai_huruf',
         'bobot',
+        'detail_nilai',
         'sks',
         'tahun_akademik',
         'semester_akademik',
@@ -26,7 +27,11 @@ class Khs extends Model
 
     protected function casts(): array
     {
-        return ['is_manual' => 'boolean', 'dosen_override' => 'boolean'];
+        return [
+            'is_manual' => 'boolean',
+            'dosen_override' => 'boolean',
+            'detail_nilai' => 'array',
+        ];
     }
 
     public function getSksEfektifAttribute(): int

@@ -127,6 +127,10 @@ class NilaiController extends Controller
             }
         }
 
+        $komponenStandar = $skema->komponen_standar_efektif;
+        $countObe = $krsList->filter(fn($k) => $k->isObeApplicable())->count();
+        $countReguler = $krsList->count() - $countObe;
+
         return view('dosen.nilai.obe', compact(
             'jadwal',
             'rps',
@@ -139,7 +143,10 @@ class NilaiController extends Controller
             'capaianKelas',
             'tab',
             'cpmks',
-            'allSubCpmks'
+            'allSubCpmks',
+            'komponenStandar',
+            'countObe',
+            'countReguler'
         ));
     }
 
@@ -167,6 +174,40 @@ class NilaiController extends Controller
             return redirect()
                 ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan'])
                 ->with('success', 'Matriks alokasi instrumen penilaian berhasil dimuat ulang dari template dokumen RPS baku.');
+        }
+
+        // Simpan / perbarui komponen & bobot penilaian standar
+        if ($request->has('komponen_standar')) {
+            $rawStandar = $request->input('komponen_standar', []);
+            $komponenStandar = [];
+            $totalStandar = 0.0;
+            foreach ($rawStandar as $ks) {
+                $nama = trim($ks['nama'] ?? '');
+                $bobot = (float) ($ks['bobot'] ?? 0);
+                if ($nama !== '' && $bobot > 0) {
+                    $komponenStandar[] = [
+                        'nama' => $nama,
+                        'bobot' => $bobot,
+                    ];
+                    $totalStandar += $bobot;
+                }
+            }
+
+            $isDraft = $request->input('action') === 'draft';
+            if (! $isDraft && ! empty($komponenStandar) && round($totalStandar, 1) != 100.0) {
+                return back()->withInput()->with('error', "Total bobot komponen standar harus tepat 100%. Saat ini terhitung: " . round($totalStandar, 1) . "%");
+            }
+
+            if (! empty($komponenStandar)) {
+                $skema->update(['komponen_standar' => $komponenStandar]);
+            }
+
+            // Jika hanya menyimpan komponen standar (misal pada matkul non-RPS)
+            if (! $request->has('matrix_rows') && ! $request->has('nama_instrumen')) {
+                return redirect()
+                    ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
+                    ->with('success', 'Pengaturan komponen dan bobot penilaian standar berhasil disimpan.');
+            }
         }
 
         // Cek jika request berasal dari Matriks 2D Alokasi
@@ -320,18 +361,27 @@ class NilaiController extends Controller
             foreach ($scoresReguler as $krsId => $regVal) {
                 $na = is_array($regVal) ? (float) ($regVal['na'] ?? 0) : (float) $regVal;
                 $na = round(min(100.0, max(0.0, $na)), 2);
+                $detailNilai = is_array($regVal) && isset($regVal['detail']) && is_array($regVal['detail'])
+                    ? $regVal['detail']
+                    : null;
+
                 $krs = Krs::find((int) $krsId);
                 if ($krs) {
                     $konversi = $obeService->konversiNilai($na);
+                    $updateData = [
+                        'nilai_angka' => $na,
+                        'nilai_huruf' => $konversi['huruf'],
+                        'bobot' => $konversi['bobot'],
+                        'tahun_akademik' => $krs->tahun_akademik,
+                        'semester_akademik' => $krs->semester_akademik,
+                    ];
+                    if ($detailNilai !== null) {
+                        $updateData['detail_nilai'] = $detailNilai;
+                    }
+
                     Khs::updateOrCreate(
                         ['krs_id' => $krs->id],
-                        [
-                            'nilai_angka' => $na,
-                            'nilai_huruf' => $konversi['huruf'],
-                            'bobot' => $konversi['bobot'],
-                            'tahun_akademik' => $krs->tahun_akademik,
-                            'semester_akademik' => $krs->semester_akademik,
-                        ]
+                        $updateData
                     );
                 }
             }

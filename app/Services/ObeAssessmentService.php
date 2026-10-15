@@ -547,6 +547,7 @@ class ObeAssessmentService
                 'all_cpl_achieved' => true,
                 'passing_grade' => (float) ($rps?->target_passing_grade ?? 60.0),
                 'is_obe' => false,
+                'detail_nilai' => $khs?->detail_nilai ?? [],
             ];
         }
 
