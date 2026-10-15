@@ -130,25 +130,32 @@ class Krs extends Model
     /**
      * Memeriksa apakah mahasiswa pada KRS ini memenuhi syarat penilaian kurikulum OBE
      * Alur validasi:
-     * 1. Prodi mahasiswa memiliki CPL (hasCpl() == true) dan status OBE aktif (is_obe_active == true)
-     * 2. Mata Kuliah memiliki RPS resmi aktif dan pemetaan CPMK
+     * 1. Prodi mahasiswa sudah OBE: status OBE aktif (is_obe_active) ATAU memiliki CPL (hasCpl())
+     * 2. Mata Kuliah (jadwal) memiliki RPS dan pemetaan CPMK
      * Jika salah satu syarat tidak terpenuhi, penilaian otomatis dialihkan ke Penilaian Standar.
      */
     public function isObeApplicable(): bool
     {
+        if ($this->obeApplicableCache !== null) {
+            return $this->obeApplicableCache;
+        }
+
         $prodi = $this->mahasiswa?->prodi ?? $this->prodiEfektif;
-        if (! $prodi || ! (bool) $prodi->is_obe_active || ! $prodi->hasCpl()) {
-            return false;
+        if (! $prodi || ! ((bool) $prodi->is_obe_active || $prodi->hasCpl())) {
+            return $this->obeApplicableCache = false;
         }
 
         $mk = $this->mata_kuliah_efektif;
         if (! $mk) {
-            return false;
+            return $this->obeApplicableCache = false;
         }
 
         $hasRps = (bool) ($mk->rpsAktif ?? ($mk->relationLoaded('rpsList') ? $mk->rpsList->first() : $mk->rpsList()->latest()->first()));
         $hasCpmk = $mk->relationLoaded('cpmks') ? $mk->cpmks->isNotEmpty() : $mk->cpmks()->exists();
 
-        return $hasRps && $hasCpmk;
+        return $this->obeApplicableCache = ($hasRps && $hasCpmk);
     }
+
+    /** Cache hasil isObeApplicable() per instance (tidak disimpan ke database). */
+    protected ?bool $obeApplicableCache = null;
 }
