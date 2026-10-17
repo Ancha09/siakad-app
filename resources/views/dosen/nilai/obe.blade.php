@@ -332,15 +332,76 @@
         text-align: center;
         letter-spacing: 0.5px;
         padding: 6px 4px;
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .matrix-cpmk-head:hover,
+    .matrix-cpmk-head.obe-head-active {
+        background: #dbeafe;
+        color: #1d4ed8;
     }
     .matrix-sub-head {
         background: #f8fafc;
-        color: #475569;
+        color: #1e40af;
         font-size: 11px;
         font-weight: 700;
         text-align: center;
         min-width: 48px;
         padding: 6px 4px;
+        cursor: pointer;
+        user-select: none;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 3px;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .matrix-sub-head:hover,
+    .matrix-sub-head.obe-head-active {
+        background: #eff6ff;
+        color: #1d4ed8;
+    }
+    .obe-subcpmk-popover {
+        position: fixed;
+        z-index: 10060;
+        background: #0f172a;
+        color: #f8fafc;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 12px 14px;
+        width: max-content;
+        max-width: min(360px, calc(100vw - 24px));
+        box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.45);
+        font-size: 12.5px;
+        line-height: 1.5;
+        display: none;
+    }
+    .obe-subcpmk-popover-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #334155;
+    }
+    .obe-subcpmk-popover-badges {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+    .obe-subcpmk-popover-close {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 0 2px;
+    }
+    .obe-subcpmk-popover-close:hover {
+        color: #ffffff;
     }
     .matrix-row-nama {
         font-weight: 700;
@@ -826,7 +887,14 @@
                                         <th style="width: 75px; background: #ffffff; border-bottom: none; text-align: center;"></th>
                                         @foreach($cpmks as $cpmk)
                                             @if($cpmk->subCpmks->count() > 0)
-                                                <th colspan="{{ $cpmk->subCpmks->count() }}" class="matrix-cpmk-head" title="{{ $cpmk->deskripsi }}">
+                                                <th colspan="{{ $cpmk->subCpmks->count() }}"
+                                                    class="matrix-cpmk-head"
+                                                    title="{{ $cpmk->kode_cpmk }}: {{ $cpmk->deskripsi }}"
+                                                    data-obe-label="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-kode="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-cpl="{{ $cpmk->subCpmks->first()?->cpl?->kode_cpl ?? '' }}"
+                                                    data-obe-desc="{{ $cpmk->deskripsi ?: 'Belum ada deskripsi CPMK.' }}"
+                                                    onclick="toggleObeHeadPopover(this, event)">
                                                     {{ $cpmk->kode_cpmk }}
                                                 </th>
                                             @endif
@@ -842,10 +910,17 @@
                                         @php $subIter = 1; @endphp
                                         @foreach($cpmks as $cpmk)
                                             @foreach($cpmk->subCpmks as $sub)
+                                                @php $sLabel = 'S' . ($subIter++); @endphp
                                                 <th class="matrix-sub-head matrix-sub-col"
                                                     data-sub-id="{{ $sub->id }}"
-                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})">
-                                                    S{{ $subIter++ }}
+                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})"
+                                                    data-obe-label="{{ $sLabel }}"
+                                                    data-obe-kode="{{ $sub->kode_sub_cpmk }}"
+                                                    data-obe-cpmk="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                    data-obe-desc="{{ $sub->deskripsi ?: 'Belum ada deskripsi Sub-CPMK.' }}"
+                                                    onclick="toggleObeHeadPopover(this, event)">
+                                                    {{ $sLabel }}
                                                 </th>
                                             @endforeach
                                         @endforeach
@@ -1352,12 +1427,12 @@
 
                     {{-- 2D Matrix Input Table --}}
                     <div style="margin-bottom:16px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
                             <div style="font-size:12.5px; font-weight:700; color:#0f172a;">
                                 Matriks Instrumen Penilaian &times; Sub-CPMK:
                             </div>
                             <div style="font-size:11.5px; color:#64748b;">
-                                Input skor mentah (skala 0 - 100). Bobot (%) telah baku dari RPS.
+                                Input skor mentah (0–100) &bull; <span style="color:#2563eb; font-weight:600;">Klik kode CPMK / S1–Sn untuk melihat deskripsi</span>
                             </div>
                         </div>
 
@@ -1370,7 +1445,14 @@
                                         <th style="width:70px; background:#ffffff; border-bottom:none; text-align:center;"></th>
                                         @foreach($cpmks as $cpmk)
                                             @if($cpmk->subCpmks->count() > 0)
-                                                <th colspan="{{ $cpmk->subCpmks->count() }}" class="matrix-cpmk-head" title="{{ $cpmk->deskripsi }}">
+                                                <th colspan="{{ $cpmk->subCpmks->count() }}"
+                                                    class="matrix-cpmk-head"
+                                                    title="{{ $cpmk->kode_cpmk }}: {{ $cpmk->deskripsi }}"
+                                                    data-obe-label="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-kode="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-cpl="{{ $cpmk->subCpmks->first()?->cpl?->kode_cpl ?? '' }}"
+                                                    data-obe-desc="{{ $cpmk->deskripsi ?: 'Belum ada deskripsi CPMK.' }}"
+                                                    onclick="toggleObeHeadPopover(this, event)">
                                                     {{ $cpmk->kode_cpmk }}
                                                 </th>
                                             @endif
@@ -1383,8 +1465,17 @@
                                         @php $subIter = 1; @endphp
                                         @foreach($cpmks as $cpmk)
                                             @foreach($cpmk->subCpmks as $sub)
-                                                <th class="matrix-sub-head" style="min-width:54px;" title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})">
-                                                    S{{ $subIter++ }}
+                                                @php $sLabel = 'S' . ($subIter++); @endphp
+                                                <th class="matrix-sub-head"
+                                                    style="min-width:54px;"
+                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})"
+                                                    data-obe-label="{{ $sLabel }}"
+                                                    data-obe-kode="{{ $sub->kode_sub_cpmk }}"
+                                                    data-obe-cpmk="{{ $cpmk->kode_cpmk }}"
+                                                    data-obe-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                    data-obe-desc="{{ $sub->deskripsi ?: 'Belum ada deskripsi Sub-CPMK.' }}"
+                                                    onclick="toggleObeHeadPopover(this, event)">
+                                                    {{ $sLabel }}
                                                 </th>
                                             @endforeach
                                         @endforeach
@@ -1838,6 +1929,17 @@
         </div>
     @endif
 
+</div>
+
+{{-- =========================================================================
+     POPOVER DESKRIPSI CPMK / SUB-CPMK (KLIK UNTUK MOBILE, TABLET, & DESKTOP)
+     ========================================================================= --}}
+<div id="obe-subcpmk-popover" class="obe-subcpmk-popover" role="dialog" aria-live="polite">
+    <div class="obe-subcpmk-popover-head">
+        <div class="obe-subcpmk-popover-badges" id="obe-popover-badges"></div>
+        <button type="button" class="obe-subcpmk-popover-close" onclick="closeObeHeadPopover()" aria-label="Tutup">&times;</button>
+    </div>
+    <div id="obe-popover-desc" style="color:#e2e8f0; font-weight:500;"></div>
 </div>
 
 {{-- =========================================================================
@@ -2785,6 +2887,105 @@
                 });
             });
         }
+    })();
+
+    // -------------------------------------------------------------------------
+    // POPOVER KLIK KODE S1-Sn & CPMK (MOBILE / TABLET / DESKTOP FRIENDLY)
+    // -------------------------------------------------------------------------
+    (function(){
+        let activeHeadEl = null;
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        window.closeObeHeadPopover = function() {
+            const pop = document.getElementById('obe-subcpmk-popover');
+            if (pop) pop.style.display = 'none';
+            if (activeHeadEl) {
+                activeHeadEl.classList.remove('obe-head-active');
+                activeHeadEl = null;
+            }
+        };
+
+        window.toggleObeHeadPopover = function(el, evt) {
+            if (evt) {
+                evt.stopPropagation();
+            }
+            const pop = document.getElementById('obe-subcpmk-popover');
+            const badgesBox = document.getElementById('obe-popover-badges');
+            const descBox = document.getElementById('obe-popover-desc');
+            if (!pop || !badgesBox || !descBox) return;
+
+            if (activeHeadEl === el && pop.style.display === 'block') {
+                closeObeHeadPopover();
+                return;
+            }
+
+            if (activeHeadEl) {
+                activeHeadEl.classList.remove('obe-head-active');
+            }
+            activeHeadEl = el;
+            el.classList.add('obe-head-active');
+
+            const label = el.getAttribute('data-obe-label') || '';
+            const kode = el.getAttribute('data-obe-kode') || '';
+            const cpmk = el.getAttribute('data-obe-cpmk') || '';
+            const cpl = el.getAttribute('data-obe-cpl') || '';
+            const desc = el.getAttribute('data-obe-desc') || '';
+
+            let badgesHtml = '';
+            if (label && label !== kode) {
+                badgesHtml += `<span style="background:#2563eb; color:#fff; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:800;">${escapeHtml(label)}</span>`;
+            }
+            if (kode) {
+                badgesHtml += `<span style="background:#1e293b; color:#93c5fd; border:1px solid #475569; padding:2px 8px; border-radius:5px; font-size:11px; font-weight:700;">${escapeHtml(kode)}</span>`;
+            }
+            if (cpmk) {
+                badgesHtml += `<span style="background:#fef3c7; color:#92400e; padding:2px 7px; border-radius:5px; font-size:10.5px; font-weight:700;">${escapeHtml(cpmk)}</span>`;
+            }
+            if (cpl) {
+                badgesHtml += `<span style="background:#e0f2fe; color:#0369a1; padding:2px 7px; border-radius:5px; font-size:10.5px; font-weight:700;">${escapeHtml(cpl)}</span>`;
+            }
+
+            badgesBox.innerHTML = badgesHtml;
+            descBox.textContent = desc;
+
+            pop.style.display = 'block';
+
+            const rect = el.getBoundingClientRect();
+            const popRect = pop.getBoundingClientRect();
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+
+            let left = rect.left + (rect.width / 2) - (popRect.width / 2);
+            if (left < 12) left = 12;
+            if (left + popRect.width > vw - 12) left = Math.max(12, vw - popRect.width - 12);
+
+            let top = rect.bottom + 8;
+            if (top + popRect.height > vh - 12 && rect.top - popRect.height - 8 > 12) {
+                top = rect.top - popRect.height - 8;
+            }
+
+            pop.style.left = Math.round(left) + 'px';
+            pop.style.top = Math.round(top) + 'px';
+        };
+
+        document.addEventListener('click', function(e) {
+            const pop = document.getElementById('obe-subcpmk-popover');
+            if (!pop || pop.style.display === 'none') return;
+            if (!pop.contains(e.target)) {
+                closeObeHeadPopover();
+            }
+        });
+
+        window.addEventListener('scroll', function() {
+            closeObeHeadPopover();
+        }, true);
     })();
 </script>
 @endpush
