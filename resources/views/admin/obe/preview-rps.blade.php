@@ -119,6 +119,10 @@
     <form method="POST" action="{{ route('admin.obe.rps.apply') }}" id="form-apply-rps">
         @csrf
         <input type="hidden" name="temp_path" value="{{ $tempPath }}">
+        <input type="hidden" name="meta_kode_mk" value="{{ $extracted['metadata']['kode_mk'] ?? '' }}">
+        <input type="hidden" name="meta_nama_mk" value="{{ $extracted['metadata']['nama_mk'] ?? '' }}">
+        <input type="hidden" name="meta_sks" value="{{ $extracted['metadata']['sks'] ?? '' }}">
+        <input type="hidden" name="meta_semester" value="{{ $extracted['metadata']['semester'] ?? '' }}">
 
         {{-- Header Card: Ringkasan Ekstraksi Dokumen --}}
         <div class="preview-header-card">
@@ -202,6 +206,11 @@
                         <label for="select-mk" style="font-weight: 600; font-size: 13px;">Mata Kuliah Tujuan *</label>
                         <select name="mata_kuliah_id" id="select-mk" class="form-control" required>
                             <option value="">-- Pilih Mata Kuliah --</option>
+                            @if(!$matchedMk && (!empty($extracted['metadata']['kode_mk']) || !empty($extracted['metadata']['nama_mk'])))
+                                <option value="new" selected>
+                                    + Buat Otomatis: {{ $extracted['metadata']['kode_mk'] ?? 'MK-BARU' }} — {{ $extracted['metadata']['nama_mk'] ?? 'Mata Kuliah Baru' }}
+                                </option>
+                            @endif
                             @foreach($allMataKuliahs as $mk)
                                 <option value="{{ $mk->id }}"
                                         data-prodi="{{ $mk->prodi_id }}"
@@ -212,6 +221,8 @@
                         </select>
                         @if($matchedMk)
                             <small style="color: #059669; font-weight: 600;">Otomatis dicocokkan dengan kode/nama mata kuliah di database.</small>
+                        @elseif(!empty($extracted['metadata']['kode_mk']) || !empty($extracted['metadata']['nama_mk']))
+                            <small style="color: #2563eb; font-weight: 600;">Mata kuliah akan dibuat otomatis dari metadata PDF, atau pilih mata kuliah yang sudah ada.</small>
                         @else
                             <small style="color: #d97706; font-weight: 600;">Silakan pilih mata kuliah yang sesuai di database.</small>
                         @endif
@@ -611,7 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
         Array.from(selectMk.options).forEach(opt => {
             if (!opt.value) return; // skip placeholder
             const optProdi = opt.getAttribute('data-prodi');
-            if (!prodiId || optProdi === prodiId) {
+            if (!prodiId || !optProdi || opt.value === 'new' || optProdi === prodiId) {
                 opt.style.display = '';
                 if (opt.value === currentSelectedMk) {
                     hasSelectedVisible = true;

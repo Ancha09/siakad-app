@@ -700,6 +700,16 @@ a.btn-primary:visited {
   color: var(--blue); border: 1.5px solid var(--blue);
   border-radius: 9px; font-size: 13px; font-weight: 600;
   cursor: pointer; font-family: inherit; transition: all 0.2s;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  text-decoration: none; white-space: nowrap;
+}
+a.btn-outline,
+a.btn-outline:hover,
+a.btn-outline:focus,
+a.btn-outline:active,
+a.btn-outline:visited {
+  color: var(--blue);
+  text-decoration: none;
 }
 .btn-outline:hover { background: var(--pale); }
 

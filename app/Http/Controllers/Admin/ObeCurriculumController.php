@@ -29,7 +29,11 @@ class ObeCurriculumController extends Controller
 
         $mataKuliahQuery = MataKuliah::query()->orderBy('kode_mk');
         if ($selectedProdiId) {
-            $mataKuliahQuery->where('prodi_id', $selectedProdiId);
+            $mataKuliahQuery->where(function ($q) use ($selectedProdiId) {
+                $q->where('prodi_id', $selectedProdiId)
+                    ->orWhereNull('prodi_id')
+                    ->orWhereHas('kurikulums', fn ($k) => $k->where('prodi_id', $selectedProdiId));
+            });
         }
         $mataKuliahs = $mataKuliahQuery->get();
 
@@ -70,7 +74,15 @@ class ObeCurriculumController extends Controller
         // Data Tab 3: RPS
         $rpsList = MataKuliahRps::with('mataKuliah.prodi')
             ->when($selectedProdiId, function ($q) use ($selectedProdiId) {
-                $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $selectedProdiId));
+                $q->whereHas('mataKuliah', function ($m) use ($selectedProdiId) {
+                    $m->where('prodi_id', $selectedProdiId)
+                        ->orWhereNull('prodi_id')
+                        ->orWhereHas('kurikulums', fn ($k) => $k->where('prodi_id', $selectedProdiId))
+                        ->orWhereHas('cpmks.subCpmks.cpl', function ($c) use ($selectedProdiId) {
+                            $c->where('prodi_id', $selectedProdiId)
+                                ->orWhere('program_studi_id', $selectedProdiId);
+                        });
+                });
             })
             ->orderByDesc('is_active')
             ->orderByDesc('id')
@@ -80,7 +92,11 @@ class ObeCurriculumController extends Controller
         // Data Tab 4: Monitoring & Unlock
         $monitoringJadwals = Jadwal::with(['mataKuliah.prodi', 'dosen', 'skemaPenilaian'])
             ->when($selectedProdiId, function ($q) use ($selectedProdiId) {
-                $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $selectedProdiId));
+                $q->whereHas('mataKuliah', function ($m) use ($selectedProdiId) {
+                    $m->where('prodi_id', $selectedProdiId)
+                        ->orWhereNull('prodi_id')
+                        ->orWhereHas('kurikulums', fn ($k) => $k->where('prodi_id', $selectedProdiId));
+                });
             })
             ->orderByDesc('tahun_akademik')
             ->orderBy('mata_kuliah_id')
@@ -374,9 +390,13 @@ class ObeCurriculumController extends Controller
     public function applyRps(Request $request)
     {
         $validated = $request->validate([
-            'mata_kuliah_id' => ['required', 'exists:mata_kuliahs,id'],
+            'mata_kuliah_id' => ['required', 'string'],
             'prodi_id' => ['required', 'exists:prodis,id'],
             'temp_path' => ['required', 'string'],
+            'meta_kode_mk' => ['nullable', 'string', 'max:50'],
+            'meta_nama_mk' => ['nullable', 'string', 'max:255'],
+            'meta_sks' => ['nullable', 'numeric'],
+            'meta_semester' => ['nullable', 'numeric'],
             'tahun_akademik' => ['nullable', 'string', 'max:20'],
             'target_passing_grade' => ['nullable', 'numeric', 'between:0,100'],
             'is_active' => ['nullable', 'boolean'],
@@ -389,8 +409,31 @@ class ObeCurriculumController extends Controller
             'porsi_cpl_values' => ['nullable', 'array'],
         ]);
 
-        $mataKuliah = MataKuliah::findOrFail($validated['mata_kuliah_id']);
         $prodiId = (int) $validated['prodi_id'];
+
+        if ($validated['mata_kuliah_id'] === 'new') {
+            $kodeMk = trim($validated['meta_kode_mk'] ?? '') ?: ('MK-' . strtoupper(substr(uniqid(), -5)));
+            $namaMk = trim($validated['meta_nama_mk'] ?? '') ?: 'Mata Kuliah RPS Baru';
+            $sks = ! empty($validated['meta_sks']) ? (int) $validated['meta_sks'] : 3;
+            $semester = ! empty($validated['meta_semester']) ? (int) $validated['meta_semester'] : 1;
+
+            $mataKuliah = MataKuliah::firstOrCreate(
+                ['kode_mk' => $kodeMk],
+                [
+                    'nama_mk' => $namaMk,
+                    'sks' => $sks,
+                    'semester' => $semester,
+                    'prodi_id' => $prodiId,
+                ]
+            );
+        } else {
+            $mataKuliah = MataKuliah::findOrFail($validated['mata_kuliah_id']);
+        }
+
+        if (! $mataKuliah->prodi_id) {
+            $mataKuliah->update(['prodi_id' => $prodiId]);
+        }
+
         $tempPath = $validated['temp_path'];
 
         $permanentPath = null;
@@ -572,6 +615,7 @@ class ObeCurriculumController extends Controller
     public function storeRps(Request $request)
     {
         $validated = $request->validate([
+            'prodi_id' => ['nullable', 'exists:prodis,id'],
             'mata_kuliah_id' => ['required', 'exists:mata_kuliahs,id'],
             'tahun_akademik' => ['nullable', 'string', 'max:20'],
             'file_rps' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
@@ -614,9 +658,14 @@ class ObeCurriculumController extends Controller
         ]);
 
         $mk = MataKuliah::find($validated['mata_kuliah_id']);
+        $redirectProdiId = $validated['prodi_id'] ?? $mk?->prodi_id;
+
+        if ($mk && ! $mk->prodi_id && $redirectProdiId) {
+            $mk->update(['prodi_id' => $redirectProdiId]);
+        }
 
         return redirect()
-            ->route('admin.obe.index', ['tab' => 'rps', 'prodi_id' => $mk?->prodi_id])
+            ->route('admin.obe.index', ['tab' => 'rps', 'prodi_id' => $redirectProdiId])
             ->with('success', "RPS Mata Kuliah {$mk?->nama_mk} berhasil disimpan.");
     }
 

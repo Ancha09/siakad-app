@@ -15,9 +15,18 @@
     .obe-filter-item label { font-size: 12px; font-weight: 600; color: #475569; margin: 0; white-space: nowrap; }
     .cpmk-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
     .cpmk-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 10px; }
-    .cpl-pill { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #e0f2fe; color: #0369a1; }
+    .cpl-pill { display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; background: #e0f2fe; color: #0369a1; white-space: nowrap; }
     .modal-backdrop-custom { position: fixed; inset: 0; background: rgba(15,23,42,0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
     .modal-box-custom { background: #fff; border-radius: 12px; width: 100%; max-width: 580px; max-height: 90vh; overflow-y: auto; padding: 22px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2); }
+    .table-wrap table td { vertical-align: middle; }
+    .btn-sm { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 10px !important; font-size: 12px !important; font-weight: 600; line-height: 1.2; border-radius: 6px; white-space: nowrap; text-decoration: none; cursor: pointer; vertical-align: middle; }
+    .btn-sm svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .btn-rps-pdf { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; line-height: 1.2; border-radius: 6px; border: 1.5px solid #cbd5e1; background: #f8fafc; color: #1e293b; text-decoration: none; white-space: nowrap; transition: all 0.15s ease; }
+    .btn-rps-pdf:hover { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
+    .btn-rps-pdf svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .badge-success { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: #dcfce7; color: #15803d; white-space: nowrap; line-height: 1.2; }
+    .badge-secondary { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: #f1f5f9; color: #475569; white-space: nowrap; line-height: 1.2; }
+    .badge-warning { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 9999px; font-size: 11px; font-weight: 700; background: #fef3c7; color: #b45309; white-space: nowrap; line-height: 1.2; }
 </style>
 @endpush
 
@@ -515,7 +524,7 @@
                                 <th style="width: 120px;">Tahun Ajaran</th>
                                 <th style="width: 100px; text-align: center;">Passing Grade</th>
                                 <th>Target Porsi CPL</th>
-                                <th style="width: 110px; text-align: center;">Dokumen RPS</th>
+                                <th style="width: 140px; text-align: center;">Dokumen RPS</th>
                                 <th style="width: 90px; text-align: center;">Status</th>
                                 <th style="width: 120px; text-align: center;">Aksi</th>
                             </tr>
@@ -544,10 +553,10 @@
                                         @endif
                                     </td>
                                     <td style="text-align: center;">
-                                        @if($item->file_rps)
-                                            <a href="{{ route('admin.obe.rps.download', $item) }}" class="btn-sm btn-outline" title="Unduh PDF RPS">
+                                        @if($item->effective_file_path)
+                                            <a href="{{ route('admin.obe.rps.download', $item) }}" class="btn-rps-pdf" title="Unduh PDF RPS">
                                                 <x-layout-icon name="download" />
-                                                <span>PDF</span>
+                                                <span>Unduh PDF</span>
                                             </a>
                                         @else
                                             <span style="color: #94a3b8; font-size: 11px;">Tidak ada file</span>
@@ -652,6 +661,7 @@
                 <h3 style="margin-top: 0; margin-bottom: 16px;">Upload &amp; Atur RPS Mata Kuliah</h3>
                 <form method="POST" action="{{ route('admin.obe.rps.store') }}" enctype="multipart/form-data">
                     @csrf
+                    <input type="hidden" name="prodi_id" value="{{ $selectedProdiId }}">
                     <div class="form-group" style="margin-bottom: 12px;">
                         <label>Mata Kuliah *</label>
                         <select name="mata_kuliah_id" class="form-control" required>
