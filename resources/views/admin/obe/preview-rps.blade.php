@@ -122,7 +122,8 @@
         <input type="hidden" name="meta_kode_mk" value="{{ $extracted['metadata']['kode_mk'] ?? '' }}">
         <input type="hidden" name="meta_nama_mk" value="{{ $extracted['metadata']['nama_mk'] ?? '' }}">
         <input type="hidden" name="meta_sks" value="{{ $extracted['metadata']['sks'] ?? '' }}">
-        <input type="hidden" name="meta_semester" value="{{ $extracted['metadata']['semester'] ?? '' }}">
+        <input type="hidden" name="meta_semester" value="{{ $extracted['metadata']['semester_int'] ?? ($extracted['metadata']['semester'] ?? 1) }}">
+        <input type="hidden" name="rubrik_lab_cpl_json" value="{{ json_encode($extracted['rubrik_lab_cpl'] ?? []) }}">
 
         {{-- Header Card: Ringkasan Ekstraksi Dokumen --}}
         <div class="preview-header-card">
@@ -358,7 +359,7 @@
             </div>
             <div class="section-card-body">
                 <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 16px;">
-                    Proporsi beban capaian pembelajaran lulusan (CPL) untuk mata kuliah ini dihitung proporsional dari jumlah Sub-CPMK pendukung.
+                    Proporsi beban capaian pembelajaran lulusan (CPL) dihitung otomatis secara presisi dari akumulasi bobot rincian pertemuan mingguan, UTS, UAS, serta rubrik praktikum laboratorium pada dokumen RPS (Total 100%).
                 </p>
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
@@ -470,7 +471,7 @@
                             <tr style="background: #f8fafc;">
                                 <th style="width: 120px;">Kode CPMK</th>
                                 <th>Deskripsi Capaian Pembelajaran Mata Kuliah</th>
-                                <th style="width: 140px;">CPL Terkait</th>
+                                <th style="width: 160px;">CPL Terkait</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -490,7 +491,13 @@
                                                   required>{{ $cpmk['deskripsi'] }}</textarea>
                                     </td>
                                     <td>
-                                        @if(!empty($cpmk['cpl_terkait']))
+                                        @if(!empty($cpmk['cpls_terkait']) && count($cpmk['cpls_terkait']) > 1)
+                                            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                                                @foreach($cpmk['cpls_terkait'] as $cRel)
+                                                    <span class="badge-cpl">{{ $cRel }}</span>
+                                                @endforeach
+                                            </div>
+                                        @elseif(!empty($cpmk['cpl_terkait']))
                                             <span class="badge-cpl">{{ $cpmk['cpl_terkait'] }}</span>
                                         @else
                                             <span style="color: #94a3b8; font-size: 11px;">-</span>
@@ -519,7 +526,7 @@
                         <span>6. Kemampuan Akhir Tiap Tahapan Belajar (Sub-CPMK)</span>
                     </h3>
                     <p style="margin: 3px 0 0; font-size: 12px; color: #64748b;">
-                        Terdeteksi {{ count($extracted['sub_cpmks']) }} Sub-CPMK beserta korelasi ke CPMK dan CPL.
+                        Terdeteksi {{ count($extracted['sub_cpmks']) }} Sub-CPMK beserta korelasi ke CPMK, CPL, dan bobot pertemuan mingguan.
                     </p>
                 </div>
             </div>
@@ -528,9 +535,10 @@
                     <table class="table-compact" style="width: 100%;">
                         <thead>
                             <tr style="background: #f8fafc;">
-                                <th style="width: 120px;">Kode Sub-CPMK</th>
-                                <th style="width: 130px;">CPMK Induk</th>
+                                <th style="width: 130px;">Kode Sub-CPMK</th>
+                                <th style="width: 120px;">CPMK Induk</th>
                                 <th style="width: 120px;">CPL Terkait</th>
+                                <th style="width: 110px;">Bobot (%)</th>
                                 <th>Deskripsi Sub-CPMK</th>
                             </tr>
                         </thead>
@@ -543,6 +551,9 @@
                                                class="form-control"
                                                value="{{ $sub['kode_sub_cpmk'] ?? '' }}"
                                                required>
+                                        <input type="hidden" name="sub_cpmks[{{ $idx }}][jenis_penilaian]" value="{{ $sub['jenis_penilaian'] ?? '' }}">
+                                        <input type="hidden" name="sub_cpmks[{{ $idx }}][pertemuan]" value="{{ $sub['pertemuan'] ?? '' }}">
+                                        <input type="hidden" name="sub_cpmks[{{ $idx }}][paruh]" value="{{ $sub['paruh'] ?? '' }}">
                                     </td>
                                     <td>
                                         <input type="text"
@@ -560,6 +571,16 @@
                                                placeholder="CPL 1">
                                     </td>
                                     <td>
+                                        <input type="number"
+                                               step="0.01"
+                                               min="0"
+                                               max="100"
+                                               name="sub_cpmks[{{ $idx }}][bobot_default]"
+                                               class="form-control"
+                                               value="{{ $sub['bobot_default'] ?? '' }}"
+                                               placeholder="0">
+                                    </td>
+                                    <td>
                                         <textarea name="sub_cpmks[{{ $idx }}][deskripsi]"
                                                   class="form-control"
                                                   rows="2"
@@ -568,7 +589,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" style="text-align: center; color: #94a3b8; padding: 20px;">
+                                    <td colspan="5" style="text-align: center; color: #94a3b8; padding: 20px;">
                                         Tidak ada Sub-CPMK yang berhasil terdeteksi dari file.
                                     </td>
                                 </tr>

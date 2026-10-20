@@ -132,12 +132,16 @@ class ObeCurriculumController extends Controller
             'deskripsi' => ['nullable', 'string'],
         ]);
 
+        $kodeCpl = trim($validated['kode_cpl']);
+        $deskripsiCpl = ! empty($validated['deskripsi']) ? trim($validated['deskripsi']) : null;
+        $namaCpl = ! empty($validated['nama_cpl']) ? trim($validated['nama_cpl']) : ($deskripsiCpl ?: $kodeCpl);
+
         Cpl::create([
             'prodi_id' => $validated['prodi_id'],
             'program_studi_id' => $validated['prodi_id'],
-            'kode_cpl' => trim($validated['kode_cpl']),
-            'nama_cpl' => $validated['nama_cpl'] ? trim($validated['nama_cpl']) : null,
-            'deskripsi' => $validated['deskripsi'] ? trim($validated['deskripsi']) : null,
+            'kode_cpl' => $kodeCpl,
+            'nama_cpl' => $namaCpl,
+            'deskripsi' => $deskripsiCpl,
         ]);
 
         return redirect()
@@ -154,12 +158,16 @@ class ObeCurriculumController extends Controller
             'deskripsi' => ['nullable', 'string'],
         ]);
 
+        $kodeCpl = trim($validated['kode_cpl']);
+        $deskripsiCpl = ! empty($validated['deskripsi']) ? trim($validated['deskripsi']) : null;
+        $namaCpl = ! empty($validated['nama_cpl']) ? trim($validated['nama_cpl']) : ($deskripsiCpl ?: $kodeCpl);
+
         $cpl->update([
             'prodi_id' => $validated['prodi_id'],
             'program_studi_id' => $validated['prodi_id'],
-            'kode_cpl' => trim($validated['kode_cpl']),
-            'nama_cpl' => $validated['nama_cpl'] ? trim($validated['nama_cpl']) : null,
-            'deskripsi' => $validated['deskripsi'] ? trim($validated['deskripsi']) : null,
+            'kode_cpl' => $kodeCpl,
+            'nama_cpl' => $namaCpl,
+            'deskripsi' => $deskripsiCpl,
         ]);
 
         return redirect()
@@ -325,20 +333,50 @@ class ObeCurriculumController extends Controller
 
     public function previewRps(Request $request, RpsPdfParserService $parserService)
     {
-        $validated = $request->validate([
-            'file_rps' => ['required', 'file', 'mimes:pdf', 'max:10240'],
-            'mata_kuliah_id' => ['nullable', 'exists:mata_kuliahs,id'],
-            'prodi_id' => ['nullable', 'exists:prodis,id'],
-        ]);
+        if ($request->isMethod('get')) {
+            $sessionPreview = session('obe_rps_preview');
+            $tempPath = $sessionPreview['temp_path'] ?? null;
+            if (! $tempPath || ! Storage::disk('public')->exists($tempPath)) {
+                // Fallback ke file terbaru di temp_rps jika baru saja di-upload sebelum sesi aktif
+                $tempFiles = Storage::disk('public')->files('temp_rps');
+                if (! empty($tempFiles)) {
+                    usort($tempFiles, fn ($a, $b) => Storage::disk('public')->lastModified($b) <=> Storage::disk('public')->lastModified($a));
+                    $tempPath = $tempFiles[0];
+                }
+            }
+            if (! $tempPath || ! Storage::disk('public')->exists($tempPath)) {
+                return redirect()
+                    ->route('admin.obe.index', ['tab' => 'rps'])
+                    ->with('info', 'Silakan pilih dan unggah kembali dokumen PDF RPS untuk melakukan pratinjau.');
+            }
+            $selectedMkId = $sessionPreview['mata_kuliah_id'] ?? null;
+            $selectedProdiId = $sessionPreview['prodi_id'] ?? null;
+        } else {
+            $validated = $request->validate([
+                'file_rps' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+                'mata_kuliah_id' => ['nullable', 'exists:mata_kuliahs,id'],
+                'prodi_id' => ['nullable', 'exists:prodis,id'],
+            ]);
 
-        try {
             $file = $request->file('file_rps');
             $tempPath = $file->store('temp_rps', 'public');
+            $selectedMkId = $validated['mata_kuliah_id'] ?? null;
+            $selectedProdiId = $validated['prodi_id'] ?? null;
+
+            session([
+                'obe_rps_preview' => [
+                    'temp_path' => $tempPath,
+                    'mata_kuliah_id' => $selectedMkId,
+                    'prodi_id' => $selectedProdiId,
+                ],
+            ]);
+        }
+
+        try {
             $fullTempPath = Storage::disk('public')->path($tempPath);
 
             $extracted = $parserService->extract($fullTempPath);
 
-            $selectedMkId = $validated['mata_kuliah_id'] ?? null;
             $matchedMk = null;
 
             if ($selectedMkId) {
@@ -356,7 +394,6 @@ class ObeCurriculumController extends Controller
                 }
             }
 
-            $selectedProdiId = $validated['prodi_id'] ?? null;
             if (! $selectedProdiId && $matchedMk) {
                 $selectedProdiId = $matchedMk->prodi_id;
             }
@@ -383,11 +420,13 @@ class ObeCurriculumController extends Controller
             \Illuminate\Support\Facades\Log::error('Gagal memproses dokumen RPS: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString(),
             ]);
-            return back()->with('error', 'Gagal memproses dokumen RPS: ' . $e->getMessage());
+            return redirect()
+                ->route('admin.obe.index', ['tab' => 'rps', 'prodi_id' => $selectedProdiId])
+                ->with('error', 'Gagal memproses dokumen RPS: ' . $e->getMessage());
         }
     }
 
-    public function applyRps(Request $request)
+    public function applyRps(Request $request, RpsPdfParserService $parserService, \App\Services\ObeAssessmentService $obeService)
     {
         $validated = $request->validate([
             'mata_kuliah_id' => ['required', 'string'],
@@ -396,7 +435,8 @@ class ObeCurriculumController extends Controller
             'meta_kode_mk' => ['nullable', 'string', 'max:50'],
             'meta_nama_mk' => ['nullable', 'string', 'max:255'],
             'meta_sks' => ['nullable', 'numeric'],
-            'meta_semester' => ['nullable', 'numeric'],
+            'meta_semester' => ['nullable', 'string', 'max:50'],
+            'rubrik_lab_cpl_json' => ['nullable', 'string'],
             'tahun_akademik' => ['nullable', 'string', 'max:20'],
             'target_passing_grade' => ['nullable', 'numeric', 'between:0,100'],
             'is_active' => ['nullable', 'boolean'],
@@ -415,7 +455,7 @@ class ObeCurriculumController extends Controller
             $kodeMk = trim($validated['meta_kode_mk'] ?? '') ?: ('MK-' . strtoupper(substr(uniqid(), -5)));
             $namaMk = trim($validated['meta_nama_mk'] ?? '') ?: 'Mata Kuliah RPS Baru';
             $sks = ! empty($validated['meta_sks']) ? (int) $validated['meta_sks'] : 3;
-            $semester = ! empty($validated['meta_semester']) ? (int) $validated['meta_semester'] : 1;
+            $semester = $parserService->parseSemesterInt($validated['meta_semester'] ?? '1');
 
             $mataKuliah = MataKuliah::firstOrCreate(
                 ['kode_mk' => $kodeMk],
@@ -436,18 +476,28 @@ class ObeCurriculumController extends Controller
 
         $tempPath = $validated['temp_path'];
 
-        $permanentPath = null;
-        if (Storage::disk('public')->exists($tempPath)) {
-            $extension = pathinfo($tempPath, PATHINFO_EXTENSION) ?: 'pdf';
-            $cleanCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $mataKuliah->kode_mk ?: 'MK');
-            $cleanTahun = $validated['tahun_akademik'] ? preg_replace('/[^A-Za-z0-9_\-]/', '_', $validated['tahun_akademik']) : time();
-            $permanentPath = "rps/RPS_{$cleanCode}_{$cleanTahun}_" . uniqid() . ".{$extension}";
-
-            Storage::disk('public')->move($tempPath, $permanentPath);
-        }
-
         DB::beginTransaction();
         try {
+            $permanentPath = null;
+            $cleanCode = preg_replace('/[^A-Za-z0-9_\-]/', '_', $mataKuliah->kode_mk ?: 'MK');
+            if (Storage::disk('public')->exists($tempPath)) {
+                $extension = pathinfo($tempPath, PATHINFO_EXTENSION) ?: 'pdf';
+                $cleanTahun = $validated['tahun_akademik'] ? preg_replace('/[^A-Za-z0-9_\-]/', '_', $validated['tahun_akademik']) : time();
+                $permanentPath = "rps/RPS_{$cleanCode}_{$cleanTahun}_" . uniqid() . ".{$extension}";
+
+                Storage::disk('public')->copy($tempPath, $permanentPath);
+            } else {
+                // Fallback jika file temp_rps sudah terpindah ke folder rps pada percobaan sebelumnya
+                $rpsFiles = array_values(array_filter(
+                    Storage::disk('public')->files('rps'),
+                    fn ($f) => str_starts_with(basename($f), "RPS_{$cleanCode}_")
+                ));
+                if (! empty($rpsFiles)) {
+                    usort($rpsFiles, fn ($a, $b) => Storage::disk('public')->lastModified($b) <=> Storage::disk('public')->lastModified($a));
+                    $permanentPath = $rpsFiles[0];
+                }
+            }
+
             // 1. Format Komponen Bobot Default
             $komponenBobotDefault = [];
             if (! empty($validated['komponen_nama']) && ! empty($validated['komponen_bobot'])) {
@@ -492,7 +542,7 @@ class ObeCurriculumController extends Controller
             $cplMap = [];
             if (! empty($validated['cpls'])) {
                 foreach ($validated['cpls'] as $cplData) {
-                    $kode = trim($cplData['kode_cpl'] ?? '');
+                    $kode = preg_replace('/\s+/', ' ', strtoupper(trim($cplData['kode_cpl'] ?? '')));
                     if (! $kode) {
                         continue;
                     }
@@ -501,17 +551,27 @@ class ObeCurriculumController extends Controller
                         $q->where('prodi_id', $prodiId)->orWhere('program_studi_id', $prodiId);
                     })->where('kode_cpl', $kode)->first();
 
+                    $deskripsiCpl = ! empty($cplData['deskripsi']) ? trim($cplData['deskripsi']) : null;
+                    $namaCpl = ! empty($cplData['nama_cpl']) ? trim($cplData['nama_cpl']) : ($deskripsiCpl ?: $kode);
+
                     if ($cpl) {
-                        if (empty($cpl->deskripsi) && ! empty($cplData['deskripsi'])) {
-                            $cpl->update(['deskripsi' => trim($cplData['deskripsi'])]);
+                        $updatesCpl = [];
+                        if (empty($cpl->deskripsi) && $deskripsiCpl) {
+                            $updatesCpl['deskripsi'] = $deskripsiCpl;
+                        }
+                        if (empty($cpl->nama_cpl)) {
+                            $updatesCpl['nama_cpl'] = $namaCpl;
+                        }
+                        if (! empty($updatesCpl)) {
+                            $cpl->update($updatesCpl);
                         }
                     } else {
                         $cpl = Cpl::create([
                             'prodi_id' => $prodiId,
                             'program_studi_id' => $prodiId,
                             'kode_cpl' => $kode,
-                            'nama_cpl' => ! empty($cplData['nama_cpl']) ? trim($cplData['nama_cpl']) : null,
-                            'deskripsi' => ! empty($cplData['deskripsi']) ? trim($cplData['deskripsi']) : null,
+                            'nama_cpl' => $namaCpl,
+                            'deskripsi' => $deskripsiCpl,
                         ]);
                     }
                     $cplMap[$kode] = $cpl;
@@ -520,9 +580,10 @@ class ObeCurriculumController extends Controller
 
             // 5. Sinkronisasi CPMK
             $cpmkMap = [];
+            $keepCpmkIds = [];
             if (! empty($validated['cpmks'])) {
                 foreach ($validated['cpmks'] as $cpmkData) {
-                    $kode = trim($cpmkData['kode_cpmk'] ?? '');
+                    $kode = preg_replace('/\s+/', ' ', strtoupper(trim($cpmkData['kode_cpmk'] ?? '')));
                     if (! $kode) {
                         continue;
                     }
@@ -537,15 +598,17 @@ class ObeCurriculumController extends Controller
                         ]
                     );
 
-                    if (empty($cpmk->deskripsi) && ! empty($cpmkData['deskripsi'])) {
+                    if (! empty($cpmkData['deskripsi'])) {
                         $cpmk->update(['deskripsi' => trim($cpmkData['deskripsi'])]);
                     }
 
                     $cpmkMap[$kode] = $cpmk;
+                    $keepCpmkIds[] = $cpmk->id;
                 }
             }
 
-            // 6. Sinkronisasi Sub-CPMK
+            // 6. Sinkronisasi Sub-CPMK (unik per mata_kuliah_id + kode_sub_cpmk agar tidak duplikat saat pindah CPMK)
+            $keepSubIds = [];
             if (! empty($validated['sub_cpmks'])) {
                 foreach ($validated['sub_cpmks'] as $subData) {
                     $kodeSub = trim($subData['kode_sub_cpmk'] ?? '');
@@ -553,7 +616,7 @@ class ObeCurriculumController extends Controller
                         continue;
                     }
 
-                    $cpmkKode = trim($subData['cpmk_kode'] ?? ($subData['cpmk_terkait'] ?? ''));
+                    $cpmkKode = preg_replace('/\s+/', ' ', strtoupper(trim($subData['cpmk_kode'] ?? ($subData['cpmk_terkait'] ?? ''))));
                     $cpmk = $cpmkMap[$cpmkKode] ?? (isset($cpmkMap) && count($cpmkMap) ? reset($cpmkMap) : null);
                     if (! $cpmk) {
                         $cpmk = Cpmk::where('mata_kuliah_id', $mataKuliah->id)->first();
@@ -566,9 +629,13 @@ class ObeCurriculumController extends Controller
                             'deskripsi' => 'Capaian Pembelajaran Mata Kuliah ' . $mataKuliah->nama_mk,
                         ]);
                         $cpmkMap['CPMK 1'] = $cpmk;
+                        $keepCpmkIds[] = $cpmk->id;
                     }
 
-                    $cplKode = trim($subData['cpl_kode'] ?? ($subData['cpl_terkait'] ?? ''));
+                    $rawCplKode = trim($subData['cpl_kode'] ?? ($subData['cpl_terkait'] ?? ''));
+                    // Ambil kode CPL pertama jika berisi daftar dipisah koma
+                    $firstCplPart = trim(explode(',', $rawCplKode)[0] ?? '');
+                    $cplKode = preg_replace('/\s+/', ' ', strtoupper($firstCplPart));
                     $cplId = null;
                     if ($cplKode && isset($cplMap[$cplKode])) {
                         $cplId = $cplMap[$cplKode]->id;
@@ -579,21 +646,58 @@ class ObeCurriculumController extends Controller
                         $cplId = $existingCpl?->id;
                     }
 
-                    SubCpmk::updateOrCreate(
-                        [
-                            'cpmk_id' => $cpmk->id,
-                            'kode_sub_cpmk' => $kodeSub,
-                        ],
-                        [
-                            'cpl_id' => $cplId,
-                            'deskripsi' => ! empty($subData['deskripsi']) ? trim($subData['deskripsi']) : null,
-                            'bobot_default' => ! empty($subData['bobot_default']) ? (float) $subData['bobot_default'] : null,
-                        ]
-                    );
+                    $existingSub = SubCpmk::whereHas('cpmk', function ($q) use ($mataKuliah) {
+                        $q->where('mata_kuliah_id', $mataKuliah->id);
+                    })->where('kode_sub_cpmk', $kodeSub)->first();
+
+                    $subPayload = [
+                        'cpmk_id' => $cpmk->id,
+                        'cpl_id' => $cplId,
+                        'kode_sub_cpmk' => $kodeSub,
+                        'deskripsi' => ! empty($subData['deskripsi']) ? trim($subData['deskripsi']) : null,
+                        'bobot_default' => isset($subData['bobot_default']) && $subData['bobot_default'] !== '' ? (float) $subData['bobot_default'] : null,
+                    ];
+
+                    if ($existingSub) {
+                        $existingSub->update($subPayload);
+                        $keepSubIds[] = $existingSub->id;
+                    } else {
+                        $newSub = SubCpmk::create($subPayload);
+                        $keepSubIds[] = $newSub->id;
+                    }
+                }
+
+                // Bersihkan Sub-CPMK lama pada mata kuliah ini yang tidak ada lagi di RPS baru
+                if (! empty($keepSubIds)) {
+                    SubCpmk::whereHas('cpmk', function ($q) use ($mataKuliah) {
+                        $q->where('mata_kuliah_id', $mataKuliah->id);
+                    })->whereNotIn('id', $keepSubIds)->delete();
+                }
+
+                // Bersihkan CPMK lama yang sudah tidak memiliki Sub-CPMK dan tidak ada di RPS baru
+                if (! empty($keepCpmkIds)) {
+                    Cpmk::where('mata_kuliah_id', $mataKuliah->id)
+                        ->whereNotIn('id', $keepCpmkIds)
+                        ->doesntHave('subCpmks')
+                        ->delete();
+                }
+            }
+
+            // 7. Sinkronisasi otomatis matriks penilaian untuk jadwal mata kuliah ini yang belum difinalisasi
+            $jadwals = Jadwal::with('mataKuliah')->where('mata_kuliah_id', $mataKuliah->id)->get();
+            foreach ($jadwals as $j) {
+                $skema = RpsPenilaianSkema::where('jadwal_id', $j->id)->where('is_finalized', false)->first();
+                if ($skema) {
+                    $obeService->seedDefaultKomponenFromRps($skema, $j, true);
                 }
             }
 
             DB::commit();
+
+            if ($tempPath && str_starts_with($tempPath, 'temp_rps/') && Storage::disk('public')->exists($tempPath)) {
+                Storage::disk('public')->delete($tempPath);
+            }
+            session()->forget('obe_rps_preview');
 
             return redirect()
                 ->route('admin.obe.index', [
@@ -608,7 +712,10 @@ class ObeCurriculumController extends Controller
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return back()->with('error', 'Gagal menerapkan kurikulum RPS: ' . $e->getMessage());
+            return redirect()
+                ->route('admin.obe.rps.preview')
+                ->withInput()
+                ->with('error', 'Gagal menerapkan kurikulum RPS: ' . $e->getMessage());
         }
     }
 

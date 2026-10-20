@@ -712,17 +712,32 @@
         $matrixRows = $matrixData['rows'] ?? [];
         $komponenRps = $matrixData['komponen_rps'] ?? [];
         $temuanList = $matrixData['temuan'] ?? [];
+        $cplSplitMap = $matrixData['cpl_split'] ?? [];
 
-        // Group Sub-CPMK codes for label S1-S2, S3-S6, etc.
+        // Group Sub-CPMK codes for label S1-S2, S3-S6, SL, etc.
         $cpmkSubRanges = [];
+        $subShortLabels = [];
         $subCounter = 1;
         foreach ($cpmks as $cpmk) {
-            $count = $cpmk->subCpmks->count();
-            if ($count > 0) {
-                $start = $subCounter;
-                $end = $subCounter + $count - 1;
-                $cpmkSubRanges[$cpmk->id] = ($start === $end) ? "S{$start}" : "S{$start}–S{$end}";
-                $subCounter += $count;
+            $labelsInCpmk = [];
+            foreach ($cpmk->subCpmks as $sub) {
+                $isLabSub = stripos($sub->kode_sub_cpmk ?? '', 'lab') !== false || stripos($sub->kode_sub_cpmk ?? '', 'praktikum') !== false;
+                if ($isLabSub) {
+                    $lbl = 'SL';
+                } elseif (preg_match('/(\d+)/', $sub->kode_sub_cpmk ?? '', $mNum)) {
+                    $lbl = 'S' . (int) $mNum[1];
+                    $subCounter = max($subCounter, (int) $mNum[1] + 1);
+                } else {
+                    $lbl = 'S' . ($subCounter++);
+                }
+                $subShortLabels[$sub->id] = $lbl;
+                $labelsInCpmk[] = $lbl;
+            }
+            $count = count($labelsInCpmk);
+            if ($count === 1) {
+                $cpmkSubRanges[$cpmk->id] = $labelsInCpmk[0];
+            } elseif ($count > 1) {
+                $cpmkSubRanges[$cpmk->id] = $labelsInCpmk[0] . '–' . $labelsInCpmk[$count - 1];
             } else {
                 $cpmkSubRanges[$cpmk->id] = '-';
             }
@@ -910,14 +925,20 @@
                                         @php $subIter = 1; @endphp
                                         @foreach($cpmks as $cpmk)
                                             @foreach($cpmk->subCpmks as $sub)
-                                                @php $sLabel = 'S' . ($subIter++); @endphp
+                                                @php
+                                                    $sLabel = $subShortLabels[$sub->id] ?? ('S' . $loop->iteration);
+                                                    $subSplitArr = $cplSplitMap[$sub->id] ?? ($cplSplitMap[(string)$sub->id] ?? null);
+                                                    $subCplDisplay = is_array($subSplitArr) && !empty($subSplitArr)
+                                                        ? implode(', ', array_keys($subSplitArr))
+                                                        : ($sub->cpl?->kode_cpl ?? 'CPL');
+                                                @endphp
                                                 <th class="matrix-sub-head matrix-sub-col"
                                                     data-sub-id="{{ $sub->id }}"
-                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})"
+                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $subCplDisplay }})"
                                                     data-obe-label="{{ $sLabel }}"
                                                     data-obe-kode="{{ $sub->kode_sub_cpmk }}"
                                                     data-obe-cpmk="{{ $cpmk->kode_cpmk }}"
-                                                    data-obe-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                    data-obe-cpl="{{ $subCplDisplay }}"
                                                     data-obe-desc="{{ $sub->deskripsi ?: 'Belum ada deskripsi Sub-CPMK.' }}"
                                                     onclick="toggleObeHeadPopover(this, event)">
                                                     {{ $sLabel }}
@@ -955,16 +976,19 @@
                                                        {{ $isMatrixLocked ? 'disabled' : '' }}>
                                             </td>
                                             <td>
-                                                <span class="row-bobot-val" id="row-bobot-{{ $rIdx }}">{{ $rowSum > 0 ? (round($rowSum, 1) . '%') : '0%' }}</span>
+                                                <span class="row-bobot-val" id="row-bobot-{{ $rIdx }}">{{ $rowSum > 0 ? (round($rowSum, 2) . '%') : '0%' }}</span>
                                             </td>
                                             @foreach($allSubCpmks as $sub)
                                                 @php
                                                     $allocVal = $row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? null);
                                                     $allocDisplay = ($allocVal !== null && (float)$allocVal > 0) ? (float)$allocVal : '';
+                                                    $subSplitJson = isset($cplSplitMap[$sub->id])
+                                                        ? json_encode($cplSplitMap[$sub->id])
+                                                        : (isset($cplSplitMap[(string)$sub->id]) ? json_encode($cplSplitMap[(string)$sub->id]) : '');
                                                 @endphp
                                                 <td style="text-align: center; padding: 4px;">
                                                     <input type="number"
-                                                           step="0.5"
+                                                           step="any"
                                                            min="0"
                                                            max="100"
                                                            class="matrix-input-cell"
@@ -975,6 +999,7 @@
                                                            data-sub="{{ $sub->id }}"
                                                            data-cpmk="{{ $sub->cpmk_id }}"
                                                            data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                           data-cpl-split="{{ $subSplitJson }}"
                                                            {{ $isMatrixLocked ? 'disabled' : '' }}>
                                                 </td>
                                             @endforeach
@@ -997,8 +1022,13 @@
                                                 <span class="row-bobot-val" id="row-bobot-0">0%</span>
                                             </td>
                                             @foreach($allSubCpmks as $sub)
+                                                @php
+                                                    $subSplitJson = isset($cplSplitMap[$sub->id])
+                                                        ? json_encode($cplSplitMap[$sub->id])
+                                                        : (isset($cplSplitMap[(string)$sub->id]) ? json_encode($cplSplitMap[(string)$sub->id]) : '');
+                                                @endphp
                                                 <td style="text-align: center; padding: 4px;">
-                                                    <input type="number" step="0.5" min="0" max="100" class="matrix-input-cell" name="matrix_rows[0][allocations][{{ $sub->id }}]" value="" placeholder="-" data-row="0" data-sub="{{ $sub->id }}" data-cpmk="{{ $sub->cpmk_id }}" data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}">
+                                                    <input type="number" step="any" min="0" max="100" class="matrix-input-cell" name="matrix_rows[0][allocations][{{ $sub->id }}]" value="" placeholder="-" data-row="0" data-sub="{{ $sub->id }}" data-cpmk="{{ $sub->cpmk_id }}" data-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}" data-cpl-split="{{ $subSplitJson }}">
                                                 </td>
                                             @endforeach
                                             <td style="text-align: center; padding: 4px;">
@@ -1054,13 +1084,29 @@
                                     <div style="margin-bottom: 14px;">
                                         @foreach($cpmks as $cpmk)
                                             @php
-                                                $firstSubCpl = $cpmk->subCpmks->first()?->cpl?->kode_cpl ?? 'CPL';
+                                                $cpmkCplCodes = [];
+                                                foreach ($cpmk->subCpmks as $s) {
+                                                    $splitForS = $cplSplitMap[$s->id] ?? ($cplSplitMap[(string)$s->id] ?? null);
+                                                    if (is_array($splitForS) && !empty($splitForS)) {
+                                                        foreach (array_keys($splitForS) as $sc) {
+                                                            $cpmkCplCodes[$sc] = $sc;
+                                                        }
+                                                    } elseif ($s->cpl?->kode_cpl) {
+                                                        $cpmkCplCodes[$s->cpl->kode_cpl] = $s->cpl->kode_cpl;
+                                                    }
+                                                }
+                                                if (empty($cpmkCplCodes)) {
+                                                    $cpmkCplCodes['CPL'] = 'CPL';
+                                                }
                                             @endphp
                                             <div class="rollup-item">
                                                 <span>
                                                      <strong>{{ $cpmk->kode_cpmk }}</strong>
                                                     <span style="color: #64748b; font-size: 11px;">{{ $cpmkSubRanges[$cpmk->id] ?? '' }}</span>
-                                                    &rarr; <span class="cpl-pill">{{ $firstSubCpl }}*</span>
+                                                    &rarr;
+                                                    @foreach($cpmkCplCodes as $cCode)
+                                                        <span class="cpl-pill">{{ $cCode }}*</span>
+                                                    @endforeach
                                                 </span>
                                                 <span style="font-weight: 700; color: #0f172a;" id="rollup-cpmk-{{ $cpmk->id }}">0%</span>
                                             </div>
@@ -1072,16 +1118,31 @@
                                     </div>
 
                                     @php
-                                        $uniqueCpls = $allSubCpmks->pluck('cpl')->filter()->unique('id');
+                                        $allCplCodesMap = [];
+                                        foreach ($allSubCpmks as $s) {
+                                            if ($s->cpl?->kode_cpl) {
+                                                $allCplCodesMap[$s->cpl->kode_cpl] = $s->cpl->kode_cpl;
+                                            }
+                                            $splitForS = $cplSplitMap[$s->id] ?? ($cplSplitMap[(string)$s->id] ?? null);
+                                            if (is_array($splitForS)) {
+                                                foreach (array_keys($splitForS) as $sc) {
+                                                    $allCplCodesMap[$sc] = $sc;
+                                                }
+                                            }
+                                        }
+                                        foreach (array_keys($targetPorsiCpl) as $tc) {
+                                            $allCplCodesMap[$tc] = $tc;
+                                        }
+                                        uksort($allCplCodesMap, 'strnatcasecmp');
                                     @endphp
-                                    @foreach($uniqueCpls as $cpl)
+                                    @foreach($allCplCodesMap as $cplKode)
                                         @php
-                                            $targetVal = $targetPorsiCpl[$cpl->kode_cpl] ?? null;
+                                            $targetVal = $targetPorsiCpl[$cplKode] ?? null;
                                         @endphp
                                         <div class="rollup-item">
-                                            <span><strong>{{ $cpl->kode_cpl }}</strong></span>
+                                            <span><strong>{{ $cplKode }}</strong></span>
                                             <div style="display: flex; align-items: center; gap: 8px;">
-                                                <strong id="rollup-cpl-{{ $cpl->kode_cpl }}">0%</strong>
+                                                <strong id="rollup-cpl-{{ $cplKode }}">0%</strong>
                                                 @if($targetVal !== null)
                                                     <span style="font-size: 11px; color: #047857;">target: {{ $targetVal }}%</span>
                                                 @else
@@ -1100,22 +1161,30 @@
                                     <div class="subtitle">Jumlah bobot mingguan vs tabel "Komponen dan bobot penilaian"</div>
                                 </div>
                                 <div class="analytics-card-body">
-                                    <div class="rollup-item">
-                                        <span style="max-width: 200px;">Kuis, keaktifan, kerja sama tim</span>
-                                        <span class="pill-compare pill-diff" id="comp-kuis">20 / 15</span>
-                                    </div>
-                                    <div class="rollup-item">
-                                        <span style="max-width: 200px;">Tugas (terstruktur, studi kasus, proyek)</span>
-                                        <span class="pill-compare pill-diff" id="comp-tugas">25 / 30</span>
-                                    </div>
-                                    <div class="rollup-item">
-                                        <span>UTS</span>
-                                        <span class="pill-compare pill-same" id="comp-uts">25 / 25</span>
-                                    </div>
-                                    <div class="rollup-item">
-                                        <span>UAS</span>
-                                        <span class="pill-compare pill-same" id="comp-uas">30 / 30</span>
-                                    </div>
+                                    @php
+                                        $kompListRender = !empty($komponenRps) ? $komponenRps : [
+                                            'Kuis, keaktifan, kerja sama tim' => ['weekly' => 10, 'summary' => 10, 'key' => 'kuis'],
+                                            'Tugas (terstruktur, studi kasus, proyek)' => ['weekly' => 45, 'summary' => 45, 'key' => 'tugas'],
+                                            'UTS' => ['weekly' => 20, 'summary' => 20, 'key' => 'uts'],
+                                            'UAS' => ['weekly' => 25, 'summary' => 25, 'key' => 'uas'],
+                                        ];
+                                    @endphp
+                                    @foreach($kompListRender as $kLabel => $kItem)
+                                        @php
+                                            $kKey = $kItem['key'] ?? 'tugas';
+                                            $kWeekly = $kItem['weekly'] ?? 0;
+                                            $kSummary = $kItem['summary'] ?? 0;
+                                            $isSame = abs($kWeekly - $kSummary) <= 0.1;
+                                        @endphp
+                                        <div class="rollup-item">
+                                            <span style="max-width: 200px;">{{ $kLabel }}</span>
+                                            <span class="pill-compare {{ $isSame ? 'pill-same' : 'pill-diff' }}"
+                                                  id="comp-{{ $kKey }}"
+                                                  data-target="{{ $kSummary }}">
+                                                {{ $kWeekly }} / {{ $kSummary }}
+                                            </span>
+                                        </div>
+                                    @endforeach
                                     <div class="rollup-item" style="margin-top: auto; padding-top: 12px; border-top: 1px solid #e2e8f0; font-weight: 800;">
                                         <span>Total</span>
                                         <span class="pill-compare pill-total" id="comp-total">100 / 100</span>
@@ -1462,17 +1531,22 @@
                                     <tr>
                                         <th style="background:#f8fafc; font-weight:700; color:#334155;">Komponen Penilaian</th>
                                         <th style="background:#f8fafc; font-weight:700; color:#334155; text-align:center;">Bobot</th>
-                                        @php $subIter = 1; @endphp
                                         @foreach($cpmks as $cpmk)
                                             @foreach($cpmk->subCpmks as $sub)
-                                                @php $sLabel = 'S' . ($subIter++); @endphp
+                                                @php
+                                                    $sLabel = $subShortLabels[$sub->id] ?? ('S' . $loop->iteration);
+                                                    $subSplitArr = $cplSplitMap[$sub->id] ?? ($cplSplitMap[(string)$sub->id] ?? null);
+                                                    $subCplDisplay = is_array($subSplitArr) && !empty($subSplitArr)
+                                                        ? implode(', ', array_keys($subSplitArr))
+                                                        : ($sub->cpl?->kode_cpl ?? 'CPL');
+                                                @endphp
                                                 <th class="matrix-sub-head"
                                                     style="min-width:54px;"
-                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $sub->cpl?->kode_cpl ?? 'CPL' }})"
+                                                    title="{{ $sub->kode_sub_cpmk }}: {{ $sub->deskripsi }} ({{ $subCplDisplay }})"
                                                     data-obe-label="{{ $sLabel }}"
                                                     data-obe-kode="{{ $sub->kode_sub_cpmk }}"
                                                     data-obe-cpmk="{{ $cpmk->kode_cpmk }}"
-                                                    data-obe-cpl="{{ $sub->cpl?->kode_cpl ?? 'CPL' }}"
+                                                    data-obe-cpl="{{ $subCplDisplay }}"
                                                     data-obe-desc="{{ $sub->deskripsi ?: 'Belum ada deskripsi Sub-CPMK.' }}"
                                                     onclick="toggleObeHeadPopover(this, event)">
                                                     {{ $sLabel }}
@@ -1498,12 +1572,15 @@
                                                 @endif
                                             </td>
                                             <td style="text-align:center; font-weight:800; font-size:12.5px; color:#0f172a;">
-                                                {{ round($rowSum, 1) }}%
+                                                {{ round($rowSum, 2) }}%
                                             </td>
                                             @foreach($allSubCpmks as $sub)
                                                 @php
                                                     $alloc = (float) ($row['allocations'][$sub->id] ?? ($row['allocations'][(string)$sub->id] ?? 0));
                                                     $komp = $komponenMatrixMap[$rIdx][$sub->id] ?? null;
+                                                    $subSplitJson = isset($cplSplitMap[$sub->id])
+                                                        ? json_encode($cplSplitMap[$sub->id])
+                                                        : (isset($cplSplitMap[(string)$sub->id]) ? json_encode($cplSplitMap[(string)$sub->id]) : '');
                                                 @endphp
                                                 @if($alloc > 0 && $komp)
                                                     <td style="text-align:center; padding:5px 4px; vertical-align:middle; background:#ffffff;">
@@ -1517,6 +1594,7 @@
                                                                data-sub="{{ $sub->id }}"
                                                                data-weight="{{ $alloc }}"
                                                                data-cpl="{{ $sub->cpl?->kode_cpl ?? '' }}"
+                                                               data-cpl-split="{{ $subSplitJson }}"
                                                                placeholder="0"
                                                                {{ $skema->is_finalized ? 'disabled' : '' }}
                                                                style="width:50px; height:32px; text-align:center; font-weight:700; font-size:13px; border:1px solid #cbd5e1; border-radius:6px; margin:0 auto; display:block;">
@@ -2133,12 +2211,24 @@
                     const subId = inp.getAttribute('data-sub');
                     const cpmkId = inp.getAttribute('data-cpmk');
                     const cplCode = inp.getAttribute('data-cpl');
+                    const splitAttr = inp.getAttribute('data-cpl-split') || '';
 
                     rowSum += val;
 
                     if (subId) colTotals[subId] = (colTotals[subId] || 0) + val;
                     if (cpmkId) cpmkTotals[cpmkId] = (cpmkTotals[cpmkId] || 0) + val;
-                    if (cplCode) cplTotals[cplCode] = (cplTotals[cplCode] || 0) + val;
+
+                    let splitObj = null;
+                    if (splitAttr) {
+                        try { splitObj = JSON.parse(splitAttr); } catch (e) { splitObj = null; }
+                    }
+                    if (splitObj && typeof splitObj === 'object' && Object.keys(splitObj).length > 0) {
+                        for (const [sCpl, ratio] of Object.entries(splitObj)) {
+                            cplTotals[sCpl] = (cplTotals[sCpl] || 0) + (val * (parseFloat(ratio) || 0));
+                        }
+                    } else if (cplCode) {
+                        cplTotals[cplCode] = (cplTotals[cplCode] || 0) + val;
+                    }
                 });
 
                 grandTotal += rowSum;
@@ -2146,7 +2236,7 @@
                 // Update badge bobot baris
                 const rowBobotBadge = row.querySelector('.row-bobot-val');
                 if (rowBobotBadge) {
-                    rowBobotBadge.textContent = (Math.round(rowSum * 10) / 10) + '%';
+                    rowBobotBadge.textContent = (Math.round(rowSum * 100) / 100) + '%';
                 }
             });
 
@@ -2154,14 +2244,14 @@
             for (const [subId, sum] of Object.entries(colTotals)) {
                 const colBadge = document.getElementById('col-bobot-' + subId);
                 if (colBadge) {
-                    colBadge.textContent = sum > 0 ? (Math.round(sum * 10) / 10) : '-';
+                    colBadge.textContent = sum > 0 ? (Math.round(sum * 100) / 100) : '-';
                 }
             }
 
             // Update grand total
             const grandBadge = document.getElementById('grand-total-bobot');
             if (grandBadge) {
-                const roundedGrand = Math.round(grandTotal * 10) / 10;
+                const roundedGrand = Math.round(grandTotal * 100) / 100;
                 grandBadge.textContent = roundedGrand + '%';
                 if (Math.abs(roundedGrand - 100) < 0.1) {
                     grandBadge.classList.remove('invalid');
@@ -2176,15 +2266,18 @@
             for (const [cpmkId, sum] of Object.entries(cpmkTotals)) {
                 const cpmkBadge = document.getElementById('rollup-cpmk-' + cpmkId);
                 if (cpmkBadge) {
-                    cpmkBadge.textContent = (Math.round(sum * 10) / 10) + '%';
+                    cpmkBadge.textContent = (Math.round(sum * 100) / 100) + '%';
                 }
             }
 
             // Update Card 1: Turunan ke CPL
+            document.querySelectorAll('[id^="rollup-cpl-"]').forEach(el => {
+                el.textContent = '0%';
+            });
             for (const [cplCode, sum] of Object.entries(cplTotals)) {
                 const cplBadge = document.getElementById('rollup-cpl-' + cplCode);
                 if (cplBadge) {
-                    cplBadge.textContent = (Math.round(sum * 10) / 10) + '%';
+                    cplBadge.textContent = (Math.round(sum * 100) / 100) + '%';
                 }
             }
 
@@ -2193,6 +2286,8 @@
             let tugasWeekly = 0;
             let utsWeekly = 0;
             let uasWeekly = 0;
+            let praktikumWeekly = 0;
+            const hasPraktikumPill = !!document.getElementById('comp-praktikum');
 
             rows.forEach(row => {
                 const nameInp = row.querySelector('.matrix-row-nama');
@@ -2208,25 +2303,30 @@
                     utsWeekly += rSum;
                 } else if (name.includes('uas') || name.includes('akhir')) {
                     uasWeekly += rSum;
+                } else if (hasPraktikumPill && (name.includes('praktikum') || name.includes('laboratorium') || name.includes('lab'))) {
+                    praktikumWeekly += rSum;
                 } else {
                     tugasWeekly += rSum;
                 }
             });
 
-            updatePillDiff('comp-kuis', kuisWeekly, 15);
-            updatePillDiff('comp-tugas', tugasWeekly, 30);
-            updatePillDiff('comp-uts', utsWeekly, 25);
-            updatePillDiff('comp-uas', uasWeekly, 30);
+            updatePillDiff('comp-kuis', kuisWeekly);
+            updatePillDiff('comp-tugas', tugasWeekly);
+            updatePillDiff('comp-uts', utsWeekly);
+            updatePillDiff('comp-uas', uasWeekly);
+            updatePillDiff('comp-praktikum', praktikumWeekly);
 
             const compTotal = document.getElementById('comp-total');
             if (compTotal) {
-                compTotal.textContent = Math.round(grandTotal) + ' / 100';
+                compTotal.textContent = (Math.round(grandTotal * 10) / 10) + ' / 100';
             }
         }
 
-        function updatePillDiff(elId, weeklyVal, targetVal) {
+        function updatePillDiff(elId, weeklyVal, fallbackTarget) {
             const el = document.getElementById(elId);
             if (!el) return;
+            const attrTarget = el.getAttribute('data-target');
+            const targetVal = attrTarget !== null && attrTarget !== '' ? parseFloat(attrTarget) : (fallbackTarget || 0);
             const w = Math.round(weeklyVal * 10) / 10;
             el.textContent = w + ' / ' + targetVal;
             if (Math.abs(w - targetVal) > 0.1) {
@@ -2687,10 +2787,25 @@
                 const val = parseFloat(inp.value) || 0;
                 const weight = parseFloat(inp.getAttribute('data-weight')) || 0;
                 const cplCode = inp.getAttribute('data-cpl') || '';
+                const splitAttr = inp.getAttribute('data-cpl-split') || '';
 
                 totalWeightedScore += (val * weight) / 100.0;
 
-                if (cplCode) {
+                let splitObj = null;
+                if (splitAttr) {
+                    try { splitObj = JSON.parse(splitAttr); } catch (e) { splitObj = null; }
+                }
+
+                if (splitObj && typeof splitObj === 'object' && Object.keys(splitObj).length > 0) {
+                    for (const [sCpl, ratio] of Object.entries(splitObj)) {
+                        const sWeight = weight * (parseFloat(ratio) || 0);
+                        if (!cplData[sCpl]) {
+                            cplData[sCpl] = { score: 0, weight: 0 };
+                        }
+                        cplData[sCpl].score += (val * sWeight);
+                        cplData[sCpl].weight += sWeight;
+                    }
+                } else if (cplCode) {
                     if (!cplData[cplCode]) {
                         cplData[cplCode] = { score: 0, weight: 0 };
                     }

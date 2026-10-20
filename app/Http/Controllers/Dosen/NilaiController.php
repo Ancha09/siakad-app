@@ -253,6 +253,7 @@ class NilaiController extends Controller
                 'rows' => $rows,
                 'komponen_rps' => $skema->matrix_alokasi['komponen_rps'] ?? $defaultPreset['komponen_rps'],
                 'temuan' => $skema->matrix_alokasi['temuan'] ?? $defaultPreset['temuan'],
+                'cpl_split' => $skema->matrix_alokasi['cpl_split'] ?? ($defaultPreset['cpl_split'] ?? []),
             ];
 
             $obeService->syncKomponensFromMatrix($skema, $matrixData);
