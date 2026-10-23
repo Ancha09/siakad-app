@@ -52,10 +52,10 @@ class KrsController extends Controller
         $jumlahNilai = $ringkasanNilai['jumlah_nilai'];
 
         // =========================================================
-        // BATAS SKS SEMENTARA: 22 ATAU BATAS PERIODE JIKA LEBIH KECIL
+        // BATAS SKS: 24 SKS (INFORMATIKA) / 22 SKS (PRODI LAIN)
         // =========================================================
 
-        $batasSks = $sksLimit->forPeriod($periodeKrs);
+        $batasSks = $sksLimit->forPeriod($periodeKrs, $mahasiswa);
 
         // ===================== KRS MAHASISWA =====================
 
@@ -278,7 +278,7 @@ class KrsController extends Controller
             // BATAS SKS SAMA DENGAN YANG DITAMPILKAN DI HALAMAN KRS
             // =========================================================
 
-            $batasSks = $sksLimit->forPeriod($periodeKrs);
+            $batasSks = $sksLimit->forPeriod($periodeKrs, $mahasiswa);
 
             // ===================== AMBIL JADWAL =====================
 
