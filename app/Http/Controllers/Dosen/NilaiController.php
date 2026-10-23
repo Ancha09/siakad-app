@@ -200,13 +200,14 @@ class NilaiController extends Controller
 
             if (! empty($komponenStandar)) {
                 $skema->update(['komponen_standar' => $komponenStandar]);
+                $obeService->recalculateStandardGradesForJadwal($jadwal, $skema->fresh());
             }
 
-            // Jika hanya menyimpan komponen standar (misal pada matkul non-RPS)
+            // Jika hanya menyimpan komponen standar (misal pada matkul non-RPS atau form khusus komponen standar)
             if (! $request->has('matrix_rows') && ! $request->has('nama_instrumen')) {
                 return redirect()
                     ->route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'input'])
-                    ->with('success', 'Pengaturan komponen dan bobot penilaian standar berhasil disimpan.');
+                    ->with('success', 'Pengaturan komponen dan bobot penilaian standar berhasil disimpan dan disinkronkan.');
             }
         }
 
@@ -458,12 +459,9 @@ class NilaiController extends Controller
 
         $skema = RpsPenilaianSkema::with('komponens')->where('jadwal_id', $jadwal->id)->firstOrFail();
         $komponens = $skema->komponens;
+        $komponenStandar = $skema->komponen_standar_efektif;
 
-        if ($komponens->isEmpty()) {
-            return back()->with('error', 'Silakan atur instrumen penilaian terlebih dahulu di Tab Pengaturan sebelum mengunduh template.');
-        }
-
-        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens'])
+        $krsList = Krs::with(['mahasiswa', 'nilaiKomponens', 'khs'])
             ->where('jadwal_id', $jadwal->id)
             ->where('is_manual', false)
             ->where('status', 'Disetujui')
@@ -479,15 +477,23 @@ class NilaiController extends Controller
             'Expires' => '0',
         ];
 
-        return new StreamedResponse(function () use ($komponens, $krsList) {
+        return new StreamedResponse(function () use ($komponens, $komponenStandar, $krsList) {
             $handle = fopen('php://output', 'w');
             // Write UTF-8 BOM so Excel opens cleanly
             fputs($handle, "\xEF\xBB\xBF");
 
+            $isStandardMode = $komponens->isEmpty();
+
             // Header row
             $headerRow = ['NIM', 'Nama Mahasiswa'];
-            foreach ($komponens as $k) {
-                $headerRow[] = "{$k->nama_instrumen} [{$k->bobot}%]";
+            if ($isStandardMode) {
+                foreach ($komponenStandar as $ks) {
+                    $headerRow[] = "{$ks['nama']} [{$ks['bobot']}%]";
+                }
+            } else {
+                foreach ($komponens as $k) {
+                    $headerRow[] = "{$k->nama_instrumen} [{$k->bobot}%]";
+                }
             }
             fputcsv($handle, $headerRow, ';');
 
@@ -495,15 +501,29 @@ class NilaiController extends Controller
             foreach ($krsList as $krs) {
                 $nilaiMap = $krs->nilaiKomponens->pluck('nilai_angka', 'komponen_id');
                 $isObe = $krs->isObeApplicable();
+                $detailNilai = is_array($krs->khs?->detail_nilai) ? $krs->khs->detail_nilai : [];
                 $row = [
                     $krs->mahasiswa?->nim ?? '',
                     $krs->mahasiswa?->nama ?? '',
                 ];
-                foreach ($komponens as $k) {
-                    if ($isObe) {
-                        $row[] = $nilaiMap->get($k->id) ?? '';
-                    } else {
-                        $row[] = ($k->id === $komponens->first()->id) ? ($krs->khs?->nilai_angka ?? '') : '';
+                if ($isStandardMode) {
+                    foreach ($komponenStandar as $idx => $ks) {
+                        $namaKomp = $ks['nama'] ?? '';
+                        if (isset($detailNilai[$namaKomp])) {
+                            $row[] = $detailNilai[$namaKomp];
+                        } elseif ($idx === 0 && empty($detailNilai) && $krs->khs?->nilai_angka !== null) {
+                            $row[] = $krs->khs->nilai_angka;
+                        } else {
+                            $row[] = '';
+                        }
+                    }
+                } else {
+                    foreach ($komponens as $k) {
+                        if ($isObe) {
+                            $row[] = $nilaiMap->get($k->id) ?? '';
+                        } else {
+                            $row[] = ($k->id === $komponens->first()->id) ? ($krs->khs?->nilai_angka ?? '') : '';
+                        }
                     }
                 }
                 fputcsv($handle, $row, ';');
@@ -561,6 +581,9 @@ class NilaiController extends Controller
 
         $headerRow = array_map('trim', $rows[0]);
         $komponens = $skema->komponens;
+        $komponenStandar = $skema->komponen_standar_efektif;
+        $isStandardMode = $komponens->isEmpty();
+
         $krsList = Krs::with(['mahasiswa.prodi', 'khs'])
             ->where('jadwal_id', $jadwal->id)
             ->where('is_manual', false)
@@ -570,7 +593,7 @@ class NilaiController extends Controller
 
         $importedCount = 0;
 
-        DB::transaction(function () use ($rows, $headerRow, $komponens, $krsList, $obeService, &$importedCount) {
+        DB::transaction(function () use ($rows, $headerRow, $komponens, $komponenStandar, $isStandardMode, $krsList, $obeService, &$importedCount) {
             for ($r = 1; $r < count($rows); $r++) {
                 $row = $rows[$r];
                 if (empty($row[0])) {
@@ -582,19 +605,33 @@ class NilaiController extends Controller
                     continue;
                 }
 
-                if (! $krs->isObeApplicable()) {
-                    // Mahasiswa reguler: baca kolom nilai pertama
-                    $colIndex = 2;
-                    if (isset($row[$colIndex]) && is_numeric(str_replace(',', '.', trim($row[$colIndex])))) {
-                        $val = (float) str_replace(',', '.', trim($row[$colIndex]));
-                        $val = min(100.0, max(0.0, $val));
-                        $konversi = $obeService->konversiNilai($val);
+                if ($isStandardMode || ! $krs->isObeApplicable()) {
+                    $detailNilai = [];
+                    $totalWeighted = 0.0;
+                    $filledCount = 0;
+
+                    foreach ($komponenStandar as $idx => $ks) {
+                        $colIndex = 2 + $idx;
+                        if (isset($row[$colIndex]) && is_numeric(str_replace(',', '.', trim($row[$colIndex])))) {
+                            $val = (float) str_replace(',', '.', trim($row[$colIndex]));
+                            $val = min(100.0, max(0.0, $val));
+                            $detailNilai[$ks['nama']] = $val;
+                            $totalWeighted += $val * (((float) $ks['bobot']) / 100.0);
+                            $filledCount++;
+                        }
+                    }
+
+                    if ($filledCount > 0) {
+                        // Jika hanya 1 kolom diisi pada kelas OBE campuran, anggap NA langsung jika bukan mode standar
+                        $na = ($isStandardMode || $filledCount > 1) ? round($totalWeighted, 2) : round( reset($detailNilai), 2 );
+                        $konversi = $obeService->konversiNilai($na);
                         Khs::updateOrCreate(
                             ['krs_id' => $krs->id],
                             [
-                                'nilai_angka' => $val,
+                                'nilai_angka' => $na,
                                 'nilai_huruf' => $konversi['huruf'],
                                 'bobot' => $konversi['bobot'],
+                                'detail_nilai' => ($isStandardMode || $filledCount > 1) ? $detailNilai : ($krs->khs?->detail_nilai ?? null),
                                 'tahun_akademik' => $krs->tahun_akademik,
                                 'semester_akademik' => $krs->semester_akademik,
                             ]

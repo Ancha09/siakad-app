@@ -748,120 +748,12 @@
     @endphp
 
     {{-- =========================================================================
-         TAB 1: PENGATURAN INSTRUMEN PENILAIAN RPS
+         TAB 1: PENGATURAN INSTRUMEN PENILAIAN RPS & STANDAR
          ========================================================================= --}}
     @if($tab === 'pengaturan')
-        @if($allSubCpmks->isEmpty())
-            <div class="obe-card" style="margin-bottom: 24px;">
-                <div class="obe-card-head" style="align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                    <div>
-                        <h3 style="margin-bottom: 4px;">
-                            <x-layout-icon name="services" />
-                            <span>Pengaturan Komponen &amp; Bobot Penilaian Standar</span>
-                        </h3>
-                        <div style="font-size: 12.5px; color: #64748b;">
-                            Mata kuliah belum memiliki dokumen RPS/CPMK aktif. Penilaian mahasiswa otomatis menggunakan format Standar (UTS, UAS, Tugas, dll.). Anda dapat menambah komponen dan menentukan persentase bobot hingga 100%.
-                        </div>
-                    </div>
-                    <span class="badge" style="background:#f1f5f9; color:#475569; font-size:12px; padding:4px 10px; border:1px solid #cbd5e1; font-weight: 700;">
-                        Penilaian Standar
-                    </span>
-                </div>
-
-                <div class="obe-card-body" style="padding: 22px 24px;">
-                    <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-komponen-standar">
-                        @csrf
-                        <div style="max-width: 680px;">
-                            <div class="table-wrap" style="margin-bottom: 16px;">
-                                <table class="table-input-nilai" style="width: 100%; border-collapse: collapse;" id="table-komponen-standar-editor">
-                                    <thead>
-                                        <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
-                                            <th style="width: 45px; text-align: center;">No</th>
-                                            <th style="min-width: 240px;">Nama Komponen Penilaian</th>
-                                            <th style="width: 140px; text-align: center;">Bobot (%)</th>
-                                            <th style="width: 70px; text-align: center;">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbody-komponen-standar">
-                                        @foreach($komponenStandar as $idx => $ks)
-                                            <tr class="row-komponen-standar">
-                                                <td style="text-align: center; color: #64748b; font-weight: 600;" class="row-ks-no">{{ $loop->iteration }}</td>
-                                                <td>
-                                                    <input type="text"
-                                                           name="komponen_standar[{{ $idx }}][nama]"
-                                                           value="{{ $ks['nama'] }}"
-                                                           class="form-control ks-input-nama"
-                                                           placeholder="Contoh: Tugas / UTS / UAS"
-                                                           required
-                                                           style="width: 100%; font-size: 13px;"
-                                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
-                                                </td>
-                                                <td>
-                                                    <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-                                                        <input type="number"
-                                                               name="komponen_standar[{{ $idx }}][bobot]"
-                                                               value="{{ $ks['bobot'] }}"
-                                                               class="form-control ks-input-bobot"
-                                                               min="1"
-                                                               max="100"
-                                                               step="0.5"
-                                                               required
-                                                               oninput="calcTotalBobotStandar()"
-                                                               style="width: 80px; text-align: center; font-weight: 700; font-size: 13px;"
-                                                               {{ $skema->is_finalized ? 'disabled' : '' }}>
-                                                        <span style="font-weight: 700; color: #64748b; font-size: 13px;">%</span>
-                                                    </div>
-                                                </td>
-                                                <td style="text-align: center;">
-                                                    @if(! $skema->is_finalized)
-                                                        <button type="button"
-                                                                onclick="hapusBarisKomponenStandar(this)"
-                                                                class="btn-outline"
-                                                                style="padding: 4px 8px; color: #dc2626; border-color: #fca5a5;"
-                                                                title="Hapus komponen">
-                                                            <x-layout-icon name="trash" />
-                                                        </button>
-                                                    @else
-                                                        <span style="color: #cbd5e1;">-</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot>
-                                        <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
-                                            <td colspan="2" style="padding: 10px 14px; text-align: right; color: #0f172a;">Total Bobot:</td>
-                                            <td style="text-align: center; font-size: 14px; font-weight: 800;" id="cell-total-bobot-standar">
-                                                {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
-                                            </td>
-                                            <td></td>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-
-                            @if(! $skema->is_finalized)
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 10px;">
-                                    <button type="button" class="btn-outline" onclick="tambahBarisKomponenStandar()" style="display: inline-flex; align-items: center; gap: 6px;">
-                                        <x-layout-icon name="plus" />
-                                        <span>Tambah Komponen</span>
-                                    </button>
-
-                                    <div style="display: flex; gap: 10px;">
-                                        <button type="submit" name="action" value="save" class="btn-primary" id="btn-submit-standar">
-                                            <x-layout-icon name="save" />
-                                            <span>Simpan Pengaturan Bobot Standar</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            @endif
-                        </div>
-                    </form>
-                </div>
-            </div>
-        @else
+        @if($allSubCpmks->isNotEmpty())
             {{-- Card Matriks Utama --}}
-            <div class="obe-card">
+            <div class="obe-card" style="margin-bottom: 24px;">
                 <div class="obe-card-head" style="align-items: flex-start;">
                     <div>
                         <h3 style="margin-bottom: 4px;">
@@ -1237,6 +1129,119 @@
                 </div>
             </div>
         @endif
+
+        {{-- Card Pengaturan Komponen & Bobot Penilaian Standar (Tanpa RPS / Mahasiswa Non-OBE) --}}
+        <div class="obe-card" id="card-komponen-standar" style="margin-bottom: 24px;">
+            <div class="obe-card-head" style="align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h3 style="margin-bottom: 4px;">
+                        <x-layout-icon name="services" />
+                        <span>Pengaturan Komponen &amp; Bobot Penilaian Standar (Tanpa RPS)</span>
+                    </h3>
+                    <div style="font-size: 12.5px; color: #64748b;">
+                        @if($allSubCpmks->isEmpty())
+                            Mata kuliah ini belum memiliki dokumen RPS/CPMK aktif. Penilaian mahasiswa menggunakan format Standar. Anda dapat mengubah bobot (%) dan menambah/menghapus komponen penilaian sendiri hingga total 100%.
+                        @else
+                            Digunakan untuk penilaian mahasiswa Kurikulum Reguler (Non-OBE) di kelas ini ({{ $countReguler ?? 0 }} mahasiswa). Anda dapat mengubah bobot (%) dan menambah komponen penilaian sendiri hingga total 100%.
+                        @endif
+                    </div>
+                </div>
+                <span class="badge" style="background:#f1f5f9; color:#475569; font-size:12px; padding:4px 10px; border:1px solid #cbd5e1; font-weight: 700;">
+                    Penilaian Standar (Fleksibel)
+                </span>
+            </div>
+
+            <div class="obe-card-body" style="padding: 22px 24px;">
+                <form action="{{ route('dosen.nilai.skema', $jadwal->id) }}" method="POST" id="form-komponen-standar">
+                    @csrf
+                    <div style="max-width: 720px;">
+                        <div class="table-wrap" style="margin-bottom: 16px;">
+                            <table class="table-input-nilai" style="width: 100%; border-collapse: collapse;" id="table-komponen-standar-editor">
+                                <thead>
+                                    <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                                        <th style="width: 45px; text-align: center;">No</th>
+                                        <th style="min-width: 240px;">Nama Komponen Penilaian</th>
+                                        <th style="width: 140px; text-align: center;">Bobot (%)</th>
+                                        <th style="width: 70px; text-align: center;">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-komponen-standar">
+                                    @foreach($komponenStandar as $idx => $ks)
+                                        <tr class="row-komponen-standar">
+                                            <td style="text-align: center; color: #64748b; font-weight: 600;" class="row-ks-no">{{ $loop->iteration }}</td>
+                                            <td>
+                                                <input type="text"
+                                                       name="komponen_standar[{{ $idx }}][nama]"
+                                                       value="{{ $ks['nama'] }}"
+                                                       class="form-control ks-input-nama"
+                                                       placeholder="Contoh: Kehadiran / Tugas / Kuis / Praktikum / UTS / UAS"
+                                                       required
+                                                       style="width: 100%; font-size: 13px;"
+                                                       {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+                                                    <input type="number"
+                                                           name="komponen_standar[{{ $idx }}][bobot]"
+                                                           value="{{ $ks['bobot'] }}"
+                                                           class="form-control ks-input-bobot"
+                                                           min="1"
+                                                           max="100"
+                                                           step="0.5"
+                                                           required
+                                                           oninput="calcTotalBobotStandar()"
+                                                           style="width: 80px; text-align: center; font-weight: 700; font-size: 13px;"
+                                                           {{ $skema->is_finalized ? 'disabled' : '' }}>
+                                                    <span style="font-weight: 700; color: #64748b; font-size: 13px;">%</span>
+                                                </div>
+                                            </td>
+                                            <td style="text-align: center;">
+                                                @if(! $skema->is_finalized)
+                                                    <button type="button"
+                                                            onclick="hapusBarisKomponenStandar(this)"
+                                                            class="btn-outline"
+                                                            style="padding: 4px 8px; color: #dc2626; border-color: #fca5a5;"
+                                                            title="Hapus komponen">
+                                                        <x-layout-icon name="trash" />
+                                                    </button>
+                                                @else
+                                                    <span style="color: #cbd5e1;">-</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                                <tfoot>
+                                    <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                                        <td colspan="2" style="padding: 10px 14px; text-align: right; color: #0f172a;">Total Bobot:</td>
+                                        <td style="text-align: center; font-size: 14px; font-weight: 800;" id="cell-total-bobot-standar">
+                                            {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        @if(! $skema->is_finalized)
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px; flex-wrap: wrap; gap: 10px;">
+                                <button type="button" class="btn-outline" onclick="tambahBarisKomponenStandar()" style="display: inline-flex; align-items: center; gap: 6px;">
+                                    <x-layout-icon name="plus" />
+                                    <span>Tambah Komponen Sendiri</span>
+                                </button>
+
+                                <div style="display: flex; gap: 10px;">
+                                    <button type="submit" name="action" value="save" class="btn-primary" id="btn-submit-standar">
+                                        <x-layout-icon name="save" />
+                                        <span>Simpan Pengaturan Bobot Standar</span>
+                                    </button>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </form>
+            </div>
+        </div>
 
     {{-- =========================================================================
          TAB 2: INPUT NILAI MAHASISWA
@@ -1676,13 +1681,23 @@
                     </div>
 
                     <div style="margin-bottom:18px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
                             <div style="font-size:12.5px; font-weight:700; color:#334155;">
                                 Komponen Penilaian Standar:
                             </div>
-                            <span style="font-size:11.5px; color:#15803d; font-weight:700;">
-                                Total Bobot: {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
-                            </span>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:11.5px; color:#15803d; font-weight:700;">
+                                    Total Bobot: {{ array_sum(array_column($komponenStandar, 'bobot')) }}%
+                                </span>
+                                @if(! $skema->is_finalized)
+                                    <a href="{{ route('dosen.nilai.show', ['jadwal' => $jadwal->id, 'tab' => 'pengaturan']) }}#card-komponen-standar"
+                                       class="btn-outline"
+                                       style="padding:3px 8px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                                        <x-layout-icon name="services" />
+                                        <span>Ubah Bobot &amp; Komponen</span>
+                                    </a>
+                                @endif
+                            </div>
                         </div>
                         <p style="font-size:11.5px; color:#64748b; margin-top:0; margin-bottom:12px;">
                             Masukkan nilai komponen (skala 0 - 100). Nilai Akhir (NA) akan dihitung otomatis sesuai bobot komponen, atau Anda dapat langsung menyesuaikan nilai akhir pada kotak NA.

@@ -178,10 +178,10 @@ class ObeAssessmentService
     /**
      * Auto-heal data CPMK, Sub-CPMK, dan Porsi CPL dari file PDF RPS jika sebelumnya ter-upload dengan format lama
      */
-    protected function autoHealCourseFromRpsPdf($mk, MataKuliahRps $rps): void
+    protected function autoHealCourseFromRpsPdf(\App\Models\MataKuliah $mk, MataKuliahRps $rps): void
     {
         try {
-            $fullPath = \Illuminate\Support\Facades\Storage::disk('public')->path($rps->effective_file_path);
+            $fullPath = storage_path('app/public/' . ltrim((string) $rps->effective_file_path, '/'));
             if (! file_exists($fullPath)) {
                 return;
             }
@@ -1200,6 +1200,62 @@ class ObeAssessmentService
                             'semester_akademik' => $krs->semester_akademik,
                         ]
                     );
+                }
+            }
+        });
+
+        $this->recalculateStandardGradesForJadwal($jadwal, $skema);
+    }
+
+    /**
+     * Hitung ulang nilai akhir KHS mahasiswa Non-OBE / Standar yang sudah memiliki detail_nilai
+     * berdasarkan bobot komponen_standar terbaru pada skema.
+     */
+    public function recalculateStandardGradesForJadwal(Jadwal $jadwal, RpsPenilaianSkema $skema): void
+    {
+        $komponenStandar = $skema->komponen_standar_efektif;
+        if (empty($komponenStandar)) {
+            return;
+        }
+
+        $krsList = Krs::with(['khs', 'mahasiswa.prodi', 'jadwal.mataKuliah.cpmks.subCpmks'])
+            ->where('jadwal_id', $jadwal->id)
+            ->where('is_manual', false)
+            ->where('status', 'Disetujui')
+            ->get();
+
+        DB::transaction(function () use ($krsList, $komponenStandar) {
+            foreach ($krsList as $krs) {
+                if ($krs->isObeApplicable()) {
+                    continue;
+                }
+                $khs = $krs->khs;
+                if (! $khs || empty($khs->detail_nilai) || ! is_array($khs->detail_nilai)) {
+                    continue;
+                }
+
+                $detail = $khs->detail_nilai;
+                $hasMatchedComponent = false;
+                $totalWeighted = 0.0;
+
+                foreach ($komponenStandar as $ks) {
+                    $nama = $ks['nama'] ?? '';
+                    $bobot = (float) ($ks['bobot'] ?? 0);
+                    if ($nama !== '' && array_key_exists($nama, $detail)) {
+                        $hasMatchedComponent = true;
+                        $skor = (float) $detail[$nama];
+                        $totalWeighted += $skor * ($bobot / 100.0);
+                    }
+                }
+
+                if ($hasMatchedComponent) {
+                    $na = round(min(100.0, max(0.0, $totalWeighted)), 2);
+                    $konversi = $this->konversiNilai($na);
+                    $khs->update([
+                        'nilai_angka' => $na,
+                        'nilai_huruf' => $konversi['huruf'],
+                        'bobot' => $konversi['bobot'],
+                    ]);
                 }
             }
         });

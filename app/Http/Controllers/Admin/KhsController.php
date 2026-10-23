@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Mahasiswa;
+use App\Models\RpsPenilaianSkema;
 use App\Services\IpkCplReportService;
 use App\Services\LegacyListNavigation;
 use App\Services\MahasiswaNilaiService;
+use App\Services\ObeAssessmentService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -300,6 +302,13 @@ class KhsController extends Controller
 
     public function edit(Khs $kh)
     {
+        $kh->loadMissing([
+            'krs.mahasiswa.prodi',
+            'krs.jadwal.mataKuliah',
+            'krs.jadwal.dosen',
+            'krs.jadwal.skemaPenilaian',
+        ]);
+
         $krs = Krs::with([
             'mahasiswa.kelas',
             'mahasiswa.prodi',
@@ -327,11 +336,24 @@ class KhsController extends Controller
             ->latest()
             ->get();
 
+        $skema = $kh->krs?->jadwal?->skemaPenilaian;
+        $komponenStandar = $skema ? $skema->komponen_standar_efektif : [
+            ['nama' => 'Kehadiran', 'bobot' => 10],
+            ['nama' => 'Tugas', 'bobot' => 20],
+            ['nama' => 'UTS', 'bobot' => 30],
+            ['nama' => 'UAS', 'bobot' => 40],
+        ];
+
+        // Jika KHS punya detail_nilai dengan komponen tambahan yang belum ada di skema, sertakan
+        $detailNilai = is_array($kh->detail_nilai) ? $kh->detail_nilai : [];
+
         return view(
             'admin.khs.edit',
             [
                 'khs' => $kh,
                 'krs' => $krs,
+                'komponenStandar' => $komponenStandar,
+                'detailNilai' => $detailNilai,
             ]
         );
     }
@@ -402,6 +424,46 @@ class KhsController extends Controller
                 );
         }
 
+        // ===================== PROSES KOMPONEN STANDAR & DETAIL NILAI =====================
+        $detailNilaiToSave = is_array($kh->detail_nilai) ? $kh->detail_nilai : null;
+
+        if ($request->has('komponen_standar') && is_array($request->input('komponen_standar'))) {
+            $rawKs = $request->input('komponen_standar', []);
+            $newKomponenStandar = [];
+            $newDetailNilai = [];
+            $totalBobotKs = 0.0;
+
+            foreach ($rawKs as $item) {
+                $nama = trim($item['nama'] ?? '');
+                $bobot = (float) ($item['bobot'] ?? 0);
+                $skorRaw = $item['skor'] ?? null;
+
+                if ($nama !== '' && $bobot > 0) {
+                    $newKomponenStandar[] = [
+                        'nama' => $nama,
+                        'bobot' => $bobot,
+                    ];
+                    $totalBobotKs += $bobot;
+
+                    if ($skorRaw !== null && $skorRaw !== '') {
+                        $newDetailNilai[$nama] = min(100.0, max(0.0, (float) $skorRaw));
+                    }
+                }
+            }
+
+            if (! empty($newKomponenStandar) && round($totalBobotKs, 1) == 100.0 && $krs->jadwal_id) {
+                $skema = RpsPenilaianSkema::firstOrCreate(
+                    ['jadwal_id' => $krs->jadwal_id],
+                    ['dosen_id' => $krs->jadwal?->dosen_id]
+                );
+                $skema->update(['komponen_standar' => $newKomponenStandar]);
+            }
+
+            if (! empty($newDetailNilai)) {
+                $detailNilaiToSave = $newDetailNilai;
+            }
+        }
+
         // ===================== KONVERSI NILAI =====================
 
         [$huruf, $bobot] = $this->konversiNilai(
@@ -415,15 +477,20 @@ class KhsController extends Controller
             'nilai_angka' => $request->nilai_angka,
             'nilai_huruf' => $huruf,
             'bobot' => $bobot,
+            'detail_nilai' => $detailNilaiToSave,
             'tahun_akademik' => $krs->tahun_akademik,
             'semester_akademik' => $krs->semester_akademik,
         ]);
+
+        if ($krs->jadwal && isset($skema)) {
+            app(ObeAssessmentService::class)->recalculateStandardGradesForJadwal($krs->jadwal, $skema->fresh());
+        }
 
         return redirect()
             ->to(app(LegacyListNavigation::class)->returnUrl(request(), 'admin.khs'))
             ->with(
                 'success',
-                'Data KHS berhasil diperbarui.'
+                'Data KHS dan komponen penilaian standar berhasil diperbarui.'
             );
     }
 
@@ -447,7 +514,7 @@ class KhsController extends Controller
     // KONVERSI NILAI
     // =====================================================
 
-    private function konversiNilai($nilai)
+    private function konversiNilai(float|int|string $nilai): array
     {
         $nilai = (float) $nilai;
 

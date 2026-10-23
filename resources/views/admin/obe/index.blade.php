@@ -735,20 +735,25 @@
 
         <div class="page-card">
             <div class="page-card-head">
-                <h2>Status Penilaian &amp; Finalisasi OBE Kelas</h2>
+                <div>
+                    <h2>Status Penilaian, Bobot Standar (Non-RPS) &amp; Finalisasi Kelas</h2>
+                    <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #64748b;">
+                        Admin dapat membuka kunci finalisasi nilai maupun mengatur/mengubah komponen &amp; bobot penilaian standar (tanpa RPS) untuk setiap kelas.
+                    </p>
+                </div>
             </div>
             <div class="page-card-body">
                 <div class="table-wrap">
                     <table>
                         <thead>
                             <tr>
-                                <th style="width: 60px;">No</th>
+                                <th style="width: 50px;">No</th>
                                 <th>Mata Kuliah</th>
                                 <th>Dosen Pengampu</th>
                                 <th>Kelas / Jadwal</th>
-                                <th>Tahun / Semester</th>
+                                <th>Komponen &amp; Bobot Standar (Non-RPS)</th>
                                 <th style="text-align: center;">Status Finalisasi</th>
-                                <th style="width: 160px; text-align: center;">Aksi Administrator</th>
+                                <th style="width: 220px; text-align: center;">Aksi Administrator</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -756,15 +761,30 @@
                                 @php
                                     $skema = $jadwal->skemaPenilaian;
                                     $isFinal = $skema && $skema->is_finalized;
+                                    $ksEfektif = $skema ? $skema->komponen_standar_efektif : [
+                                        ['nama' => 'Kehadiran', 'bobot' => 10],
+                                        ['nama' => 'Tugas', 'bobot' => 20],
+                                        ['nama' => 'UTS', 'bobot' => 30],
+                                        ['nama' => 'UAS', 'bobot' => 40],
+                                    ];
                                 @endphp
                                 <tr>
                                     <td>{{ $loop->iteration }}</td>
                                     <td>
                                         <strong>{{ $jadwal->mataKuliah?->kode_mk }}</strong> — {{ $jadwal->mataKuliah?->nama_mk }}
+                                        <div style="font-size: 11px; color: #64748b; margin-top: 2px;">{{ $jadwal->tahun_akademik }} {{ $jadwal->semester_akademik }}</div>
                                     </td>
                                     <td>{{ $jadwal->dosen?->nama ?? '-' }}</td>
-                                    <td>Kelas {{ $jadwal->kelas }} ({{ $jadwal->hari }}, {{ $jadwal->jam_mulai }})</td>
-                                    <td>{{ $jadwal->tahun_akademik }} {{ $jadwal->semester_akademik }}</td>
+                                    <td>Kelas {{ $jadwal->kelas }}<br><small style="color:#64748b;">{{ $jadwal->hari }}, {{ $jadwal->jam_mulai }}</small></td>
+                                    <td>
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                            @foreach($ksEfektif as $ksItem)
+                                                <span style="background:#f8fafc; border:1px solid #cbd5e1; color:#334155; border-radius:6px; padding:2px 7px; font-size:11px; font-weight:600;">
+                                                    {{ $ksItem['nama'] }}: <strong>{{ $ksItem['bobot'] }}%</strong>
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    </td>
                                     <td style="text-align: center;">
                                         @if($isFinal)
                                             <span class="badge-success">
@@ -777,21 +797,32 @@
                                         @elseif($skema && $skema->komponens()->count() > 0)
                                             <span class="badge-warning">Draf ({{ $skema->komponens()->count() }} Instrumen)</span>
                                         @else
-                                            <span class="badge-secondary">Belum Dikonfigurasi</span>
+                                            <span class="badge-secondary">Standar / Belum Dikonfigurasi</span>
                                         @endif
                                     </td>
                                     <td style="text-align: center;">
-                                        @if($isFinal)
-                                            <form method="POST" action="{{ route('admin.obe.unlock-nilai', $skema) }}" onsubmit="return confirm('Buka kunci finalisasi nilai untuk kelas ini? Dosen pengampu akan dapat merevisi instrumen dan nilai kembali.')" style="margin: 0;">
-                                                @csrf
-                                                <button type="submit" class="btn-sm btn-warning" title="Buka Kunci Nilai agar Dosen dapat Merevisi">
-                                                    <x-layout-icon name="refresh" />
-                                                    <span>Buka Kunci</span>
-                                                </button>
-                                            </form>
-                                        @else
-                                            <span style="font-size: 12px; color: #94a3b8;">Form Terbuka</span>
-                                        @endif
+                                        <div style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
+                                            <button type="button"
+                                                    class="btn-sm btn-outline"
+                                                    style="font-size:11.5px; padding:5px 9px; display:inline-flex; align-items:center; gap:4px;"
+                                                    data-jadwal-id="{{ $jadwal->id }}"
+                                                    data-mk="{{ ($jadwal->mataKuliah?->kode_mk ?? '') . ' — ' . ($jadwal->mataKuliah?->nama_mk ?? '') . ' (Kelas ' . $jadwal->kelas . ')' }}"
+                                                    data-komponen='@json($ksEfektif)'
+                                                    onclick="openAdminKomponenStandarBtn(this)">
+                                                <x-layout-icon name="services" />
+                                                <span>Atur Bobot Standar</span>
+                                            </button>
+
+                                            @if($isFinal)
+                                                <form method="POST" action="{{ route('admin.obe.unlock-nilai', $skema) }}" onsubmit="return confirm('Buka kunci finalisasi nilai untuk kelas ini? Dosen pengampu akan dapat merevisi instrumen dan nilai kembali.')" style="margin: 0;">
+                                                    @csrf
+                                                    <button type="submit" class="btn-sm btn-warning" title="Buka Kunci Nilai agar Dosen dapat Merevisi">
+                                                        <x-layout-icon name="refresh" />
+                                                        <span>Buka Kunci</span>
+                                                    </button>
+                                                </form>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                             @empty
@@ -808,6 +839,61 @@
                 <div style="margin-top: 16px;">
                     {{ $monitoringJadwals->links() }}
                 </div>
+            </div>
+        </div>
+
+        {{-- Modal Admin Atur Komponen & Bobot Standar --}}
+        <div id="modal-admin-komponen-standar" class="modal-backdrop-custom" style="display: none;">
+            <div class="modal-box-custom" style="max-width: 620px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; border-bottom:1px solid #e2e8f0; padding-bottom:10px;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 16px; color: #0f172a;">Atur Komponen &amp; Bobot Penilaian Standar (Tanpa RPS)</h3>
+                        <p id="admin-ks-subtitle" style="margin: 4px 0 0 0; font-size: 12px; color: #64748b; font-weight: 600;"></p>
+                    </div>
+                    <button type="button" onclick="closeModal('modal-admin-komponen-standar')" style="background:transparent; border:none; font-size:22px; color:#94a3b8; cursor:pointer; line-height:1;">&times;</button>
+                </div>
+
+                <form method="POST" id="form-admin-komponen-standar" action="">
+                    @csrf
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:12px; color:#475569;">
+                        Admin dapat mengubah persentase bobot maupun menambah/menghapus komponen penilaian sendiri hingga total mencapai <strong>100%</strong>. Perubahan akan langsung tersinkronisasi dengan portal dosen dan nilai mahasiswa reguler di kelas ini.
+                    </div>
+
+                    <div class="table-wrap" style="margin-bottom: 14px;">
+                        <table style="width:100%; border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+                                    <th style="width:45px; text-align:center;">No</th>
+                                    <th>Nama Komponen Penilaian</th>
+                                    <th style="width:130px; text-align:center;">Bobot (%)</th>
+                                    <th style="width:65px; text-align:center;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-tbody-ks"></tbody>
+                            <tfoot>
+                                <tr style="background:#f8fafc; font-weight:700; border-top:2px solid #cbd5e1;">
+                                    <td colspan="2" style="text-align:right; padding:8px 12px;">Total Bobot:</td>
+                                    <td style="text-align:center; font-weight:800; font-size:14px;" id="admin-total-ks">100%</td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px;">
+                        <button type="button" class="btn-outline" onclick="adminTambahBarisKs()" style="font-size:12px; padding:6px 12px;">
+                            <x-layout-icon name="plus" />
+                            <span>Tambah Komponen Sendiri</span>
+                        </button>
+                        <div style="display:flex; gap:8px;">
+                            <button type="button" class="btn-outline" onclick="closeModal('modal-admin-komponen-standar')">Batal</button>
+                            <button type="submit" class="btn-primary" id="admin-btn-save-ks">
+                                <x-layout-icon name="check" />
+                                <span>Simpan Bobot Standar</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     {{-- ========================================================
@@ -978,6 +1064,106 @@
         document.getElementById('edit-sub-bobot').value = sub.bobot_default || '';
         document.getElementById('edit-sub-deskripsi').value = sub.deskripsi || '';
         openModal('modal-edit-sub-cpmk');
+    }
+
+    var adminKsCounter = 0;
+
+    function openAdminKomponenStandarBtn(btn) {
+        var jadwalId = btn.getAttribute('data-jadwal-id');
+        var mkLabel = btn.getAttribute('data-mk') || '';
+        var komponenRaw = btn.getAttribute('data-komponen') || '[]';
+        var list = [];
+        try {
+            list = JSON.parse(komponenRaw);
+        } catch (e) {
+            list = [];
+        }
+        if (!Array.isArray(list) || list.length === 0) {
+            list = [
+                { nama: 'Kehadiran', bobot: 10 },
+                { nama: 'Tugas', bobot: 20 },
+                { nama: 'UTS', bobot: 30 },
+                { nama: 'UAS', bobot: 40 }
+            ];
+        }
+
+        document.getElementById('form-admin-komponen-standar').action = '{{ url("admin/kurikulum-obe/jadwal") }}/' + jadwalId + '/komponen-standar';
+        document.getElementById('admin-ks-subtitle').textContent = mkLabel;
+
+        var tbody = document.getElementById('admin-tbody-ks');
+        tbody.innerHTML = '';
+        adminKsCounter = 0;
+
+        list.forEach(function (item) {
+            adminAppendKsRow(item.nama || '', item.bobot || 0);
+        });
+
+        adminCalcTotalKs();
+        openModal('modal-admin-komponen-standar');
+    }
+
+    function adminAppendKsRow(nama, bobot) {
+        var tbody = document.getElementById('admin-tbody-ks');
+        var idx = adminKsCounter++;
+        var tr = document.createElement('tr');
+        tr.className = 'admin-ks-row';
+        tr.innerHTML =
+            '<td style="text-align:center; font-weight:600; color:#64748b;" class="admin-ks-no"></td>' +
+            '<td style="padding:6px 8px;">' +
+                '<input type="text" name="komponen_standar[' + idx + '][nama]" class="form-control" value="' + String(nama).replace(/"/g, '&quot;') + '" placeholder="Contoh: Kuis / Tugas / Praktikum / UTS / UAS" required style="font-size:13px;">' +
+            '</td>' +
+            '<td style="padding:6px 8px; text-align:center;">' +
+                '<div style="display:flex; align-items:center; justify-content:center; gap:4px;">' +
+                    '<input type="number" name="komponen_standar[' + idx + '][bobot]" class="form-control admin-ks-bobot" value="' + bobot + '" min="1" max="100" step="0.5" required oninput="adminCalcTotalKs()" style="width:78px; text-align:center; font-weight:700; font-size:13px;">' +
+                    '<span style="font-weight:700; color:#64748b;">%</span>' +
+                '</div>' +
+            '</td>' +
+            '<td style="text-align:center; padding:6px;">' +
+                '<button type="button" class="btn-sm btn-danger" onclick="adminHapusBarisKs(this)" title="Hapus Komponen">&times;</button>' +
+            '</td>';
+        tbody.appendChild(tr);
+        adminRenumberKsRows();
+    }
+
+    function adminTambahBarisKs() {
+        adminAppendKsRow('', 10);
+        adminCalcTotalKs();
+    }
+
+    function adminHapusBarisKs(btn) {
+        var rows = document.querySelectorAll('#admin-tbody-ks .admin-ks-row');
+        if (rows.length <= 1) {
+            alert('Minimal harus terdapat 1 komponen penilaian.');
+            return;
+        }
+        var tr = btn.closest('tr');
+        if (tr) tr.remove();
+        adminRenumberKsRows();
+        adminCalcTotalKs();
+    }
+
+    function adminRenumberKsRows() {
+        document.querySelectorAll('#admin-tbody-ks .admin-ks-no').forEach(function (td, i) {
+            td.textContent = i + 1;
+        });
+    }
+
+    function adminCalcTotalKs() {
+        var total = 0;
+        document.querySelectorAll('#admin-tbody-ks .admin-ks-bobot').forEach(function (inp) {
+            var v = parseFloat(inp.value);
+            if (!isNaN(v) && v > 0) total += v;
+        });
+        total = Math.round(total * 10) / 10;
+        var el = document.getElementById('admin-total-ks');
+        var btn = document.getElementById('admin-btn-save-ks');
+        if (el) {
+            el.textContent = total + '%';
+            el.style.color = Math.abs(total - 100) < 0.05 ? '#15803d' : '#dc2626';
+        }
+        if (btn) {
+            btn.disabled = Math.abs(total - 100) >= 0.05;
+        }
     }
 </script>
 @endpush

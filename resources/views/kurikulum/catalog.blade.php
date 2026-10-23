@@ -55,11 +55,20 @@
                                         <td>{{ $item->mataKuliah->sks }}</td>
                                         <td>{{ $item->jenis }}</td>
                                         <td>
-                                            @if($item->silabus_path)
-                                                <a class="btn-outline" style="padding:5px 10px;font-size:11px;" href="{{ route($silabusRoute, $item) }}">Unduh PDF</a>
-                                            @else
-                                                <span class="silabus-missing">Belum tersedia</span>
-                                            @endif
+                                            <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+                                                @if($item->silabus_path)
+                                                    <a class="btn-outline" style="padding:5px 10px;font-size:11px;" href="{{ route($silabusRoute, $item) }}">Unduh Silabus</a>
+                                                @endif
+                                                @php($rpsAktifItem = $item->mataKuliah?->rpsAktif)
+                                                @if($rpsAktifItem && $rpsAktifItem->effective_file_path && request()->routeIs('mahasiswa.*'))
+                                                    <a class="btn-primary" style="padding:5px 10px;font-size:11px;display:inline-flex;align-items:center;gap:4px;text-decoration:none;" href="{{ route('mahasiswa.rps.download', $item->mataKuliah->id) }}" target="_blank">
+                                                        <x-layout-icon name="download" /> RPS PDF
+                                                    </a>
+                                                @endif
+                                                @if(!$item->silabus_path && !($rpsAktifItem && $rpsAktifItem->effective_file_path))
+                                                    <span class="silabus-missing">Belum tersedia</span>
+                                                @endif
+                                            </div>
                                         </td>
                                     </tr>
                                 @endforeach

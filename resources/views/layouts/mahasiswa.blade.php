@@ -108,7 +108,7 @@
             <x-sidebar-item route="mahasiswa.dashboard" :active="request()->routeIs('mahasiswa.dashboard', 'mahasiswa.dashboard.*')" icon="dashboard">Dashboard</x-sidebar-item>
 
             <div class="nav-section-label">Akademik</div>
-            <x-sidebar-item route="mahasiswa.kurikulum" :active="request()->routeIs('mahasiswa.kurikulum', 'mahasiswa.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
+            <x-sidebar-item route="mahasiswa.kurikulum" :active="request()->routeIs('mahasiswa.kurikulum', 'mahasiswa.kurikulum.*')" icon="book">RPS &amp; Kurikulum</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.krs" :active="request()->routeIs('mahasiswa.krs', 'mahasiswa.krs.*')" icon="file-check">KRS</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.jadwal" :active="request()->routeIs('mahasiswa.jadwal', 'mahasiswa.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
             <x-sidebar-item route="mahasiswa.presensi" :active="request()->routeIs('mahasiswa.presensi')" icon="attendance">Absen Mahasiswa</x-sidebar-item>
@@ -243,11 +243,11 @@
                     @elseif(request()->routeIs('mahasiswa.kurikulum'))
 
                         <h1>
-                            Kurikulum & Silabus
+                            RPS & Kurikulum
                         </h1>
 
                         <p>
-                            Kurikulum dan silabus perkuliahan
+                            Dokumen RPS semester aktif, riwayat KRS, dan katalog kurikulum prodi
                         </p>
 
 

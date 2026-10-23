@@ -61,7 +61,12 @@ class RpsPenilaianSkema extends Model
 
     public function getTotalBobotAttribute(): float
     {
-        return (float) $this->komponens->sum('bobot');
+        $sumKomponen = (float) $this->komponens->sum('bobot');
+        if ($sumKomponen > 0) {
+            return $sumKomponen;
+        }
+
+        return (float) array_sum(array_column($this->komponen_standar_efektif, 'bobot'));
     }
 }
 

@@ -11,6 +11,7 @@ use App\Models\MataKuliahRps;
 use App\Models\Prodi;
 use App\Models\RpsPenilaianSkema;
 use App\Models\SubCpmk;
+use App\Services\ObeAssessmentService;
 use App\Services\RpsPdfParserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -373,7 +374,7 @@ class ObeCurriculumController extends Controller
         }
 
         try {
-            $fullTempPath = Storage::disk('public')->path($tempPath);
+            $fullTempPath = storage_path('app/public/' . ltrim($tempPath, '/'));
 
             $extracted = $parserService->extract($fullTempPath);
 
@@ -848,7 +849,7 @@ class ObeCurriculumController extends Controller
 
         $filename = 'RPS_' . ($rps->mataKuliah?->kode_mk ?? 'MK') . '_' . ($rps->tahun_akademik ? str_replace('/', '-', $rps->tahun_akademik) : 'Aktif') . '.pdf';
 
-        return Storage::disk('public')->download($filePath, $filename);
+        return response()->download(storage_path('app/public/' . ltrim($filePath, '/')), $filename);
     }
 
     // ==========================================
@@ -868,6 +869,41 @@ class ObeCurriculumController extends Controller
         return back()->with('success', "Kunci finalisasi nilai untuk {$mkNama} (Kelas {$kelas}) berhasil dibuka. Dosen pengampu kini dapat merevisi kembali instrumen dan input nilai.");
     }
 
+    public function updateKomponenStandar(Request $request, Jadwal $jadwal, ObeAssessmentService $obeService)
+    {
+        $rawStandar = $request->input('komponen_standar', []);
+        $komponenStandar = [];
+        $totalStandar = 0.0;
+
+        foreach ($rawStandar as $ks) {
+            $nama = trim($ks['nama'] ?? '');
+            $bobot = (float) ($ks['bobot'] ?? 0);
+            if ($nama !== '' && $bobot > 0) {
+                $komponenStandar[] = [
+                    'nama' => $nama,
+                    'bobot' => $bobot,
+                ];
+                $totalStandar += $bobot;
+            }
+        }
+
+        if (empty($komponenStandar) || round($totalStandar, 1) != 100.0) {
+            return back()->with('error', 'Total bobot komponen penilaian standar harus tepat 100%. Saat ini: ' . round($totalStandar, 1) . '%.');
+        }
+
+        $skema = RpsPenilaianSkema::firstOrCreate(
+            ['jadwal_id' => $jadwal->id],
+            ['dosen_id' => $jadwal->dosen_id]
+        );
+
+        $skema->update(['komponen_standar' => $komponenStandar]);
+        $obeService->recalculateStandardGradesForJadwal($jadwal, $skema->fresh());
+
+        $mkNama = $jadwal->mataKuliah?->nama_mk ?? 'Mata Kuliah';
+
+        return back()->with('success', "Komponen & bobot penilaian standar untuk {$mkNama} (Kelas {$jadwal->kelas}) berhasil diperbarui oleh Admin dan nilai mahasiswa terkait telah disinkronkan.");
+    }
+
     public function downloadRpsByCourse(MataKuliah $mataKuliah)
     {
         $rps = $mataKuliah->rpsAktif ?? $mataKuliah->rpsList()->latest()->first();
@@ -878,7 +914,7 @@ class ObeCurriculumController extends Controller
 
         $filename = 'RPS_' . ($mataKuliah->kode_mk ?? 'MK') . '.pdf';
 
-        return Storage::disk('public')->download($filePath, $filename);
+        return response()->download(storage_path('app/public/' . ltrim($filePath, '/')), $filename);
     }
 
     // ==========================================

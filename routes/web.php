@@ -527,6 +527,7 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/rps', [ObeCurriculumController::class, 'index'])->name('admin.rps.index');
 
     Route::post('/kurikulum-obe/unlock-nilai/{skema}', [ObeCurriculumController::class, 'unlockNilai'])->name('admin.obe.unlock-nilai');
+    Route::post('/kurikulum-obe/jadwal/{jadwal}/komponen-standar', [ObeCurriculumController::class, 'updateKomponenStandar'])->name('admin.obe.update-komponen-standar');
     Route::post('/kurikulum-obe/prodi/{prodi}/toggle', [ObeCurriculumController::class, 'toggleProdi'])->name('admin.obe.toggle-prodi');
 });
 

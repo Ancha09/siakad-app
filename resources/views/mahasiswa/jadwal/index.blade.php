@@ -24,11 +24,16 @@
                                 <td>
                                     <strong>{{ $item->mata_kuliah_efektif?->nama_mk ?? '-' }}</strong>
                                     @php($rps = $item->mata_kuliah_efektif?->rpsAktif ?? $jadwal?->mataKuliah?->rpsAktif)
-                                    @if($rps && $rps->file_rps && $item->mata_kuliah_efektif)
-                                        <div style="margin-top:3px;">
-                                            <a href="{{ route('mahasiswa.rps.download', $item->mata_kuliah_efektif->id) }}" class="btn-outline" style="font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" target="_blank">
-                                                <x-layout-icon name="download" /> RPS (PDF)
+                                    @if($rps && $item->mata_kuliah_efektif)
+                                        <div style="margin-top:4px; display:flex; gap:5px; flex-wrap:wrap; align-items:center;">
+                                            <a href="{{ route('mahasiswa.kurikulum') }}" class="btn-outline" style="font-size:11px; padding:2px 7px; display:inline-flex; align-items:center; gap:4px; text-decoration:none; color:#0a1f5c; border-color:#cbd5e1;" title="Lihat Detail RPS, CPMK & Bobot">
+                                                <x-layout-icon name="book" /> Detail RPS
                                             </a>
+                                            @if($rps->effective_file_path)
+                                                <a href="{{ route('mahasiswa.rps.download', $item->mata_kuliah_efektif->id) }}" class="btn-primary" style="font-size:11px; padding:2px 8px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" target="_blank">
+                                                    <x-layout-icon name="download" /> RPS (PDF)
+                                                </a>
+                                            @endif
                                         </div>
                                     @endif
                                 </td>
