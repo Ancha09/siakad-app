@@ -483,10 +483,12 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== ANALISIS CPL (PENGGANTI LAPORAN AKADEMIK, IPK CPL & PENILAIAN CPL MAHASISWA) =====================
 
     Route::get('/analisis-cpl', [AnalisisCplController::class, 'index'])->name('admin.analisis-cpl.index');
+    Route::get('/analisis-cpl/excel', [AnalisisCplController::class, 'excel'])->name('admin.analisis-cpl.excel');
+    Route::get('/analisis-cpl/pdf', [AnalisisCplController::class, 'pdf'])->name('admin.analisis-cpl.pdf');
 
     Route::redirect('/laporan-akademik', '/admin/analisis-cpl')->name('admin.laporan.index');
-    Route::redirect('/laporan-akademik/excel', '/admin/analisis-cpl')->name('admin.laporan.excel');
-    Route::redirect('/laporan-akademik/pdf', '/admin/analisis-cpl')->name('admin.laporan.pdf');
+    Route::redirect('/laporan-akademik/excel', '/admin/analisis-cpl/excel')->name('admin.laporan.excel');
+    Route::redirect('/laporan-akademik/pdf', '/admin/analisis-cpl/pdf')->name('admin.laporan.pdf');
     Route::redirect('/ipk-cpl', '/admin/analisis-cpl')->name('admin.ipk-cpl.index');
     Route::redirect('/penilaian-cpl-mahasiswa', '/admin/analisis-cpl')->name('admin.penilaian-cpl-mahasiswa.index');
     Route::redirect('/penilaian-cpl-mahasiswa/{mahasiswa}', '/admin/analisis-cpl')->name('admin.penilaian-cpl-mahasiswa.show');
@@ -494,6 +496,8 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     // ===================== KURIKULUM OBE & RPS =====================
 
     Route::get('/kurikulum-obe', [ObeCurriculumController::class, 'index'])->name('admin.obe.index');
+    Route::get('/kurikulum-obe/export/excel', [ObeCurriculumController::class, 'exportExcel'])->name('admin.obe.export.excel');
+    Route::get('/kurikulum-obe/export/pdf', [ObeCurriculumController::class, 'exportPdf'])->name('admin.obe.export.pdf');
     Route::post('/kurikulum-obe/cpl', [ObeCurriculumController::class, 'storeCpl'])->name('admin.obe.cpl.store');
     Route::put('/kurikulum-obe/cpl/{cpl}', [ObeCurriculumController::class, 'updateCpl'])->name('admin.obe.cpl.update');
     Route::delete('/kurikulum-obe/cpl/{cpl}', [ObeCurriculumController::class, 'destroyCpl'])->name('admin.obe.cpl.destroy');

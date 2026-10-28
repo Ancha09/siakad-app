@@ -12,10 +12,13 @@ use App\Models\Prodi;
 use App\Models\RpsPenilaianSkema;
 use App\Models\SubCpmk;
 use App\Services\ObeAssessmentService;
+use App\Services\ReportExporter;
 use App\Services\RpsPdfParserService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ObeCurriculumController extends Controller
@@ -941,5 +944,174 @@ class ObeCurriculumController extends Controller
         }
 
         return back()->with('success', $msg);
+    }
+
+    // ==========================================
+    // EXPORT EXCEL & PDF KURIKULUM OBE & RPS
+    // ==========================================
+
+    public function exportExcel(Request $request, ReportExporter $exporter)
+    {
+        $data = $this->collectObeExportData($request);
+        $prodiName = $data['selectedProdi']
+            ? ($data['selectedProdi']->jenjang . ' ' . $data['selectedProdi']->nama_prodi)
+            : 'Semua Program Studi';
+
+        $cplRows = $data['cpls']->map(fn (Cpl $cpl) => [
+            $cpl->kode_cpl,
+            $cpl->nama_cpl ?: '-',
+            $cpl->deskripsi ?: '-',
+            $cpl->sub_cpmks_count ?? 0,
+        ]);
+
+        $cpmkRows = [];
+        foreach ($data['cpmks'] as $cpmk) {
+            if ($cpmk->subCpmks->isEmpty()) {
+                $cpmkRows[] = [
+                    $cpmk->mataKuliah?->kode_mk ?? '-',
+                    $cpmk->mataKuliah?->nama_mk ?? '-',
+                    $cpmk->kode_cpmk,
+                    $cpmk->deskripsi ?: '-',
+                    '-',
+                    '-',
+                    '-',
+                    '-',
+                ];
+                continue;
+            }
+            foreach ($cpmk->subCpmks as $sub) {
+                $cpmkRows[] = [
+                    $cpmk->mataKuliah?->kode_mk ?? '-',
+                    $cpmk->mataKuliah?->nama_mk ?? '-',
+                    $cpmk->kode_cpmk,
+                    $cpmk->deskripsi ?: '-',
+                    $sub->kode_sub_cpmk,
+                    $sub->deskripsi ?: '-',
+                    $sub->cpl?->kode_cpl ?? 'Belum dipetakan',
+                    $sub->bobot_default !== null ? $sub->bobot_default . '%' : '-',
+                ];
+            }
+        }
+
+        $rpsRows = $data['rpsItems']->map(function (MataKuliahRps $rps) {
+            $porsiText = '-';
+            if (! empty($rps->porsi_cpl) && is_array($rps->porsi_cpl)) {
+                $parts = [];
+                foreach ($rps->porsi_cpl as $k => $v) {
+                    $parts[] = "{$k}: {$v}%";
+                }
+                $porsiText = implode(', ', $parts);
+            }
+
+            return [
+                $rps->mataKuliah?->kode_mk ?? '-',
+                $rps->mataKuliah?->nama_mk ?? '-',
+                $rps->mataKuliah?->sks ?? '-',
+                $rps->mataKuliah?->semester ?? '-',
+                $rps->tahun_akademik ?: 'Reguler',
+                $rps->target_passing_grade,
+                $porsiText,
+                $rps->is_active ? 'Aktif' : 'Arsip',
+            ];
+        });
+
+        $sheets = [
+            [
+                'title' => 'Daftar CPL Prodi',
+                'headings' => ['Kode CPL', 'Nama Singkat CPL', 'Deskripsi Capaian Pembelajaran', 'Jumlah Sub-CPMK Terkait'],
+                'rows' => $cplRows,
+            ],
+            [
+                'title' => 'Dokumen & Target RPS',
+                'headings' => ['Kode MK', 'Nama Mata Kuliah', 'SKS', 'Semester', 'Tahun Ajaran', 'Passing Grade', 'Target Porsi CPL', 'Status'],
+                'rows' => $rpsRows,
+            ],
+            [
+                'title' => 'Matriks CPMK & Sub-CPMK',
+                'headings' => ['Kode MK', 'Nama Mata Kuliah', 'Kode CPMK', 'Deskripsi CPMK', 'Kode Sub-CPMK', 'Deskripsi Sub-CPMK', 'CPL Pemetaan', 'Bobot Default'],
+                'rows' => $cpmkRows,
+            ],
+        ];
+
+        $slug = Str::slug($prodiName ?: 'prodi');
+        $filename = 'kurikulum-obe-rps-' . $slug . '-' . now()->format('Ymd-His') . '.xlsx';
+
+        return $exporter->excel(
+            $filename,
+            'Laporan Kurikulum OBE & RPS — ' . $prodiName,
+            'Program Studi: ' . $prodiName,
+            $sheets
+        );
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $data = $this->collectObeExportData($request);
+        $prodiName = $data['selectedProdi']
+            ? ($data['selectedProdi']->jenjang . ' ' . $data['selectedProdi']->nama_prodi)
+            : 'Semua Program Studi';
+
+        $slug = Str::slug($prodiName ?: 'prodi');
+        $filename = 'kurikulum-obe-rps-' . $slug . '-' . now()->format('Ymd-His') . '.pdf';
+
+        return Pdf::loadView('admin.obe.pdf', $data + [
+            'prodiName' => $prodiName,
+            'filterDescription' => 'Program Studi: ' . $prodiName,
+        ])
+            ->setPaper('a4', 'landscape')
+            ->download($filename);
+    }
+
+    private function collectObeExportData(Request $request): array
+    {
+        $prodis = Prodi::orderBy('nama_prodi')->get();
+        $selectedProdiId = $request->query('prodi_id') ?: $prodis->first()?->id;
+        $selectedProdi = $prodis->firstWhere('id', $selectedProdiId);
+
+        $cpls = Cpl::query()
+            ->when($selectedProdiId, function ($q) use ($selectedProdiId) {
+                $q->where(function ($sub) use ($selectedProdiId) {
+                    $sub->where('prodi_id', $selectedProdiId)
+                        ->orWhere('program_studi_id', $selectedProdiId);
+                });
+            })
+            ->withCount('subCpmks')
+            ->orderBy('sort_order')
+            ->orderBy('kode_cpl')
+            ->get();
+
+        $rpsItems = MataKuliahRps::with('mataKuliah.prodi')
+            ->when($selectedProdiId, function ($q) use ($selectedProdiId) {
+                $q->whereHas('mataKuliah', function ($m) use ($selectedProdiId) {
+                    $m->where('prodi_id', $selectedProdiId)
+                        ->orWhereNull('prodi_id')
+                        ->orWhereHas('kurikulums', fn ($k) => $k->where('prodi_id', $selectedProdiId))
+                        ->orWhereHas('cpmks.subCpmks.cpl', function ($c) use ($selectedProdiId) {
+                            $c->where('prodi_id', $selectedProdiId)
+                                ->orWhere('program_studi_id', $selectedProdiId);
+                        });
+                });
+            })
+            ->orderByDesc('is_active')
+            ->orderByDesc('id')
+            ->get();
+
+        $cpmks = Cpmk::with(['mataKuliah', 'subCpmks.cpl'])
+            ->when($selectedProdiId, function ($q) use ($selectedProdiId) {
+                $q->whereHas('mataKuliah', function ($m) use ($selectedProdiId) {
+                    $m->where('prodi_id', $selectedProdiId)
+                        ->orWhereNull('prodi_id')
+                        ->orWhereHas('kurikulums', fn ($k) => $k->where('prodi_id', $selectedProdiId))
+                        ->orWhereHas('cpmks.subCpmks.cpl', function ($c) use ($selectedProdiId) {
+                            $c->where('prodi_id', $selectedProdiId)
+                                ->orWhere('program_studi_id', $selectedProdiId);
+                        });
+                });
+            })
+            ->orderBy('mata_kuliah_id')
+            ->orderBy('kode_cpmk')
+            ->get();
+
+        return compact('selectedProdi', 'selectedProdiId', 'cpls', 'rpsItems', 'cpmks');
     }
 }

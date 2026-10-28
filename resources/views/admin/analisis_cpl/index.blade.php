@@ -369,6 +369,22 @@
                     <label for="tgt">Target % Mahasiswa Lulus</label>
                     <input id="tgt" name="target" type="number" min="0" max="100" step="1" value="{{ (int) $target }}" style="width: 90px;">
                 </div>
+                <div class="cpl-field" style="flex-direction: row; align-items: flex-end; gap: 8px;">
+                    <a id="btn-export-excel"
+                       href="{{ route('admin.analisis-cpl.excel', ['prodi_id' => $selectedProdi?->id, 'angkatan' => $selectedAngkatan ?? 'all', 'mode' => $mode, 'ambang' => (int) $ambang, 'target' => (int) $target]) }}"
+                       data-base-url="{{ route('admin.analisis-cpl.excel') }}"
+                       style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: #16a34a; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;">
+                        <x-layout-icon name="download" />
+                        <span>Download Excel</span>
+                    </a>
+                    <a id="btn-export-pdf"
+                       href="{{ route('admin.analisis-cpl.pdf', ['prodi_id' => $selectedProdi?->id, 'angkatan' => $selectedAngkatan ?? 'all', 'mode' => $mode, 'ambang' => (int) $ambang, 'target' => (int) $target]) }}"
+                       data-base-url="{{ route('admin.analisis-cpl.pdf') }}"
+                       style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: #dc2626; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;">
+                        <x-layout-icon name="file" />
+                        <span>Download PDF</span>
+                    </a>
+                </div>
             </div>
         </form>
     </div>
@@ -664,6 +680,26 @@
         }
         const inputMode = $('input-mode');
         if (inputMode) inputMode.value = currentMode;
+
+        // Sync Export Excel & PDF URLs with active filters
+        const prodiSel = $('select-prodi');
+        const angkatanSel = $('select-angkatan');
+        const queryParams = new URLSearchParams({
+            prodi_id: prodiSel ? prodiSel.value : '',
+            angkatan: angkatanSel ? angkatanSel.value : 'all',
+            mode: currentMode,
+            ambang: String(amb),
+            target: String(tgt)
+        }).toString();
+
+        const btnExcel = $('btn-export-excel');
+        if (btnExcel && btnExcel.getAttribute('data-base-url')) {
+            btnExcel.href = btnExcel.getAttribute('data-base-url') + '?' + queryParams;
+        }
+        const btnPdf = $('btn-export-pdf');
+        if (btnPdf && btnPdf.getAttribute('data-base-url')) {
+            btnPdf.href = btnPdf.getAttribute('data-base-url') + '?' + queryParams;
+        }
 
         // 1. Render CPL Cards
         $('cards').innerHTML = cpls.map(function (c, i) {

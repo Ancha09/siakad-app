@@ -155,7 +155,7 @@
 
             <div class="nav-section-label">Akademik</div>
             <x-sidebar-item route="admin.kurikulum.index" :active="request()->routeIs('admin.kurikulum.*')" icon="book">Kurikulum &amp; Silabus</x-sidebar-item>
-            <x-sidebar-item route="admin.obe.index" :active="request()->routeIs('admin.obe.*')" icon="chart" badge="OBE">Kurikulum OBE &amp; RPS</x-sidebar-item>
+            <x-sidebar-item route="admin.obe.index" :active="request()->routeIs('admin.obe.*')" icon="chart">Kurikulum OBE &amp; RPS</x-sidebar-item>
             <x-sidebar-item route="admin.jadwal" :active="request()->routeIs('admin.jadwal', 'admin.jadwal.*')" icon="calendar">Jadwal Kuliah</x-sidebar-item>
             <x-sidebar-item route="admin.periode-krs" :active="request()->routeIs('admin.periode-krs', 'admin.periode-krs.*')" icon="period">Periode KRS</x-sidebar-item>
             <x-sidebar-item route="admin.krs-mahasiswa.index" :active="request()->routeIs('admin.krs', 'admin.krs.*', 'admin.krs-mahasiswa.*')" icon="file-check">KRS Admin</x-sidebar-item>
@@ -164,9 +164,9 @@
             <x-sidebar-item route="admin.skripsi" :active="request()->routeIs('admin.skripsi', 'admin.skripsi.*')" icon="graduation">Pembimbing Skripsi</x-sidebar-item>
 
             <div class="nav-section-label">Monitoring &amp; Laporan</div>
-            <x-sidebar-item route="admin.presensi" :active="request()->routeIs('admin.presensi', 'admin.presensi.*')" icon="attendance" badge="Baru">Monitoring Absensi</x-sidebar-item>
+            <x-sidebar-item route="admin.presensi" :active="request()->routeIs('admin.presensi', 'admin.presensi.*')" icon="attendance">Monitoring Absensi</x-sidebar-item>
             <x-sidebar-item route="admin.kuesioner" :active="request()->routeIs('admin.kuesioner', 'admin.kuesioner.*')" icon="clipboard">Evaluasi Dosen</x-sidebar-item>
-            <x-sidebar-item route="admin.analisis-cpl.index" :active="request()->routeIs('admin.analisis-cpl.*')" icon="chart" badge="OBE">Analisis CPL</x-sidebar-item>
+            <x-sidebar-item route="admin.analisis-cpl.index" :active="request()->routeIs('admin.analisis-cpl.*')" icon="chart">Analisis CPL</x-sidebar-item>
 
             <div class="nav-section-label">Pembayaran</div>
             <x-sidebar-item route="admin.pembayaran.index" :active="request()->routeIs('admin.pembayaran.*')" icon="wallet">Tagihan &amp; Pembayaran</x-sidebar-item>

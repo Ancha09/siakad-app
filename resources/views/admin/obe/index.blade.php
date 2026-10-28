@@ -55,7 +55,7 @@
     @endif
 
     {{-- Tab Navigasi --}}
-    <div class="obe-nav-tabs">
+    <div class="obe-nav-tabs" style="align-items: center;">
         <a href="{{ route('admin.obe.index', ['tab' => 'cpl', 'prodi_id' => $selectedProdiId]) }}" class="obe-nav-tab {{ $tab === 'cpl' ? 'active' : '' }}">
             <x-layout-icon name="chart" />
             <span>1. Capaian Lulusan (CPL)</span>
@@ -76,6 +76,21 @@
             <x-layout-icon name="check-circle" />
             <span>5. Aktivasi OBE Prodi</span>
         </a>
+
+        <div style="margin-left: auto; display: flex; gap: 8px; padding-bottom: 6px; flex-wrap: wrap;">
+            <a href="{{ route('admin.obe.export.excel', ['prodi_id' => $selectedProdiId]) }}"
+               class="btn-sm"
+               style="background: #16a34a; color: #ffffff; border: 1px solid #15803d;">
+                <x-layout-icon name="download" />
+                <span>Download Excel</span>
+            </a>
+            <a href="{{ route('admin.obe.export.pdf', ['prodi_id' => $selectedProdiId]) }}"
+               class="btn-sm"
+               style="background: #dc2626; color: #ffffff; border: 1px solid #b91c1c;">
+                <x-layout-icon name="file" />
+                <span>Download PDF</span>
+            </a>
+        </div>
     </div>
 
     {{-- ========================================================
