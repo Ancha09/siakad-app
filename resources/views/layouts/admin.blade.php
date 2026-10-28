@@ -45,7 +45,7 @@
         $adminInitial = mb_strtoupper(mb_substr($adminName, 0, 1));
         $adminSubtitle = match (true) {
             request()->routeIs('admin.kurikulum.*', 'admin.jadwal*', 'admin.periode-krs*', 'admin.krs*', 'admin.khs*', 'admin.skripsi*') => 'Kelola proses dan data akademik STTMI',
-            request()->routeIs('admin.presensi*', 'admin.kuesioner*', 'admin.laporan.*', 'admin.ipk-cpl.*') => 'Monitoring dan laporan akademik STTMI',
+            request()->routeIs('admin.presensi*', 'admin.kuesioner*', 'admin.analisis-cpl.*') => 'Monitoring dan laporan akademik STTMI',
             request()->routeIs('admin.pengumuman.*', 'admin.pemberitahuan*') => 'Informasi dan komunikasi kampus',
             request()->routeIs('profile.*') => 'Kelola identitas dan keamanan akun administrator',
             default => 'Ringkasan akademik seluruh program studi STTMI',
@@ -166,9 +166,7 @@
             <div class="nav-section-label">Monitoring &amp; Laporan</div>
             <x-sidebar-item route="admin.presensi" :active="request()->routeIs('admin.presensi', 'admin.presensi.*')" icon="attendance" badge="Baru">Monitoring Absensi</x-sidebar-item>
             <x-sidebar-item route="admin.kuesioner" :active="request()->routeIs('admin.kuesioner', 'admin.kuesioner.*')" icon="clipboard">Evaluasi Dosen</x-sidebar-item>
-            <x-sidebar-item route="admin.laporan.index" :active="request()->routeIs('admin.laporan.*')" icon="file">Laporan Akademik</x-sidebar-item>
-            <x-sidebar-item route="admin.ipk-cpl.index" :active="request()->routeIs('admin.ipk-cpl.*')" icon="chart">IPK CPL</x-sidebar-item>
-            <x-sidebar-item route="admin.penilaian-cpl-mahasiswa.index" :active="request()->routeIs('admin.penilaian-cpl-mahasiswa.*')" icon="star">Penilaian CPL Mahasiswa</x-sidebar-item>
+            <x-sidebar-item route="admin.analisis-cpl.index" :active="request()->routeIs('admin.analisis-cpl.*')" icon="chart" badge="OBE">Analisis CPL</x-sidebar-item>
 
             <div class="nav-section-label">Pembayaran</div>
             <x-sidebar-item route="admin.pembayaran.index" :active="request()->routeIs('admin.pembayaran.*')" icon="wallet">Tagihan &amp; Pembayaran</x-sidebar-item>

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalisisCplController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\DosenController;
 // ===================== ADMIN =====================
@@ -10,11 +11,9 @@ use App\Http\Controllers\Admin\KelasController;
 use App\Http\Controllers\Admin\KhsController;
 use App\Http\Controllers\Admin\KrsController;
 use App\Http\Controllers\Admin\KrsApprovalResetController;
-use App\Http\Controllers\Admin\IpkCplController;
 use App\Http\Controllers\Admin\KuesionerController as AdminKuesionerController;
 use App\Http\Controllers\Admin\KtmController as AdminKtmController;
 use App\Http\Controllers\Admin\KurikulumController as AdminKurikulumController;
-use App\Http\Controllers\Admin\LaporanAkademikController;
 use App\Http\Controllers\Admin\MahasiswaController;
 use App\Http\Controllers\Admin\MataKuliahController;
 use App\Http\Controllers\Admin\NilaiManualController;
@@ -24,7 +23,6 @@ use App\Http\Controllers\Admin\PresensiController as AdminPresensiController;
 use App\Http\Controllers\Admin\PresensiExportController;
 use App\Http\Controllers\Admin\ProdiController;
 use App\Http\Controllers\Admin\RuanganController;
-use App\Http\Controllers\Admin\StudentCplAssessmentController as AdminStudentCplAssessmentController;
 use App\Http\Controllers\Dosen\DashboardController as DosenDashboardController;
 use App\Http\Controllers\Dosen\EvaluasiController as DosenEvaluasiController;
 // ===================== DOSEN =====================
@@ -482,26 +480,16 @@ Route::middleware(['auth', SkripsiRole::class.':admin'])->prefix('admin')->group
     Route::get('/kuesioner/dosen/{dosen}', [AdminKuesionerController::class, 'show'])->name('admin.kuesioner.dosen');
     Route::get('/kuesioner/dosen/{dosen}/pdf', [AdminKuesionerController::class, 'pdfDetail'])->name('admin.kuesioner.dosen.pdf');
 
-    // ===================== LAPORAN AKADEMIK =====================
+    // ===================== ANALISIS CPL (PENGGANTI LAPORAN AKADEMIK, IPK CPL & PENILAIAN CPL MAHASISWA) =====================
 
-    Route::get('/laporan-akademik', [LaporanAkademikController::class, 'index'])->name('admin.laporan.index');
+    Route::get('/analisis-cpl', [AnalisisCplController::class, 'index'])->name('admin.analisis-cpl.index');
 
-    Route::get('/laporan-akademik/excel', [LaporanAkademikController::class, 'excel'])->name('admin.laporan.excel');
-
-    Route::get('/laporan-akademik/pdf', [LaporanAkademikController::class, 'pdf'])->name('admin.laporan.pdf');
-
-    // ===================== IPK CPL =====================
-
-    Route::get('/ipk-cpl', [IpkCplController::class, 'index'])->name('admin.ipk-cpl.index');
-    Route::get('/ipk-cpl/program-studi/{prodi}', [IpkCplController::class, 'program'])->name('admin.ipk-cpl.program');
-    Route::get('/ipk-cpl/program-studi/{prodi}/download/excel', [IpkCplController::class, 'cplExcel'])->name('admin.ipk-cpl.program.excel');
-    Route::get('/ipk-cpl/program-studi/{prodi}/download/pdf', [IpkCplController::class, 'cplPdf'])->name('admin.ipk-cpl.program.pdf');
-    Route::patch('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}/mapping/{mapping}', [IpkCplController::class, 'updateMapping'])->name('admin.ipk-cpl.mapping.update');
-    Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}', [IpkCplController::class, 'cpl'])->name('admin.ipk-cpl.cpl');
-    Route::get('/ipk-cpl/program-studi/{prodi}/cpl/{cpl}/mapping/{mapping}', [IpkCplController::class, 'course'])->name('admin.ipk-cpl.course');
-
-    Route::get('/penilaian-cpl-mahasiswa', [AdminStudentCplAssessmentController::class, 'index'])->name('admin.penilaian-cpl-mahasiswa.index');
-    Route::get('/penilaian-cpl-mahasiswa/{mahasiswa}', [AdminStudentCplAssessmentController::class, 'show'])->name('admin.penilaian-cpl-mahasiswa.show');
+    Route::redirect('/laporan-akademik', '/admin/analisis-cpl')->name('admin.laporan.index');
+    Route::redirect('/laporan-akademik/excel', '/admin/analisis-cpl')->name('admin.laporan.excel');
+    Route::redirect('/laporan-akademik/pdf', '/admin/analisis-cpl')->name('admin.laporan.pdf');
+    Route::redirect('/ipk-cpl', '/admin/analisis-cpl')->name('admin.ipk-cpl.index');
+    Route::redirect('/penilaian-cpl-mahasiswa', '/admin/analisis-cpl')->name('admin.penilaian-cpl-mahasiswa.index');
+    Route::redirect('/penilaian-cpl-mahasiswa/{mahasiswa}', '/admin/analisis-cpl')->name('admin.penilaian-cpl-mahasiswa.show');
 
     // ===================== KURIKULUM OBE & RPS =====================
 
