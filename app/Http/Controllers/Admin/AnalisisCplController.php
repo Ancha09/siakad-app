@@ -187,9 +187,13 @@ class AnalisisCplController extends Controller
             : collect();
 
         $rawAngkatan = $request->query('angkatan');
-        $selectedAngkatan = ($rawAngkatan !== null && $rawAngkatan !== '' && $rawAngkatan !== 'all')
-            ? (int) $rawAngkatan
-            : null;
+        if ($rawAngkatan === 'all') {
+            $selectedAngkatan = null;
+        } elseif ($rawAngkatan !== null && $rawAngkatan !== '') {
+            $selectedAngkatan = max(ObeCplAnalyticsService::MIN_RPS_ANGKATAN, (int) $rawAngkatan);
+        } else {
+            $selectedAngkatan = (int) ($cohorts->first() ?? ObeCplAnalyticsService::MIN_RPS_ANGKATAN);
+        }
 
         $mode = in_array($request->query('mode'), ['weighted_average', 'persen_ketercapaian'], true)
             ? $request->query('mode')

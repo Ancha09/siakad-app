@@ -12,6 +12,8 @@ use Illuminate\Support\Collection;
 
 class ObeCplAnalyticsService
 {
+    public const MIN_RPS_ANGKATAN = 2025;
+
     public function __construct(
         private readonly ObeAssessmentService $obeService
     ) {}
@@ -63,19 +65,26 @@ class ObeCplAnalyticsService
     }
 
     /**
-     * Ambil daftar angkatan (kohort) mahasiswa pada prodi terpilih
+     * Ambil daftar angkatan (kohort) mahasiswa pada prodi terpilih (mulai angkatan 2025 ke atas)
      */
     public function getCohortsForProdi(int $prodiId): Collection
     {
-        return Mahasiswa::query()
+        $cohorts = Mahasiswa::query()
             ->where('prodi_id', $prodiId)
             ->whereNotNull('angkatan')
+            ->where('angkatan', '>=', self::MIN_RPS_ANGKATAN)
             ->distinct()
             ->orderByDesc('angkatan')
             ->pluck('angkatan')
             ->map(fn ($yr) => (int) $yr)
-            ->filter(fn (int $yr) => $yr > 1990)
+            ->filter(fn (int $yr) => $yr >= self::MIN_RPS_ANGKATAN)
             ->values();
+
+        if ($cohorts->isEmpty()) {
+            return collect([self::MIN_RPS_ANGKATAN]);
+        }
+
+        return $cohorts;
     }
 
     /**
@@ -160,17 +169,18 @@ class ObeCplAnalyticsService
         // Urutkan kode CPL secara natural (CPL 1, CPL 2, ..., CPL 9)
         uksort($cplCatalog, fn ($a, $b) => strnatcasecmp($a, $b));
 
-        // 3. Ambil daftar mahasiswa di Prodi (dan angkatan jika difilter)
+        // 3. Ambil daftar mahasiswa di Prodi (hanya angkatan >= 2025 yang menggunakan kurikulum RPS OBE)
         $studentsQuery = Mahasiswa::query()
             ->where('prodi_id', $prodi->id)
-            ->when($angkatan !== null, fn ($q) => $q->where('angkatan', $angkatan))
+            ->where('angkatan', '>=', self::MIN_RPS_ANGKATAN)
+            ->when($angkatan !== null && $angkatan >= self::MIN_RPS_ANGKATAN, fn ($q) => $q->where('angkatan', $angkatan))
             ->orderBy('nim')
             ->orderBy('nama');
 
         $students = $studentsQuery->get();
         $studentIds = $students->pluck('id')->all();
 
-        // 4. Ambil seluruh KRS Disetujui milik mahasiswa tersebut pada mata kuliah yang relevan
+        // 4. Ambil seluruh KRS Disetujui (non-manual) milik mahasiswa tersebut pada mata kuliah yang relevan
         $relevantCourseIds = array_keys($courseWeightsMap);
         $krsRecords = collect();
 
@@ -187,6 +197,7 @@ class ObeCplAnalyticsService
                 'mahasiswa.prodi',
             ])
                 ->whereIn('mahasiswa_id', $studentIds)
+                ->where('is_manual', false)
                 ->where('status', 'Disetujui')
                 ->where(function ($q) use ($relevantCourseIds) {
                     $q->whereIn('mata_kuliah_id', $relevantCourseIds)
@@ -443,7 +454,8 @@ class ObeCplAnalyticsService
     }
 
     /**
-     * Hitung skor CPL mahasiswa (skala 0..100) pada suatu KRS Mata Kuliah untuk setiap CPL yang dibebankan
+     * Hitung skor CPL mahasiswa (skala 0..100) pada suatu KRS Mata Kuliah untuk setiap CPL yang dibebankan.
+     * Hanya menghitung dari penilaian berbasis komponen RPS (MahasiswaNilaiKomponen) yang sudah diinput dosen.
      *
      * @param  array<string, float>  $courseCplWeights
      * @param  array<int, mixed>  $jadwalSkemaCache
@@ -457,66 +469,46 @@ class ObeCplAnalyticsService
     ): array {
         $result = [];
 
-        // Cek apakah mahasiswa punya rincian nilai komponen OBE pada jadwal ini
-        $hasKomponenScores = $krs->nilaiKomponens && $krs->nilaiKomponens->isNotEmpty();
+        if ($krs->is_manual) {
+            return [];
+        }
+
+        // Hanya hitung jika dosen sudah menginput nilai komponen berbasis RPS (minimal ada nilai_angka > 0)
+        $hasKomponenScores = $krs->nilaiKomponens
+            && $krs->nilaiKomponens->contains(fn ($nk) => (float) ($nk->nilai_angka ?? 0) > 0);
         $jadwal = $krs->jadwal;
 
-        if ($hasKomponenScores && $jadwal) {
-            if (! isset($jadwalSkemaCache[$jadwal->id])) {
-                $jadwalSkemaCache[$jadwal->id] = $jadwal->skemaPenilaian
-                    ?: $this->obeService->getOrCreateSkema($jadwal);
-            }
-            $skema = $jadwalSkemaCache[$jadwal->id];
-
-            if ($skema) {
-                $calc = $this->obeService->hitungNilaiMahasiswa($krs, $skema, $rps);
-                $cplResults = $calc['cpl_results'] ?? [];
-                $normalizedCalcCpl = [];
-
-                foreach ($cplResults as $rawCode => $cData) {
-                    $normCode = $this->normalizeCplCode((string) $rawCode);
-                    $normalizedCalcCpl[$normCode] = (float) ($cData['score'] ?? 0.0);
-                }
-
-                $fallbackNa = (float) ($calc['na'] ?? 0.0);
-                if ($fallbackNa <= 0 && $krs->khs && $krs->khs->nilai_angka !== null) {
-                    $fallbackNa = (float) $krs->khs->nilai_angka;
-                }
-
-                foreach (array_keys($courseCplWeights) as $cplCode) {
-                    if (isset($normalizedCalcCpl[$cplCode])) {
-                        $result[$cplCode] = round($normalizedCalcCpl[$cplCode], 2);
-                    } elseif ($fallbackNa > 0) {
-                        $result[$cplCode] = round($fallbackNa, 2);
-                    }
-                }
-
-                if (! empty($result)) {
-                    return $result;
-                }
-            }
-        }
-
-        // Fallback ke nilai KHS (nilai_angka skala 0..100, atau bobot * 25 jika hanya ada bobot)
-        $khs = $krs->khs;
-        if (! $khs) {
+        if (! $hasKomponenScores || ! $jadwal) {
             return [];
         }
 
-        $score100 = null;
-        if ($khs->nilai_angka !== null && (float) $khs->nilai_angka > 0) {
-            $score100 = (float) $khs->nilai_angka;
-        } elseif ($khs->bobot !== null && (float) $khs->bobot > 0) {
-            $score100 = (float) $khs->bobot * 25.0;
+        if (! isset($jadwalSkemaCache[$jadwal->id])) {
+            $jadwalSkemaCache[$jadwal->id] = $jadwal->skemaPenilaian
+                ?: $this->obeService->getOrCreateSkema($jadwal);
         }
+        $skema = $jadwalSkemaCache[$jadwal->id];
 
-        if ($score100 === null) {
+        if (! $skema) {
             return [];
         }
 
-        $score100 = round(min(100.0, max(0.0, $score100)), 2);
+        $calc = $this->obeService->hitungNilaiMahasiswa($krs, $skema, $rps);
+        $cplResults = $calc['cpl_results'] ?? [];
+        $normalizedCalcCpl = [];
+
+        foreach ($cplResults as $rawCode => $cData) {
+            $normCode = $this->normalizeCplCode((string) $rawCode);
+            $normalizedCalcCpl[$normCode] = (float) ($cData['score'] ?? 0.0);
+        }
+
+        $fallbackNa = (float) ($calc['na'] ?? 0.0);
+
         foreach (array_keys($courseCplWeights) as $cplCode) {
-            $result[$cplCode] = $score100;
+            if (isset($normalizedCalcCpl[$cplCode])) {
+                $result[$cplCode] = round($normalizedCalcCpl[$cplCode], 2);
+            } elseif ($fallbackNa > 0) {
+                $result[$cplCode] = round($fallbackNa, 2);
+            }
         }
 
         return $result;

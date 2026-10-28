@@ -103,14 +103,13 @@
     }
     .cpl-cards-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
         gap: 12px;
     }
     .cpl-card {
         background: #ffffff;
         border-radius: 12px;
         padding: 14px 16px;
-        cursor: pointer;
         border: 1.5px solid #e2e8f0;
         transition: all 0.15s ease;
         display: flex;
@@ -124,7 +123,7 @@
     .cpl-card.sel {
         border: 2px solid #2563eb;
         background: #f8fafc;
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.10);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
     }
     .cpl-card-code {
         font-size: 13px;
@@ -144,7 +143,31 @@
     .cpl-card-sub {
         font-size: 12px;
         color: #64748b;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
+    }
+    .cpl-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 6px;
+        margin-top: 4px;
+        padding-top: 8px;
+        border-top: 1px solid #f1f5f9;
+    }
+    .cpl-card-detail-btn {
+        border: none;
+        background: #eff6ff;
+        color: #1d4ed8;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 9px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        white-space: nowrap;
+    }
+    .cpl-card-detail-btn:hover {
+        background: #dbeafe;
     }
     .cpl-badge {
         font-size: 11px;
@@ -176,9 +199,9 @@
     .cpl-panel-head {
         display: flex;
         justify-content: space-between;
-        align-items: baseline;
+        align-items: center;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 12px;
         margin-bottom: 14px;
     }
     .cpl-panel-title {
@@ -195,7 +218,7 @@
         display: flex;
         gap: 18px;
         flex-wrap: wrap;
-        margin-top: 10px;
+        margin-top: 12px;
         font-size: 12px;
         color: #475569;
     }
@@ -206,11 +229,90 @@
         margin-right: 5px;
         vertical-align: -1px;
     }
+    .cpl-action-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        transition: all 0.15s ease;
+    }
+    .cpl-action-btn.primary {
+        background: #2563eb;
+        color: #ffffff;
+    }
+    .cpl-action-btn.primary:hover {
+        background: #1d4ed8;
+    }
+    .cpl-action-btn.outline {
+        background: #f8fafc;
+        color: #1e293b;
+        border-color: #cbd5e1;
+    }
+    .cpl-action-btn.outline:hover {
+        background: #eff6ff;
+        border-color: #93c5fd;
+        color: #1d4ed8;
+    }
+    .cpl-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9998;
+        padding: 16px;
+    }
+    .cpl-modal-box {
+        background: #ffffff;
+        border-radius: 16px;
+        max-width: 980px;
+        width: 100%;
+        padding: 22px 26px;
+        box-shadow: 0 24px 38px -8px rgba(15, 23, 42, 0.25);
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .cpl-switcher-pills {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .cpl-switch-pill {
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+    .cpl-switch-pill:hover {
+        border-color: #93c5fd;
+        background: #eff6ff;
+    }
+    .cpl-switch-pill.active {
+        background: #2563eb;
+        color: #ffffff;
+        border-color: #2563eb;
+    }
     .cpl-detail-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 24px;
-        margin-top: 14px;
+        margin-top: 12px;
     }
     .mk-contrib-row {
         display: flex;
@@ -256,35 +358,6 @@
         color: #1e293b;
         line-height: 1.6;
     }
-    .cpl-note-box {
-        font-size: 12px;
-        color: #64748b;
-        background: #f8fafc;
-        border: 1px dashed #cbd5e1;
-        border-radius: 10px;
-        padding: 12px 16px;
-        line-height: 1.6;
-    }
-    .stu-mk-modal-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 23, 42, 0.5);
-        display: none;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        padding: 16px;
-    }
-    .stu-mk-modal-box {
-        background: #ffffff;
-        border-radius: 14px;
-        max-width: 680px;
-        width: 100%;
-        padding: 22px 24px;
-        box-shadow: 0 20px 25px -5px rgba(15, 23, 42, 0.18);
-        max-height: 88vh;
-        overflow-y: auto;
-    }
 </style>
 
 <div class="inner-page cpl-analytics-wrap"
@@ -305,7 +378,7 @@
                     @if($selectedProdi)
                         Prodi {{ $selectedProdi->jenjang }} {{ $selectedProdi->nama_prodi }}
                         &middot;
-                        {{ $selectedAngkatan ? 'Kohort Angkatan ' . $selectedAngkatan : 'Semua Kohort Angkatan' }}
+                        {{ $selectedAngkatan ? 'Kohort Angkatan ' . $selectedAngkatan : 'Semua Kohort Angkatan (≥ 2025)' }}
                         &middot;
                         {{ $analytics['total_students_in_cohort'] ?? 0 }} mahasiswa terdaftar
                     @else
@@ -338,7 +411,7 @@
 
             <div class="cpl-filter-group">
                 <div class="cpl-field">
-                    <label for="select-prodi">1. Pilih Program Studi</label>
+                    <label for="select-prodi">Program Studi</label>
                     <select id="select-prodi" name="prodi_id" onchange="this.form.submit()" style="min-width: 240px;">
                         @foreach($prodis as $p)
                             <option value="{{ $p->id }}" @selected($selectedProdi && $selectedProdi->id === $p->id)>
@@ -352,37 +425,41 @@
                 <div class="cpl-field">
                     <label for="select-angkatan">Kohort / Angkatan</label>
                     <select id="select-angkatan" name="angkatan" onchange="this.form.submit()" style="min-width: 165px;">
-                        <option value="all" @selected($selectedAngkatan === null)>Semua Angkatan</option>
                         @foreach($cohorts as $yr)
                             <option value="{{ $yr }}" @selected($selectedAngkatan === (int) $yr)>Angkatan {{ $yr }}</option>
                         @endforeach
+                        @if($cohorts->count() > 1)
+                            <option value="all" @selected($selectedAngkatan === null)>Semua Angkatan (&ge; 2025)</option>
+                        @endif
                     </select>
                 </div>
             </div>
 
             <div class="cpl-filter-group">
                 <div class="cpl-field">
-                    <label for="amb">Ambang Lulus CPL (Batas Minimal)</label>
-                    <input id="amb" name="ambang" type="number" min="0" max="100" step="1" value="{{ (int) $ambang }}" style="width: 90px;">
+                    <label for="amb">Ambang Lulus CPL</label>
+                    <input id="amb" name="ambang" type="number" min="0" max="100" step="1" value="{{ (int) $ambang }}" style="width: 82px;">
                 </div>
                 <div class="cpl-field">
-                    <label for="tgt">Target % Mahasiswa Lulus</label>
-                    <input id="tgt" name="target" type="number" min="0" max="100" step="1" value="{{ (int) $target }}" style="width: 90px;">
+                    <label for="tgt">Target % Lulus</label>
+                    <input id="tgt" name="target" type="number" min="0" max="100" step="1" value="{{ (int) $target }}" style="width: 82px;">
                 </div>
                 <div class="cpl-field" style="flex-direction: row; align-items: flex-end; gap: 8px;">
                     <a id="btn-export-excel"
                        href="{{ route('admin.analisis-cpl.excel', ['prodi_id' => $selectedProdi?->id, 'angkatan' => $selectedAngkatan ?? 'all', 'mode' => $mode, 'ambang' => (int) $ambang, 'target' => (int) $target]) }}"
                        data-base-url="{{ route('admin.analisis-cpl.excel') }}"
-                       style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: #16a34a; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;">
+                       class="cpl-action-btn"
+                       style="background: #16a34a; color: #ffffff;">
                         <x-layout-icon name="download" />
-                        <span>Download Excel</span>
+                        <span>Excel</span>
                     </a>
                     <a id="btn-export-pdf"
                        href="{{ route('admin.analisis-cpl.pdf', ['prodi_id' => $selectedProdi?->id, 'angkatan' => $selectedAngkatan ?? 'all', 'mode' => $mode, 'ambang' => (int) $ambang, 'target' => (int) $target]) }}"
                        data-base-url="{{ route('admin.analisis-cpl.pdf') }}"
-                       style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; background: #dc2626; color: #ffffff; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap;">
+                       class="cpl-action-btn"
+                       style="background: #dc2626; color: #ffffff;">
                         <x-layout-icon name="file" />
-                        <span>Download PDF</span>
+                        <span>PDF</span>
                     </a>
                 </div>
             </div>
@@ -397,30 +474,39 @@
                 Silakan kelola CPL atau unggah dokumen RPS pada menu <strong>Kurikulum OBE &amp; RPS</strong> terlebih dahulu.
             </p>
             <a href="{{ route('admin.obe.index', ['prodi_id' => $selectedProdi?->id, 'tab' => 'rps']) }}"
-               class="btn-primary"
-               style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 9px 16px; border-radius: 8px; background: #2563eb; color: #fff; font-size: 13px; font-weight: 600;">
+               class="cpl-action-btn primary">
                 Buka Kurikulum OBE &amp; RPS &rarr;
             </a>
         </div>
     @else
         {{-- =========================================================
-             KARTU RINGKASAN TIAP CPL (KLIK UNTUK MEMILIH CPL)
+             KARTU RINGKASAN TIAP CPL (CPL 1 s/d CPL 9)
         ========================================================== --}}
         <div id="cards" class="cpl-cards-grid"></div>
 
         {{-- =========================================================
-             GRAFIK KOMBINASI: % KETERCAPAIAN & WEIGHTED AVERAGE
+             GRAFIK CAPAIAN SELURUH CPL (DENGAN TOMBOL RINCIAN & CARA HITUNG)
         ========================================================== --}}
         <div class="cpl-panel">
             <div class="cpl-panel-head">
                 <div>
                     <h3 class="cpl-panel-title" id="chart-main-title">Grafik Capaian Seluruh CPL</h3>
-                    <div class="cpl-panel-sub" id="chart-main-sub">
-                        Klik pada salah satu kartu atau batang CPL untuk melihat rincian mata kuliah dan mahasiswa di bawah.
+                    <div class="cpl-panel-sub">
+                        Ringkasan visual seluruh CPL Program Studi. Gunakan tombol di kanan atau klik pada kartu CPL untuk membuka rincian per CPL maupun rumus cara hitung.
                     </div>
                 </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="cpl-action-btn outline" id="btn-open-cara-hitung">
+                        <x-layout-icon name="book" />
+                        <span>Cara Hitung CPL</span>
+                    </button>
+                    <button type="button" class="cpl-action-btn primary" id="btn-open-rincian">
+                        <x-layout-icon name="chart" />
+                        <span id="btn-open-rincian-label">Lihat Rincian CPL</span>
+                    </button>
+                </div>
             </div>
-            <div style="position: relative; height: 270px;">
+            <div style="position: relative; height: 290px;">
                 <canvas id="bar"></canvas>
             </div>
             <div class="cpl-legend">
@@ -429,112 +515,142 @@
                 <span><span class="k" style="width:16px;height:0;border-top:2px dashed #888780"></span>Target % ketercapaian</span>
             </div>
         </div>
-
-        {{-- =========================================================
-             PANEL RINCIAN CPL TERPILIH
-        ========================================================== --}}
-        <div class="cpl-panel">
-            <div class="cpl-panel-head">
-                <div>
-                    <h3 class="cpl-panel-title" id="dTitle">Rincian CPL</h3>
-                    <div class="cpl-panel-sub" id="dDesc" style="margin-top: 2px;"></div>
-                </div>
-                <div id="dStat" class="cpl-panel-sub" style="font-weight: 600; color: #1e293b;"></div>
-            </div>
-
-            <div class="cpl-detail-grid">
-                {{-- Kiri: Sebaran Nilai Capaian Mahasiswa (Histogram) --}}
-                <div>
-                    <div class="cpl-panel-sub" style="margin-bottom: 8px; font-weight: 600; color: #334155;">
-                        Sebaran Nilai Capaian Mahasiswa
-                    </div>
-                    <div style="position: relative; height: 220px;">
-                        <canvas id="hist"></canvas>
-                    </div>
-                    <div style="margin-top: 16px;">
-                        <div class="cpl-panel-sub" style="margin-bottom: 6px; font-weight: 600; color: #991b1b;">
-                            Mahasiswa di Bawah Ambang (<span id="low-amb-label">60</span>)
-                        </div>
-                        <div id="low" style="font-size: 13px; line-height: 1.9;"></div>
-                    </div>
-                </div>
-
-                {{-- Kanan: Kontribusi Mata Kuliah (w x sks & Rata-rata Skor CPL di MK) --}}
-                <div>
-                    <div class="cpl-panel-sub" style="margin-bottom: 8px; font-weight: 600; color: #334155;">
-                        Kontribusi Mata Kuliah (w &times; SKS dan Rata-rata Skor CPL di MK)
-                    </div>
-                    <div id="mk"></div>
-                </div>
-            </div>
-
-            {{-- Tabel Perhitungan Weighted Average per Mata Kuliah (Persis Contoh Gambar 1) --}}
-            <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;" id="formula-mk-title">
-                        Tabel Perhitungan Nilai Rata-rata (Weighted Average) Mata Kuliah
-                    </h4>
-                    <span class="cpl-panel-sub">Rumus: Nilai Akhir CPL = &Sigma; Kontribusi / &Sigma; (w &times; SKS)</span>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="cpl-formula-table" id="formula-mk-table">
-                        <thead>
-                            <tr>
-                                <th>Mata Kuliah (MK)</th>
-                                <th>Porsi CPL di RPS (w)</th>
-                                <th>SKS</th>
-                                <th>w &times; SKS</th>
-                                <th id="th-skor-cpl">Rata-rata Skor CPL</th>
-                                <th>Kontribusi ((w &times; SKS) &times; Skor)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="formula-mk-tbody"></tbody>
-                        <tfoot id="formula-mk-tfoot"></tfoot>
-                    </table>
-                </div>
-                <div class="cpl-summary-callout" id="formula-mk-summary"></div>
-            </div>
-
-            {{-- Tabel Evaluasi Capaian CPL per Mahasiswa Kohort (Persis Contoh Gambar 2) --}}
-            <div style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 18px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;" id="cohort-table-title">
-                        Evaluasi Nilai Capaian &amp; Kelulusan CPL Mahasiswa
-                    </h4>
-                    <span class="cpl-panel-sub" id="cohort-table-subtitle"></span>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="cpl-formula-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">No</th>
-                                <th>Mahasiswa (NIM &amp; Nama)</th>
-                                <th style="width: 100px;">Angkatan</th>
-                                <th style="width: 130px;">&Sigma; (w &times; SKS)</th>
-                                <th style="width: 140px;">&Sigma; Kontribusi</th>
-                                <th style="width: 160px;" id="th-mhs-cpl">Nilai Capaian CPL</th>
-                                <th style="width: 130px;" id="th-mhs-pass">&ge; 60?</th>
-                                <th style="width: 140px; text-align: center;">Rincian MK</th>
-                            </tr>
-                        </thead>
-                        <tbody id="cohort-mhs-tbody"></tbody>
-                    </table>
-                </div>
-                <div class="cpl-summary-callout" id="cohort-mhs-summary"></div>
-            </div>
-        </div>
-
-        <div class="cpl-note-box">
-            <strong>Catatan Rumus Perhitungan:</strong><br>
-            1. <strong>Weighted Average (Nilai Capaian CPL Mahasiswa)</strong> = &Sigma;(w &times; SKS &times; Skor CPL di MK) / &Sigma;(w &times; SKS), di mana <em>w</em> adalah proporsi bobot CPL pada dokumen RPS mata kuliah (contoh: Statistika memiliki 66% CPL 1 &rarr; w = 0,66 dan 34% CPL 6 &rarr; w = 0,34).<br>
-            2. <strong>Persen Ketercapaian (% Mahasiswa Lolos CPL)</strong> = (Jumlah mahasiswa dengan Nilai Capaian CPL &ge; Ambang Lulus / Jumlah mahasiswa kohort yang dinilai) &times; 100%. Mahasiswa dapat lulus mata kuliah (nilai B atau C), namun jika skor komponen CPL-nya di bawah ambang (60), nilai tersebut tetap berkontribusi secara proporsional terhadap nilai CPL total.
-        </div>
     @endif
 </div>
 
-{{-- Modal Rincian Perhitungan CPL per Mahasiswa --}}
-<div class="stu-mk-modal-backdrop" id="stu-mk-modal">
-    <div class="stu-mk-modal-box">
+{{-- =========================================================
+     MODAL 1: RINCIAN CPL (BISA PILIH CPL 1 s/d CPL 9)
+========================================================== --}}
+<div class="cpl-modal-backdrop" id="modal-rincian-cpl">
+    <div class="cpl-modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+            <div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;" id="dTitle">Rincian CPL</h3>
+                <div class="cpl-panel-sub" id="dDesc" style="margin-top: 2px;"></div>
+            </div>
+            <button type="button" id="btn-close-rincian" style="border: none; background: #f1f5f9; border-radius: 8px; width: 34px; height: 34px; font-size: 20px; cursor: pointer; color: #475569;">&times;</button>
+        </div>
+
+        {{-- Pemilih CPL 1 s/d CPL 9 di dalam Modal Rincian --}}
+        <div class="cpl-switcher-pills" id="rincian-cpl-pills"></div>
+
+        <div id="dStat" style="font-size: 13px; font-weight: 600; color: #1e293b; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px;"></div>
+
+        <div class="cpl-detail-grid">
+            {{-- Kiri: Sebaran Nilai Capaian Mahasiswa (Histogram) --}}
+            <div>
+                <div class="cpl-panel-sub" style="margin-bottom: 8px; font-weight: 600; color: #334155;">
+                    Sebaran Nilai Capaian Mahasiswa
+                </div>
+                <div style="position: relative; height: 210px;">
+                    <canvas id="hist"></canvas>
+                </div>
+                <div style="margin-top: 16px;">
+                    <div class="cpl-panel-sub" style="margin-bottom: 6px; font-weight: 600; color: #991b1b;">
+                        Mahasiswa di Bawah Ambang (<span id="low-amb-label">60</span>)
+                    </div>
+                    <div id="low" style="font-size: 13px; line-height: 1.9;"></div>
+                </div>
+            </div>
+
+            {{-- Kanan: Kontribusi Mata Kuliah (w x sks & Rata-rata Skor CPL di MK) --}}
+            <div>
+                <div class="cpl-panel-sub" style="margin-bottom: 8px; font-weight: 600; color: #334155;">
+                    Kontribusi Mata Kuliah (w &times; SKS dan Rata-rata Skor CPL di MK)
+                </div>
+                <div id="mk"></div>
+            </div>
+        </div>
+
+        {{-- Tabel Evaluasi Capaian CPL per Mahasiswa Kohort --}}
+        <div style="margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;" id="cohort-table-title">
+                    Daftar Nilai Capaian CPL Mahasiswa Kohort
+                </h4>
+                <span class="cpl-panel-sub" id="cohort-table-subtitle"></span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="cpl-formula-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">No</th>
+                            <th>Mahasiswa (NIM &amp; Nama)</th>
+                            <th style="width: 95px;">Angkatan</th>
+                            <th style="width: 120px;">&Sigma; (w &times; SKS)</th>
+                            <th style="width: 130px;">&Sigma; Kontribusi</th>
+                            <th style="width: 150px;" id="th-mhs-cpl">Nilai Capaian CPL</th>
+                            <th style="width: 110px;" id="th-mhs-pass">&ge; 60?</th>
+                            <th style="width: 125px; text-align: center;">Rincian MK</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cohort-mhs-tbody"></tbody>
+                </table>
+            </div>
+            <div class="cpl-summary-callout" id="cohort-mhs-summary"></div>
+        </div>
+    </div>
+</div>
+
+{{-- =========================================================
+     MODAL 2: CARA HITUNG & TABEL RUMUS CPL
+========================================================== --}}
+<div class="cpl-modal-backdrop" id="modal-cara-hitung">
+    <div class="cpl-modal-box">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
+            <div>
+                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: #0f172a;">Cara Hitung Nilai Rata-rata (Weighted Average) &amp; % Ketercapaian CPL</h3>
+                <div class="cpl-panel-sub" style="margin-top: 2px;">Pilih CPL di bawah untuk melihat tabel perhitungan bobot (w &times; SKS) dari dokumen RPS yang aktif.</div>
+            </div>
+            <button type="button" id="btn-close-cara-hitung" style="border: none; background: #f1f5f9; border-radius: 8px; width: 34px; height: 34px; font-size: 20px; cursor: pointer; color: #475569;">&times;</button>
+        </div>
+
+        {{-- Pemilih CPL 1 s/d CPL 9 di dalam Modal Cara Hitung --}}
+        <div class="cpl-switcher-pills" id="hitung-cpl-pills"></div>
+
+        <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;" id="formula-mk-title">
+                    1. Perhitungan Weighted Average (Nilai Rata-rata CPL)
+                </h4>
+                <span class="cpl-panel-sub">Rumus: Nilai Akhir CPL = &Sigma; Kontribusi / &Sigma; (w &times; SKS)</span>
+            </div>
+            <div style="overflow-x: auto;">
+                <table class="cpl-formula-table" id="formula-mk-table">
+                    <thead>
+                        <tr>
+                            <th>Mata Kuliah (MK)</th>
+                            <th>Porsi CPL di RPS (w)</th>
+                            <th>SKS</th>
+                            <th>w &times; SKS</th>
+                            <th id="th-skor-cpl">Skor CPL</th>
+                            <th>Kontribusi ((w &times; SKS) &times; Skor)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="formula-mk-tbody"></tbody>
+                    <tfoot id="formula-mk-tfoot"></tfoot>
+                </table>
+            </div>
+            <div class="cpl-summary-callout" id="formula-mk-summary"></div>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #334155; line-height: 1.65;">
+            <h4 style="margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #0f172a;">2. Perhitungan Persen Ketercapaian (% Mahasiswa Lolos CPL)</h4>
+            <ul style="margin: 0; padding-left: 18px;">
+                <li>Setiap mahasiswa pada kohort (mulai <strong>Angkatan 2025</strong>) dihitung <strong>Nilai Akhir Capaian CPL</strong>-nya dari seluruh mata kuliah pengampu CPL tersebut menggunakan rumus <code>&Sigma;(w &times; SKS &times; Skor CPL di MK) / &Sigma;(w &times; SKS)</code>.</li>
+                <li>Mahasiswa dinyatakan <strong>Lolos CPL</strong> apabila Nilai Capaian CPL-nya <strong>&ge; Ambang Lulus CPL (60)</strong>. Meskipun mahasiswa lulus mata kuliah dengan nilai B atau C, apabila nilai komponen CPL-nya di bawah 60 maka tetap berkontribusi sesuai nilai aslinya terhadap CPL total.</li>
+                <li><strong>% Ketercapaian CPL</strong> = <code>(Jumlah mahasiswa dengan Nilai Capaian CPL &ge; 60 / Total mahasiswa kohort yang dinilai) &times; 100%</code>.</li>
+                <li>Jika <strong>% Ketercapaian &ge; Target (75%)</strong> maka CPL berstatus <strong>Tercapai</strong>, sedangkan jika di bawah target berstatus <strong>Belum Tercapai</strong>.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{{-- =========================================================
+     MODAL 3: RINCIAN PERHITUNGAN MK PER MAHASISWA
+========================================================== --}}
+<div class="cpl-modal-backdrop" id="stu-mk-modal" style="z-index: 9999;">
+    <div class="cpl-modal-box" style="max-width: 680px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px;">
             <div>
                 <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;" id="modal-stu-title">Rincian Perhitungan CPL Mahasiswa</h3>
@@ -591,11 +707,11 @@
 
     const getAmbang = function () {
         const el = $('amb');
-        return el ? ( parseFloat(el.value) || 0 ) : 60;
+        return el ? (parseFloat(el.value) || 0) : 60;
     };
     const getTarget = function () {
         const el = $('tgt');
-        return el ? ( parseFloat(el.value) || 0 ) : 75;
+        return el ? (parseFloat(el.value) || 0) : 75;
     };
 
     function computeStatsForCpl(cplItem, ambang, target) {
@@ -620,6 +736,29 @@
             pct: pct,
             met: pct !== null && pct >= target
         };
+    }
+
+    function openRincianModal(index) {
+        if (typeof index === 'number' && index >= 0 && index < cpls.length) {
+            sel = index;
+        }
+        render();
+        const modal = $('modal-rincian-cpl');
+        if (modal) {
+            modal.style.display = 'flex';
+            if (histChart) {
+                setTimeout(function () { histChart.resize(); }, 50);
+            }
+        }
+    }
+
+    function openCaraHitungModal(index) {
+        if (typeof index === 'number' && index >= 0 && index < cpls.length) {
+            sel = index;
+        }
+        render();
+        const modal = $('modal-cara-hitung');
+        if (modal) modal.style.display = 'flex';
     }
 
     function openStudentModal(cplItem, studentRow, ambang) {
@@ -666,6 +805,23 @@
         modal.style.display = 'flex';
     }
 
+    function renderSwitcherPills(containerId) {
+        const container = $(containerId);
+        if (!container) return;
+        container.innerHTML = cpls.map(function (c, idx) {
+            return '<button type="button" class="cpl-switch-pill ' + (idx === sel ? 'active' : '') + '" data-cpl-idx="' + idx + '">' +
+                esc(c.kode_cpl) +
+            '</button>';
+        }).join('');
+
+        container.querySelectorAll('.cpl-switch-pill').forEach(function (pill) {
+            pill.onclick = function () {
+                sel = parseInt(pill.getAttribute('data-cpl-idx'), 10) || 0;
+                render();
+            };
+        });
+    }
+
     function render() {
         const amb = getAmbang();
         const tgt = getTarget();
@@ -681,7 +837,7 @@
         const inputMode = $('input-mode');
         if (inputMode) inputMode.value = currentMode;
 
-        // Sync Export Excel & PDF URLs with active filters
+        // Sync Export Excel & PDF URLs
         const prodiSel = $('select-prodi');
         const angkatanSel = $('select-angkatan');
         const queryParams = new URLSearchParams({
@@ -701,7 +857,13 @@
             btnPdf.href = btnPdf.getAttribute('data-base-url') + '?' + queryParams;
         }
 
-        // 1. Render CPL Cards
+        const curCpl = cpls[sel];
+        const btnOpenRincianLabel = $('btn-open-rincian-label');
+        if (btnOpenRincianLabel && curCpl) {
+            btnOpenRincianLabel.textContent = 'Rincian ' + curCpl.kode_cpl;
+        }
+
+        // 1. Render CPL Cards (CPL 1 s/d CPL 9)
         $('cards').innerHTML = cpls.map(function (c, i) {
             const s = statsList[i];
             const isSel = i === sel;
@@ -711,35 +873,45 @@
 
             if (currentMode === 'weighted_average') {
                 mainText = s.avg !== null ? fmt(s.avg, 1) : '—';
-                subText = 'Weighted Avg · ' + (s.pct !== null ? fmt(s.pct, 1) + '% lulus' : 'Belum ada nilai');
+                subText = 'Weighted Avg · ' + (s.pct !== null ? fmt(s.pct, 1) + '% lulus' : 'Belum dinilai');
                 if (s.avg === null) {
-                    badgeHtml = '<span class="cpl-badge neutral">' + c.course_count + ' MK (&Sigma;w&times;sks ' + fmt(c.total_ws, 2) + ')</span>';
+                    badgeHtml = '<span class="cpl-badge neutral">&Sigma;w&times;sks ' + fmt(c.total_ws, 2) + '</span>';
                 } else {
                     badgeHtml = '<span class="cpl-badge ' + (s.avg >= amb ? 'ok' : 'no') + '">' +
-                        (s.avg >= amb ? 'Rata-rata &ge; ' + amb : 'Rata-rata &lt; ' + amb) + '</span>';
+                        (s.avg >= amb ? '&ge; ' + amb : '&lt; ' + amb) + '</span>';
                 }
             } else {
                 mainText = s.pct !== null ? fmt(s.pct, 1) + '%' : '—';
                 subText = '% ketercapaian · rata-rata ' + (s.avg !== null ? fmt(s.avg, 1) : '—');
                 if (s.pct === null) {
-                    badgeHtml = '<span class="cpl-badge neutral">Belum ada nilai</span>';
+                    badgeHtml = '<span class="cpl-badge neutral">Belum dinilai</span>';
                 } else {
                     badgeHtml = '<span class="cpl-badge ' + (s.met ? 'ok' : 'no') + '">' +
                         (s.met ? 'Tercapai' : 'Belum tercapai') + '</span>';
                 }
             }
 
-            return '<div class="cpl-card ' + (isSel ? 'sel' : '') + '" data-i="' + i + '">' +
-                '<div class="cpl-card-code"><span>' + esc(c.kode_cpl) + '</span><span style="font-size:11px;font-weight:500;color:#64748b;">' + c.course_count + ' MK</span></div>' +
-                '<div class="cpl-card-main-val">' + mainText + '</div>' +
-                '<div class="cpl-card-sub">' + subText + '</div>' +
-                badgeHtml +
+            return '<div class="cpl-card ' + (isSel ? 'sel' : '') + '" data-card-idx="' + i + '" style="cursor:pointer;">' +
+                '<div>' +
+                    '<div class="cpl-card-code"><span>' + esc(c.kode_cpl) + '</span><span style="font-size:11px;font-weight:500;color:#64748b;">' + c.course_count + ' MK</span></div>' +
+                    '<div class="cpl-card-main-val">' + mainText + '</div>' +
+                    '<div class="cpl-card-sub">' + subText + '</div>' +
+                '</div>' +
+                '<div class="cpl-card-footer">' +
+                    badgeHtml +
+                    '<button type="button" class="cpl-card-detail-btn" data-rincian-idx="' + i + '">Rincian &rarr;</button>' +
+                '</div>' +
                 '</div>';
         }).join('');
 
         document.querySelectorAll('.cpl-card').forEach(function (card) {
-            card.onclick = function () {
-                sel = parseInt(card.getAttribute('data-i'), 10) || 0;
+            card.onclick = function (e) {
+                const idx = parseInt(card.getAttribute('data-card-idx'), 10) || 0;
+                if (e.target && e.target.hasAttribute('data-rincian-idx')) {
+                    openRincianModal(idx);
+                    return;
+                }
+                sel = idx;
                 render();
             };
         });
@@ -797,8 +969,7 @@
                     plugins: { legend: { display: false } },
                     onClick: function (e, el) {
                         if (el && el.length) {
-                            sel = el[0].index;
-                            render();
+                            openRincianModal(el[0].index);
                         }
                     },
                     scales: {
@@ -830,8 +1001,11 @@
             barChart.update();
         }
 
-        // 3. Render Selected CPL Detail Panel
-        const curCpl = cpls[sel];
+        // 3. Populate Switcher Pills in both Modals (CPL 1 .. CPL 9)
+        renderSwitcherPills('rincian-cpl-pills');
+        renderSwitcherPills('hitung-cpl-pills');
+
+        // 4. Populate Modal Rincian for Selected CPL
         const curStat = statsList[sel];
         const students = Array.isArray(curCpl.students) ? curCpl.students : [];
         const courses = Array.isArray(curCpl.courses) ? curCpl.courses : [];
@@ -840,11 +1014,10 @@
         $('dDesc').textContent = curCpl.deskripsi || curCpl.nama_cpl || '';
         $('dStat').textContent = curStat.n > 0
             ? (curStat.pass + ' dari ' + curStat.n + ' mahasiswa ≥ ' + amb + ' (' + fmt(curStat.pct, 1) + '%) · Rata-rata Weighted Average: ' + fmt(curStat.avg, 1))
-            : ('Total Bobot (w × SKS): ' + fmt(curCpl.total_ws, 2) + ' dari ' + curCpl.course_count + ' Mata Kuliah');
+            : ('Total Bobot (w × SKS): ' + fmt(curCpl.total_ws, 2) + ' dari ' + curCpl.course_count + ' Mata Kuliah · Belum ada nilai RPS yang diinput');
 
         $('low-amb-label').textContent = amb;
 
-        // 3a. Histogram
         const bins = [0, 20, 30, 40, 50, 60, 70, 80, 90];
         const binLabels = ['<20', '20–29', '30–39', '40–49', '50–59', '60–69', '70–79', '80–89', '90–100'];
         const counts = bins.map(function (b, idx) {
@@ -894,7 +1067,6 @@
             histChart.update();
         }
 
-        // 3b. Kontribusi Mata Kuliah List (Right Column)
         if (!courses.length) {
             $('mk').innerHTML = '<div class="cpl-panel-sub">Belum ada mata kuliah yang dipetakan ke ' + esc(curCpl.kode_cpl) + '.</div>';
         } else {
@@ -917,17 +1089,16 @@
             }).join('');
         }
 
-        // 3c. Mahasiswa di bawah ambang
         const lowStudents = students
             .filter(function (st) { return Number(st.score) < amb; })
             .sort(function (a, b) { return Number(a.score) - Number(b.score); });
 
         if (!students.length) {
-            $('low').innerHTML = '<span class="cpl-panel-sub">Belum ada data nilai mahasiswa pada CPL ini.</span>';
+            $('low').innerHTML = '<span class="cpl-panel-sub">Belum ada penilaian RPS yang diinput pada CPL ini.</span>';
         } else if (!lowStudents.length) {
             $('low').innerHTML = '<span class="cpl-badge ok">Tidak ada (Seluruh mahasiswa &ge; ' + amb + ')</span>';
         } else {
-            $('low').innerHTML = lowStudents.map(function (st, idx) {
+            $('low').innerHTML = lowStudents.map(function (st) {
                 return '<button type="button" class="cpl-badge no btn-low-stu" data-stu-id="' + st.mahasiswa_id + '" style="margin:0 6px 6px 0;border:none;cursor:pointer;" title="Klik untuk lihat rincian MK">' +
                     esc(st.nim) + ' · ' + esc(st.nama) + ' · ' + fmt(st.score, 1) +
                 '</button>';
@@ -942,62 +1113,15 @@
             });
         }
 
-        // 4. Tabel Perhitungan Weighted Average per Mata Kuliah (Screenshot 1)
-        $('formula-mk-title').textContent = '1. Cara Menghitung Nilai Rata-rata ' + curCpl.kode_cpl + ' (Weighted Average Mata Kuliah)';
-        $('th-skor-cpl').textContent = 'Skor ' + curCpl.kode_cpl;
-
-        let totalMkWsAll = 0;
-        let totalMkWsGraded = 0;
-        let totalMkKontrib = 0;
-
-        $('formula-mk-tbody').innerHTML = courses.map(function (m) {
-            const ws = Number(m.ws);
-            totalMkWsAll += ws;
-            const hasScore = m.avg_score !== null;
-            const skor = hasScore ? Number(m.avg_score) : null;
-            const kontrib = hasScore ? (ws * skor) : null;
-
-            if (hasScore) {
-                totalMkWsGraded += ws;
-                totalMkKontrib += kontrib;
-            }
-
-            return '<tr>' +
-                '<td><strong>' + esc(m.nama_mk) + '</strong> <span style="color:#64748b;font-size:12px;">(' + esc(m.kode_mk) + ')</span></td>' +
-                '<td>' + fmt(m.w_percent, 2) + '% (' + fmt(m.w, 4) + ')</td>' +
-                '<td>' + m.sks + '</td>' +
-                '<td>' + fmt(m.w, 4) + ' &times; ' + m.sks + ' = <strong>' + fmt(ws, 2) + '</strong></td>' +
-                '<td>' + (hasScore ? ('<strong>' + fmt(skor, 1) + '</strong> <span style="color:#64748b;font-size:11px;">(' + m.student_count + ' mhs)</span>') : '<span style="color:#94a3b8;">Belum ada nilai</span>') + '</td>' +
-                '<td>' + (hasScore ? (fmt(ws, 2) + ' &times; ' + fmt(skor, 1) + ' = <strong>' + fmt(kontrib, 1) + '</strong>') : '—') + '</td>' +
-            '</tr>';
-        }).join('');
-
-        $('formula-mk-tfoot').innerHTML = '<tr>' +
-            '<td colspan="3">Total</td>' +
-            '<td>' + fmt(totalMkWsGraded > 0 ? totalMkWsGraded : totalMkWsAll, 2) + '</td>' +
-            '<td></td>' +
-            '<td>' + (totalMkWsGraded > 0 ? fmt(totalMkKontrib, 1) : '—') + '</td>' +
-        '</tr>';
-
-        if (totalMkWsGraded > 0) {
-            const finalMkAvg = totalMkKontrib / totalMkWsGraded;
-            $('formula-mk-summary').innerHTML =
-                'Nilai akhir rata-rata <strong>' + esc(curCpl.kode_cpl) + '</strong> = &Sigma; kontribusi / &Sigma; (w &times; sks) = ' +
-                '<strong>' + fmt(totalMkKontrib, 1) + ' / ' + fmt(totalMkWsGraded, 2) + ' = ' + fmt(finalMkAvg, 1) + '</strong>.';
-        } else {
-            $('formula-mk-summary').innerHTML =
-                'Total bobot terpetakan pada <strong>' + esc(curCpl.kode_cpl) + '</strong> adalah <strong>&Sigma;(w &times; sks) = ' + fmt(totalMkWsAll, 2) + '</strong>. Nilai rata-rata akan otomatis dihitung setelah nilai mata kuliah mahasiswa diinput.';
-        }
-
-        // 5. Tabel Evaluasi Persen Ketercapaian Kohort Mahasiswa (Screenshot 2)
-        $('cohort-table-title').textContent = '2. Perhitungan Persen Ketercapaian ' + curCpl.kode_cpl + ' (Kohort Mahasiswa)';
+        // Tabel Kohort Mahasiswa di dalam Modal Rincian
+        $('cohort-table-title').textContent = 'Daftar Nilai Capaian ' + curCpl.kode_cpl + ' Mahasiswa Kohort';
         $('cohort-table-subtitle').textContent = 'Ambang kelulusan ' + curCpl.kode_cpl + ' ≥ ' + amb + ' · Target kelulusan kohort: ' + tgt + '%';
         $('th-mhs-cpl').textContent = 'Nilai Capaian ' + curCpl.kode_cpl;
         $('th-mhs-pass').textContent = '≥ ' + amb + '?';
 
         if (!students.length) {
-            $('cohort-mhs-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px;">Belum ada mahasiswa pada kohort ini yang memiliki nilai pada mata kuliah pengampu ' + esc(curCpl.kode_cpl) + '.</td></tr>';
-            $('cohort-mhs-summary').innerHTML = 'Belum ada data mahasiswa yang dapat dievaluasi untuk <strong>' + esc(curCpl.kode_cpl) + '</strong>.';
+            $('cohort-mhs-tbody').innerHTML = '<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:24px;">Belum ada penilaian berbasis RPS yang diinput untuk mahasiswa kohort ini pada ' + esc(curCpl.kode_cpl) + '.</td></tr>';
+            $('cohort-mhs-summary').innerHTML = 'Nilai ketercapaian mahasiswa akan otomatis muncul setelah dosen menginput nilai komponen berbasis RPS.';
         } else {
             $('cohort-mhs-tbody').innerHTML = students.map(function (st, idx) {
                 const passed = Number(st.score) >= amb;
@@ -1032,6 +1156,53 @@
                 '<strong>% ketercapaian ' + esc(curCpl.kode_cpl) + ' = ' + curStat.pass + '/' + curStat.n + ' &times; 100% = ' + fmt(curStat.pct, 1) + '%</strong>. ' +
                 'Dengan target <strong>' + fmt(tgt, 0) + '%</strong>, ' + esc(curCpl.kode_cpl) + ' ' + statusText + '.';
         }
+
+        // 5. Populate Modal Cara Hitung for Selected CPL
+        $('formula-mk-title').textContent = '1. Tabel Perhitungan Bobot & Rata-rata ' + curCpl.kode_cpl + ' (Weighted Average)';
+        $('th-skor-cpl').textContent = 'Skor ' + curCpl.kode_cpl;
+
+        let totalMkWsAll = 0;
+        let totalMkWsGraded = 0;
+        let totalMkKontrib = 0;
+
+        $('formula-mk-tbody').innerHTML = courses.map(function (m) {
+            const ws = Number(m.ws);
+            totalMkWsAll += ws;
+            const hasScore = m.avg_score !== null;
+            const skor = hasScore ? Number(m.avg_score) : null;
+            const kontrib = hasScore ? (ws * skor) : null;
+
+            if (hasScore) {
+                totalMkWsGraded += ws;
+                totalMkKontrib += kontrib;
+            }
+
+            return '<tr>' +
+                '<td><strong>' + esc(m.nama_mk) + '</strong> <span style="color:#64748b;font-size:12px;">(' + esc(m.kode_mk) + ')</span></td>' +
+                '<td>' + fmt(m.w_percent, 2) + '% (' + fmt(m.w, 4) + ')</td>' +
+                '<td>' + m.sks + '</td>' +
+                '<td>' + fmt(m.w, 4) + ' &times; ' + m.sks + ' = <strong>' + fmt(ws, 2) + '</strong></td>' +
+                '<td>' + (hasScore ? ('<strong>' + fmt(skor, 1) + '</strong> <span style="color:#64748b;font-size:11px;">(' + m.student_count + ' mhs)</span>') : '<span style="color:#94a3b8;">Belum dinilai</span>') + '</td>' +
+                '<td>' + (hasScore ? (fmt(ws, 2) + ' &times; ' + fmt(skor, 1) + ' = <strong>' + fmt(kontrib, 1) + '</strong>') : '—') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        $('formula-mk-tfoot').innerHTML = '<tr>' +
+            '<td colspan="3">Total</td>' +
+            '<td>' + fmt(totalMkWsGraded > 0 ? totalMkWsGraded : totalMkWsAll, 2) + '</td>' +
+            '<td></td>' +
+            '<td>' + (totalMkWsGraded > 0 ? fmt(totalMkKontrib, 1) : '—') + '</td>' +
+        '</tr>';
+
+        if (totalMkWsGraded > 0) {
+            const finalMkAvg = totalMkKontrib / totalMkWsGraded;
+            $('formula-mk-summary').innerHTML =
+                'Nilai akhir rata-rata <strong>' + esc(curCpl.kode_cpl) + '</strong> = &Sigma; kontribusi / &Sigma; (w &times; sks) = ' +
+                '<strong>' + fmt(totalMkKontrib, 1) + ' / ' + fmt(totalMkWsGraded, 2) + ' = ' + fmt(finalMkAvg, 1) + '</strong>.';
+        } else {
+            $('formula-mk-summary').innerHTML =
+                'Total bobot terpetakan pada <strong>' + esc(curCpl.kode_cpl) + '</strong> adalah <strong>&Sigma;(w &times; sks) = ' + fmt(totalMkWsAll, 2) + '</strong>. Rumus akhir: <code>&Sigma;(w &times; sks &times; Skor ' + esc(curCpl.kode_cpl) + ') / ' + fmt(totalMkWsAll, 2) + '</code>.';
+        }
     }
 
     // Event Listeners
@@ -1055,12 +1226,38 @@
     if (ambInput) ambInput.oninput = render;
     if (tgtInput) tgtInput.oninput = render;
 
-    const modalClose = $('modal-stu-close');
-    const modalBackdrop = $('stu-mk-modal');
-    if (modalClose && modalBackdrop) {
-        modalClose.onclick = function () { modalBackdrop.style.display = 'none'; };
-        modalBackdrop.onclick = function (e) {
-            if (e.target === modalBackdrop) modalBackdrop.style.display = 'none';
+    const btnOpenRincian = $('btn-open-rincian');
+    const modalRincian = $('modal-rincian-cpl');
+    const btnCloseRincian = $('btn-close-rincian');
+    if (btnOpenRincian) {
+        btnOpenRincian.onclick = function () { openRincianModal(sel); };
+    }
+    if (btnCloseRincian && modalRincian) {
+        btnCloseRincian.onclick = function () { modalRincian.style.display = 'none'; };
+        modalRincian.onclick = function (e) {
+            if (e.target === modalRincian) modalRincian.style.display = 'none';
+        };
+    }
+
+    const btnOpenCaraHitung = $('btn-open-cara-hitung');
+    const modalCaraHitung = $('modal-cara-hitung');
+    const btnCloseCaraHitung = $('btn-close-cara-hitung');
+    if (btnOpenCaraHitung) {
+        btnOpenCaraHitung.onclick = function () { openCaraHitungModal(sel); };
+    }
+    if (btnCloseCaraHitung && modalCaraHitung) {
+        btnCloseCaraHitung.onclick = function () { modalCaraHitung.style.display = 'none'; };
+        modalCaraHitung.onclick = function (e) {
+            if (e.target === modalCaraHitung) modalCaraHitung.style.display = 'none';
+        };
+    }
+
+    const modalCloseStu = $('modal-stu-close');
+    const modalBackdropStu = $('stu-mk-modal');
+    if (modalCloseStu && modalBackdropStu) {
+        modalCloseStu.onclick = function () { modalBackdropStu.style.display = 'none'; };
+        modalBackdropStu.onclick = function (e) {
+            if (e.target === modalBackdropStu) modalBackdropStu.style.display = 'none';
         };
     }
 
@@ -1068,4 +1265,3 @@
 })();
 </script>
 @endsection
-
