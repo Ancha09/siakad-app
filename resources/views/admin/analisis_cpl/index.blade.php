@@ -362,11 +362,10 @@
 
 <div class="inner-page cpl-analytics-wrap"
      id="cpl-analytics-root"
-     data-analytics="{{ json_encode($analytics) }}"
-     data-initial-mode="{{ $mode }}">
+     data-analytics="{{ json_encode($analytics) }}">
 
     {{-- =========================================================
-         HEADER FILTER: PILIH PRODI -> PILIH MODE (1. WEIGHTED AVERAGE / 2. PERSEN KETERCAPAIAN)
+         HEADER FILTER: PILIH PRODI & KOHORT (GABUNGAN WEIGHTED AVERAGE & % KETERCAPAIAN)
     ========================================================== --}}
     <div class="cpl-top-bar">
         <div class="cpl-top-row">
@@ -386,28 +385,9 @@
                     @endif
                 </div>
             </div>
-
-            {{-- Pilihan 1: Weighted Average | Pilihan 2: Persen Ketercapaian --}}
-            <div class="cpl-mode-tabs" role="tablist" aria-label="Metode Analisis CPL">
-                <button type="button"
-                        class="cpl-mode-btn {{ $mode === 'weighted_average' ? 'active' : '' }}"
-                        id="btn-mode-weighted"
-                        data-mode="weighted_average">
-                    <span class="num-pill">1</span>
-                    <span>Weighted Average (Nilai Rata-rata CPL)</span>
-                </button>
-                <button type="button"
-                        class="cpl-mode-btn {{ $mode === 'persen_ketercapaian' ? 'active' : '' }}"
-                        id="btn-mode-persen"
-                        data-mode="persen_ketercapaian">
-                    <span class="num-pill">2</span>
-                    <span>Persen Ketercapaian (% Lulus CPL)</span>
-                </button>
-            </div>
         </div>
 
         <form method="GET" action="{{ route('admin.analisis-cpl.index') }}" id="cpl-filter-form" class="cpl-top-row" style="border-top: 1px solid #f1f5f9; padding-top: 14px;">
-            <input type="hidden" name="mode" id="input-mode" value="{{ $mode }}">
 
             <div class="cpl-filter-group">
                 <div class="cpl-field">
@@ -687,7 +667,6 @@
     const cpls = Array.isArray(analytics.cpls) ? analytics.cpls : [];
     if (!cpls.length) return;
 
-    let currentMode = root.getAttribute('data-initial-mode') || 'weighted_average';
     let sel = 0;
     let barChart = null;
     let histChart = null;
@@ -827,23 +806,12 @@
         const tgt = getTarget();
         const statsList = cpls.map(function (c) { return computeStatsForCpl(c, amb, tgt); });
 
-        // Update Mode Buttons
-        const btnWeighted = $('btn-mode-weighted');
-        const btnPersen = $('btn-mode-persen');
-        if (btnWeighted && btnPersen) {
-            btnWeighted.classList.toggle('active', currentMode === 'weighted_average');
-            btnPersen.classList.toggle('active', currentMode === 'persen_ketercapaian');
-        }
-        const inputMode = $('input-mode');
-        if (inputMode) inputMode.value = currentMode;
-
         // Sync Export Excel & PDF URLs
         const prodiSel = $('select-prodi');
         const angkatanSel = $('select-angkatan');
         const queryParams = new URLSearchParams({
             prodi_id: prodiSel ? prodiSel.value : '',
             angkatan: angkatanSel ? angkatanSel.value : 'all',
-            mode: currentMode,
             ambang: String(amb),
             target: String(tgt)
         }).toString();
@@ -863,32 +831,19 @@
             btnOpenRincianLabel.textContent = 'Rincian ' + curCpl.kode_cpl;
         }
 
-        // 1. Render CPL Cards (CPL 1 s/d CPL 9)
+        // 1. Render CPL Cards (Gabungan % Ketercapaian & Rata-rata Weighted Average)
         $('cards').innerHTML = cpls.map(function (c, i) {
             const s = statsList[i];
             const isSel = i === sel;
-            let mainText = '—';
-            let subText = '';
+            const mainText = s.pct !== null ? fmt(s.pct, 1) + '%' : '—';
+            const subText = '% ketercapaian · rata-rata ' + (s.avg !== null ? fmt(s.avg, 1) : '—');
             let badgeHtml = '';
 
-            if (currentMode === 'weighted_average') {
-                mainText = s.avg !== null ? fmt(s.avg, 1) : '—';
-                subText = 'Weighted Avg · ' + (s.pct !== null ? fmt(s.pct, 1) + '% lulus' : 'Belum dinilai');
-                if (s.avg === null) {
-                    badgeHtml = '<span class="cpl-badge neutral">&Sigma;w&times;sks ' + fmt(c.total_ws, 2) + '</span>';
-                } else {
-                    badgeHtml = '<span class="cpl-badge ' + (s.avg >= amb ? 'ok' : 'no') + '">' +
-                        (s.avg >= amb ? '&ge; ' + amb : '&lt; ' + amb) + '</span>';
-                }
+            if (s.pct === null) {
+                badgeHtml = '<span class="cpl-badge neutral">&Sigma;w&times;sks ' + fmt(c.total_ws, 2) + '</span>';
             } else {
-                mainText = s.pct !== null ? fmt(s.pct, 1) + '%' : '—';
-                subText = '% ketercapaian · rata-rata ' + (s.avg !== null ? fmt(s.avg, 1) : '—');
-                if (s.pct === null) {
-                    badgeHtml = '<span class="cpl-badge neutral">Belum dinilai</span>';
-                } else {
-                    badgeHtml = '<span class="cpl-badge ' + (s.met ? 'ok' : 'no') + '">' +
-                        (s.met ? 'Tercapai' : 'Belum tercapai') + '</span>';
-                }
+                badgeHtml = '<span class="cpl-badge ' + (s.met ? 'ok' : 'no') + '">' +
+                    (s.met ? 'Tercapai' : 'Belum tercapai') + '</span>';
             }
 
             return '<div class="cpl-card ' + (isSel ? 'sel' : '') + '" data-card-idx="' + i + '" style="cursor:pointer;">' +
@@ -916,7 +871,7 @@
             };
         });
 
-        // 2. Render Main Bar + Line Chart
+        // 2. Render Main Bar + Line Chart (Gabungan % Ketercapaian & Weighted Average)
         const labels = cpls.map(function (c) { return c.kode_cpl; });
         const pctData = statsList.map(function (s) { return s.pct !== null ? Number(s.pct.toFixed(1)) : 0; });
         const avgData = statsList.map(function (s) { return s.avg !== null ? Number(s.avg.toFixed(1)) : 0; });
@@ -927,10 +882,7 @@
                 label: '% ketercapaian',
                 data: pctData,
                 backgroundColor: statsList.map(function (_, i) {
-                    if (currentMode === 'persen_ketercapaian') {
-                        return i === sel ? '#185FA5' : '#85B7EB';
-                    }
-                    return i === sel ? '#6499E9' : '#BDCDD6';
+                    return i === sel ? '#185FA5' : '#85B7EB';
                 }),
                 borderRadius: 6,
                 yAxisID: 'y',
@@ -942,8 +894,7 @@
                 data: avgData,
                 borderColor: '#D85A30',
                 backgroundColor: '#D85A30',
-                showLine: currentMode === 'weighted_average',
-                borderWidth: 2,
+                showLine: false,
                 pointRadius: statsList.map(function (_, i) { return i === sel ? 8 : 6; }),
                 yAxisID: 'y2',
                 order: 1
@@ -1206,21 +1157,6 @@
     }
 
     // Event Listeners
-    const btnWeighted = $('btn-mode-weighted');
-    const btnPersen = $('btn-mode-persen');
-    if (btnWeighted) {
-        btnWeighted.onclick = function () {
-            currentMode = 'weighted_average';
-            render();
-        };
-    }
-    if (btnPersen) {
-        btnPersen.onclick = function () {
-            currentMode = 'persen_ketercapaian';
-            render();
-        };
-    }
-
     const ambInput = $('amb');
     const tgtInput = $('tgt');
     if (ambInput) ambInput.oninput = render;
