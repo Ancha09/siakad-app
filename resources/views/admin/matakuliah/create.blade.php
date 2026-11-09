@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>📚 Tambah Mata Kuliah</h2>
+        <h2><x-layout-icon name="plus" /> <span>Tambah Mata Kuliah</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -184,7 +184,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Simpan
+                    <x-layout-icon name="save" /> <span>Simpan</span>
                 </button>
 
                 <a

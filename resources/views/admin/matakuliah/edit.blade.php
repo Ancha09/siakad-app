@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>✏️ Edit Mata Kuliah</h2>
+        <h2><x-layout-icon name="edit" /> <span>Edit Mata Kuliah</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -183,7 +183,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Update
+                    <x-layout-icon name="save" /> <span>Update</span>
                 </button>
 
                 <a

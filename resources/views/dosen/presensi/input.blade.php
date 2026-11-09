@@ -661,7 +661,7 @@
             >
 
                 <h3 style="margin-top:0;">
-                    ✏️ Edit Status Presensi Mahasiswa
+                    <x-layout-icon name="edit" /> <span>Edit Status Presensi Mahasiswa</span>
                 </h3>
 
 

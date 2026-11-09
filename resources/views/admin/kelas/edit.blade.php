@@ -8,7 +8,7 @@
 
     <div class="page-card-head">
 
-        <h2>✏️ Edit Kelas</h2>
+        <h2><x-layout-icon name="edit" /> <span>Edit Kelas</span></h2>
 
     </div>
 
@@ -227,7 +227,7 @@
 
                 <div>
 
-                    ℹ️
+                    <x-layout-icon name="info" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;" />
 
                     <strong>
                         {{ $kelas->mahasiswas()->count() }} mahasiswa
@@ -256,7 +256,7 @@
                     class="btn-primary"
                 >
 
-                    💾 Simpan Perubahan
+                    <x-layout-icon name="save" /> <span>Simpan Perubahan</span>
 
                 </button>
 

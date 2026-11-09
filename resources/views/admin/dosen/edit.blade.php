@@ -295,7 +295,7 @@
                         style="margin-bottom:20px;"
                     >
 
-                        <span>ℹ️</span>
+                        <span style="display:inline-flex;align-items:center;"><x-layout-icon name="info" /></span>
 
                         <div>
 

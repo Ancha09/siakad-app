@@ -6,9 +6,8 @@
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>✏️ Edit Fakultas</h2>
+    <h2><x-layout-icon name="edit" /> <span>Edit Fakultas</span></h2>
 </div>
 
 <div class="page-card-body">
@@ -47,7 +46,7 @@
         <br>
 
         <button type="submit" class="btn-primary">
-            💾 Update
+            <x-layout-icon name="save" /> <span>Update</span>
         </button>
 
         <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.fakultas') }}" class="btn-outline">
@@ -57,7 +56,6 @@
     </form>
 
 </div>
-```
 
 </div>
 

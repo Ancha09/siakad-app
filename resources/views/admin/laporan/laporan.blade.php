@@ -64,10 +64,10 @@
 <div class="laporan-page">
     <div class="page-card">
         <div class="page-card-head">
-            <h2>📚 Laporan Akademik</h2>
+            <h2><x-layout-icon name="file-chart" /> <span>Laporan Akademik</span></h2>
             <div class="report-actions">
-                <a href="{{ route('admin.laporan.excel', request()->query()) }}" class="btn-primary">📊 Download Excel (.xlsx)</a>
-                <a href="{{ route('admin.laporan.pdf', request()->query()) }}" class="btn-outline">📄 Download PDF</a>
+                <a href="{{ route('admin.laporan.excel', request()->query()) }}" class="btn-primary"><x-layout-icon name="file-spreadsheet" /> <span>Download Excel (.xlsx)</span></a>
+                <a href="{{ route('admin.laporan.pdf', request()->query()) }}" class="btn-outline"><x-layout-icon name="file-text" /> <span>Download PDF</span></a>
             </div>
         </div>
         <div class="page-card-body">
@@ -80,7 +80,7 @@
                     <div class="form-group"><label>Kelas</label><select name="kelas_id" class="form-control"><option value="">Semua Kelas</option>@foreach($kelases as $item)<option value="{{ $item->id }}" @selected((string) request('kelas_id') === (string) $item->id)>{{ $item->nama_kelas }}</option>@endforeach</select></div>
                     <div class="form-group"><label>Mata Kuliah</label><select name="mata_kuliah_id" class="form-control"><option value="">Semua Mata Kuliah</option>@foreach($mataKuliahs as $item)<option value="{{ $item->id }}" @selected((string) request('mata_kuliah_id') === (string) $item->id)>{{ $item->kode_mk }} - {{ $item->nama_mk }}</option>@endforeach</select></div>
                     <div class="form-group"><label>Dosen</label><select name="dosen_id" class="form-control"><option value="">Semua Dosen</option>@foreach($dosens as $item)<option value="{{ $item->id }}" @selected((string) request('dosen_id') === (string) $item->id)>{{ $item->nama }}</option>@endforeach</select></div>
-                    <div class="filter-actions"><button type="submit" class="btn-primary">🔎 Tampilkan</button><a href="{{ route('admin.laporan.index') }}" class="btn-outline">Reset</a></div>
+                    <div class="filter-actions"><button type="submit" class="btn-primary"><x-layout-icon name="search" /> <span>Tampilkan</span></button><a href="{{ route('admin.laporan.index') }}" class="btn-outline">Reset</a></div>
                 </div>
             </form>
         </div>
@@ -101,7 +101,7 @@
     </div>
 
     <div class="page-card">
-        <div class="page-card-head"><h2>🎓 Rekap Nilai</h2></div>
+        <div class="page-card-head"><h2><x-layout-icon name="graduation" /> <span>Rekap Nilai</span></h2></div>
         <div class="page-card-body">
             <div class="grade-list">@foreach($distribusiNilai as $huruf => $jumlah)<div class="grade-pill"><span>{{ $huruf }}</span><strong>{{ $jumlah }}</strong></div>@endforeach</div>
             <div class="table-wrap"><table><thead><tr><th>Mata Kuliah</th><th>Dosen</th><th>Kelas</th><th>Mahasiswa</th><th>Rata Nilai</th><th>Rata Bobot</th><th>Tertinggi</th><th>Terendah</th></tr></thead><tbody>
@@ -111,7 +111,7 @@
     </div>
 
     <div class="page-card">
-        <div class="page-card-head"><h2>✅ Rekap Presensi</h2></div>
+        <div class="page-card-head"><h2><x-layout-icon name="attendance" /> <span>Rekap Presensi</span></h2></div>
         <div class="page-card-body">
             <div class="mini-grid">
                 <div class="mini-stat"><span>Total Hadir</span><strong>{{ $rekapPresensi['hadir'] }}</strong></div><div class="mini-stat"><span>Total Izin</span><strong>{{ $rekapPresensi['izin'] }}</strong></div><div class="mini-stat"><span>Total Sakit</span><strong>{{ $rekapPresensi['sakit'] }}</strong></div><div class="mini-stat"><span>Total Alpha</span><strong>{{ $rekapPresensi['alpha'] }}</strong></div><div class="mini-stat"><span>Rata-rata Kehadiran</span><strong>{{ number_format($ringkasan['rata_kehadiran'], 1) }}%</strong></div><div class="mini-stat"><span>Mahasiswa &lt; 75%</span><strong>{{ $ringkasan['mahasiswa_kehadiran_rendah'] }}</strong></div>
@@ -124,14 +124,14 @@
     </div>
 
     <div class="page-card">
-        <div class="page-card-head"><h2>📋 Rekap KRS</h2></div>
+        <div class="page-card-head"><h2><x-layout-icon name="clipboard" /> <span>Rekap KRS</span></h2></div>
         <div class="page-card-body"><div class="mini-grid">
             <div class="mini-stat"><span>Menunggu</span><strong>{{ $rekapKrs['menunggu'] }}</strong></div><div class="mini-stat"><span>Disetujui</span><strong>{{ $rekapKrs['disetujui'] }}</strong></div><div class="mini-stat"><span>Ditolak</span><strong>{{ $rekapKrs['ditolak'] }}</strong></div><div class="mini-stat"><span>Mahasiswa Mengajukan</span><strong>{{ $rekapKrs['mahasiswa_mengajukan'] }}</strong></div><div class="mini-stat"><span>Total SKS Disetujui</span><strong>{{ $rekapKrs['sks_disetujui'] }}</strong></div>@if($rekapKrs['diambil_legacy'] > 0)<div class="mini-stat"><span>Diambil (Data Legacy)</span><strong>{{ $rekapKrs['diambil_legacy'] }}</strong></div>@endif
         </div></div>
     </div>
 
     <div class="page-card">
-        <div class="page-card-head"><h2>📝 Rekap Evaluasi Perkuliahan</h2></div>
+        <div class="page-card-head"><h2><x-layout-icon name="file-check" /> <span>Rekap Evaluasi Perkuliahan</span></h2></div>
         <div class="page-card-body">
             <div class="mini-grid"><div class="mini-stat"><span>Jumlah Responden</span><strong>{{ $rekapKuesioner['jumlah_responden'] }}</strong></div><div class="mini-stat"><span>Sudah Mengisi</span><strong>{{ $rekapKuesioner['sudah_mengisi'] }}</strong></div><div class="mini-stat"><span>Belum Mengisi</span><strong>{{ $rekapKuesioner['belum_mengisi'] }}</strong></div><div class="mini-stat"><span>Rata-rata Skor</span><strong>{{ number_format($rekapKuesioner['rata_rata'], 2) }}/5</strong></div></div>
             <div class="section-note">Jumlah sudah/belum mengisi dihitung dari KRS berstatus Disetujui yang telah memiliki nilai KHS. Komentar tetap ditampilkan tanpa nama atau NIM mahasiswa.</div>
@@ -147,7 +147,7 @@
     </div>
 
     <div class="page-card">
-        <div class="page-card-head"><h2>👨‍🎓 Ringkasan Akademik Mahasiswa</h2></div>
+        <div class="page-card-head"><h2><x-layout-icon name="user" /> <span>Ringkasan Akademik Mahasiswa</span></h2></div>
         <div class="page-card-body">
             <div class="section-note">IP Akademik mengikuti data KHS pada filter aktif dengan rumus total (SKS × bobot) dibagi total SKS bernilai. Status akademik tidak ditampilkan karena tidak tersedia sebagai kolom di database.</div>
             <div class="table-wrap"><table><thead><tr><th>No</th><th>NIM</th><th>Nama Mahasiswa</th><th>Program Studi</th><th>Kelas</th><th>Total SKS Disetujui</th><th>IP Akademik</th><th>Kehadiran</th></tr></thead><tbody>

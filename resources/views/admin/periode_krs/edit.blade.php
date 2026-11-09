@@ -9,7 +9,7 @@
     <div class="page-card-head">
 
         <h2>
-            ✏️ Edit Periode KRS
+            <x-layout-icon name="edit" /> <span>Edit Periode KRS</span>
         </h2>
 
     </div>
@@ -259,7 +259,7 @@
                                 ? 'selected'
                                 : '' }}
                         >
-                            🔒 Ditutup
+                            <x-layout-icon name="lock" /> <span>Ditutup</span>
                         </option>
 
                         <option
@@ -271,7 +271,7 @@
                                 ? 'selected'
                                 : '' }}
                         >
-                            🔓 Dibuka
+                            <x-layout-icon name="lock-open" /> <span>Dibuka</span>
                         </option>
 
                     </select>
@@ -314,7 +314,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Simpan Perubahan
+                    <x-layout-icon name="save" /> <span>Simpan Perubahan</span>
                 </button>
 
 

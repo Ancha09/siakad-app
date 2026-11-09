@@ -8,7 +8,7 @@
 
 ```
 <div class="page-card-head">
-    <h2>📑 Tambah Data KHS</h2>
+    <h2><x-layout-icon name="plus" /> <span>Tambah Data KHS</span></h2>
 </div>
 
 <div class="page-card-body">
@@ -94,7 +94,7 @@
         <br>
 
         <button type="submit" class="btn-primary">
-            💾 Simpan
+            <x-layout-icon name="save" /> <span>Simpan</span>
         </button>
 
         <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.khs') }}" class="btn-outline">

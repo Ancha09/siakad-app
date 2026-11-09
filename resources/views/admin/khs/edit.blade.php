@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>✏️ Edit Data KHS &amp; Komponen Penilaian Standar</h2>
+        <h2><x-layout-icon name="edit" /> <span>Edit Data KHS &amp; Komponen Penilaian Standar</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -41,7 +41,7 @@
                 border-radius:8px;
                 margin-bottom:20px;
             ">
-                ❌ {{ session('error') }}
+                <x-layout-icon name="x" /> <span>{{ session('error') }}</span>
             </div>
         @endif
 
@@ -260,7 +260,7 @@
             <div style="margin-top: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; margin-bottom: 12px;">
                     <div>
-                        <h3 style="margin: 0; font-size: 15px; color: #0a1f5c;">⚙️ Komponen &amp; Bobot Penilaian Standar (Tanpa RPS)</h3>
+                        <h3 style="margin: 0; font-size: 15px; color: #0a1f5c; display:flex; align-items:center; gap:6px;"><x-layout-icon name="settings" /> <span>Komponen &amp; Bobot Penilaian Standar (Tanpa RPS)</span></h3>
                         <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">
                             Admin dapat mengubah persentase bobot, menambah/menghapus komponen penilaian sendiri (total 100%), serta mengisi nilai per komponen untuk menghitung Nilai Akhir secara otomatis.
                         </p>
@@ -352,7 +352,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Simpan Perubahan
+                    <x-layout-icon name="save" /> <span>Simpan Perubahan</span>
                 </button>
 
                 <a

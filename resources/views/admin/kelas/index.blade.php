@@ -10,7 +10,7 @@
 
     <div class="page-card-head">
 
-        <h2>🏫 Data Kelas</h2>
+        <h2><x-layout-icon name="school" /> <span>Data Kelas</span></h2>
 
         <a
             href="{{ route('admin.kelas.create', ['return_url' => request()->fullUrl()]) }}"
@@ -34,7 +34,7 @@
                 style="margin-bottom:20px;"
             >
 
-                ✅ {{ session('success') }}
+                <x-layout-icon name="check" /> <span>{{ session('success') }}</span>
 
             </div>
 
@@ -55,7 +55,7 @@
                 "
             >
 
-                ❌ {{ session('error') }}
+                <x-layout-icon name="x" /> <span>{{ session('error') }}</span>
 
             </div>
 
@@ -82,7 +82,7 @@
                 "
             >
 
-                🔎 Filter Data Kelas
+                <x-layout-icon name="search" /> <span>Filter Data Kelas</span>
 
             </div>
 
@@ -284,7 +284,7 @@
                         class="btn-primary"
                     >
 
-                        🔍 Terapkan Filter
+                        <x-layout-icon name="search" /> <span>Terapkan Filter</span>
 
                     </button>
 
@@ -502,7 +502,7 @@
                                         "
                                     >
 
-                                        ✏️ Edit
+                                        <x-layout-icon name="edit" style="width:14px;height:14px;" /> <span>Edit</span>
 
                                     </a>
 
@@ -529,7 +529,7 @@
                                             "
                                         >
 
-                                            🗑 Hapus
+                                            <x-layout-icon name="trash" style="width:14px;height:14px;" /> <span>Hapus</span>
 
                                         </button>
 
@@ -554,9 +554,7 @@
                                 "
                             >
 
-                                <div style="font-size:32px;">
-                                    🏫
-                                </div>
+                                <div style="display:flex;justify-content:center;margin-bottom:12px;color:#94a3b8;"><x-layout-icon name="school" style="width:48px;height:48px;" /></div>
 
                                 <strong>
                                     Belum ada data kelas

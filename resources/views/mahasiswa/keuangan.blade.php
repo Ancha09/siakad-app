@@ -24,7 +24,7 @@
           </div>
 
           <div class="page-card">
-            <div class="page-card-head"><h2>💰 Riwayat Pembayaran</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="wallet" /> <span>Riwayat Pembayaran</span></h2></div>
             <div class="page-card-body">
               <div class="table-wrap">
                 <table>

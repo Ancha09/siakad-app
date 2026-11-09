@@ -8,8 +8,8 @@
     <div class="sk-page-header">
         <div><span class="sk-eyebrow">AKADEMIK · SKRIPSI</span><h1>Pengelolaan Pembimbing Skripsi</h1><p class="sk-muted">Atur periode, pantau pengajuan, dan alihkan secara manual berdasarkan beban dosen.</p></div>
         <div class="sk-actions">
-            <a class="sk-link sk-excel" href="{{ route('admin.skripsi.excel', request()->query()) }}">📊 Download Excel</a>
-            <a class="sk-link sk-pdf" href="{{ route('admin.skripsi.pdf', request()->query()) }}">📄 Download PDF</a>
+            <a class="sk-link sk-excel" href="{{ route('admin.skripsi.excel', request()->query()) }}"><x-layout-icon name="file-spreadsheet" /> <span>Download Excel</span></a>
+            <a class="sk-link sk-pdf" href="{{ route('admin.skripsi.pdf', request()->query()) }}"><x-layout-icon name="file-text" /> <span>Download PDF</span></a>
         </div>
     </div>
     @include('skripsi.partials.period')

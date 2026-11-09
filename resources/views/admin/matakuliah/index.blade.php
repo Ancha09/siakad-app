@@ -11,7 +11,7 @@
         class="alert-success"
         style="margin-bottom:20px;"
     >
-        ✅ {{ session('success') }}
+        <x-layout-icon name="check" /> <span>{{ session('success') }}</span>
     </div>
 
 @endif
@@ -22,13 +22,13 @@
 
     <div class="page-card-head">
 
-        <h2>📚 Data Mata Kuliah</h2>
+        <h2><x-layout-icon name="book" /> <span>Data Mata Kuliah</span></h2>
 
         <a
             href="{{ route('admin.matakuliah.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
         >
-            ➕ Tambah Mata Kuliah
+            <x-layout-icon name="plus" /> <span>Tambah Mata Kuliah</span>
         </a>
 
     </div>
@@ -56,7 +56,7 @@
                     margin-bottom:15px;
                 "
             >
-                🔎 Filter Mata Kuliah
+                <x-layout-icon name="search" /> <span>Filter Mata Kuliah</span>
             </div>
 
 
@@ -171,7 +171,7 @@
                         type="submit"
                         class="btn-primary"
                     >
-                        🔍 Terapkan Filter
+                        <x-layout-icon name="search" /> <span>Terapkan Filter</span>
                     </button>
 
 
@@ -396,7 +396,7 @@
                                         text-decoration:none;
                                     "
                                 >
-                                    ✏️ Edit
+                                    <x-layout-icon name="edit" style="width:14px;height:14px;" /> <span>Edit</span>
                                 </a>
 
 
@@ -421,7 +421,7 @@
                                             cursor:pointer;
                                         "
                                     >
-                                        🗑 Hapus
+                                        <x-layout-icon name="trash" style="width:14px;height:14px;" /> <span>Hapus</span>
                                     </button>
 
                                 </form>
@@ -451,7 +451,7 @@
                                     margin-bottom:10px;
                                 "
                             >
-                                📚
+                                <x-layout-icon name="book" style="width:48px;height:48px;" />
                             </div>
 
                             <strong>

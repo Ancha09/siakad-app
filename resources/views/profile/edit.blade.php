@@ -30,9 +30,9 @@
             <h2>{{ $user->name }}</h2>
             <p>Administrator Sistem Informasi Akademik</p>
             <div class="profile-tags">
-                <span>🏫 SIAKAD STTMI</span>
-                <span>🔑 Akses Administrator</span>
-                <span>✅ Aktif</span>
+                <span><x-layout-icon name="school" style="width:14px;height:14px;" /> SIAKAD STTMI</span>
+                <span><x-layout-icon name="key" style="width:14px;height:14px;" /> Akses Administrator</span>
+                <span><x-layout-icon name="check" style="width:14px;height:14px;" /> Aktif</span>
             </div>
         </div>
     </section>
@@ -46,7 +46,7 @@
 
     <div class="admin-profile-grid">
         <section class="page-card profile-card">
-            <div class="page-card-head"><h2>👤 Informasi Profil</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="user" /> <span>Informasi Profil</span></h2></div>
             <form class="page-card-body" method="POST" action="{{ route('profile.update') }}">
                 @csrf
                 @method('PATCH')
@@ -72,7 +72,7 @@
         </section>
 
         <section class="page-card profile-card">
-            <div class="page-card-head"><h2>🔒 Keamanan Akun</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="lock" /> <span>Keamanan Akun</span></h2></div>
             <form class="page-card-body" method="POST" action="{{ route('password.update') }}">
                 @csrf
                 @method('PUT')

@@ -9,7 +9,7 @@
     <div class="page-card-head">
 
         <h2>
-            📅 Tambah Periode KRS
+            <x-layout-icon name="plus" /> <span>Tambah Periode KRS</span>
         </h2>
 
     </div>
@@ -242,7 +242,7 @@
                                 ? 'selected'
                                 : '' }}
                         >
-                            🔒 Ditutup
+                            <x-layout-icon name="lock" /> <span>Ditutup</span>
                         </option>
 
                         <option
@@ -251,7 +251,7 @@
                                 ? 'selected'
                                 : '' }}
                         >
-                            🔓 Dibuka
+                            <x-layout-icon name="lock-open" /> <span>Dibuka</span>
                         </option>
 
                     </select>
@@ -295,7 +295,7 @@
                     type="submit"
                     class="btn-primary"
                 >
-                    💾 Simpan Periode
+                    <x-layout-icon name="save" /> <span>Simpan Periode</span>
                 </button>
 
 

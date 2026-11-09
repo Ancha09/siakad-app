@@ -8,7 +8,7 @@
         <div class="inner-page">
           <div class="page-card">
             <div class="page-card-head">
-              <h2>📅 Jadwal Kuliah Semester 7</h2>
+              <h2><x-layout-icon name="calendar" /> <span>Jadwal Kuliah Semester 7</h2>
               <span style="font-size:12px;color:rgba(255,255,255,0.7)">T.A 2024/2025 Gasal</span>
             </div>
             <div class="page-card-body">

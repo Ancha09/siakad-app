@@ -6,9 +6,8 @@
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>🏫 Tambah Ruangan</h2>
+    <h2><x-layout-icon name="door" /> <span>Tambah Ruangan</span></h2>
 </div>
 
 <div class="page-card-body">
@@ -56,7 +55,7 @@
         <br>
 
         <button type="submit" class="btn-primary">
-            💾 Simpan
+            <x-layout-icon name="save" /> <span>Simpan</span>
         </button>
 
         <a href="{{ app(\App\Services\LegacyListNavigation::class)->returnUrl(request(), 'admin.ruangan') }}" class="btn-outline">
@@ -66,7 +65,6 @@
     </form>
 
 </div>
-```
 
 </div>
 

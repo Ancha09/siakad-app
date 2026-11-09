@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>➕ Tambah Kelas</h2>
+        <h2><x-layout-icon name="plus" /> <span>Tambah Kelas</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -220,7 +220,7 @@
                     class="btn-primary"
                 >
 
-                    💾 Simpan Kelas
+                    <x-layout-icon name="save" /> <span>Simpan Kelas</span>
 
                 </button>
 

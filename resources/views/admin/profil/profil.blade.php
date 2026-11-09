@@ -7,11 +7,11 @@
             <div class="profile-info">
               <h2>Admin Akademik STTM</h2>
               <p>Super Admin Sistem Informasi Akademik</p>
-              <div class="profile-tags"><span>🏫 UPT SIAKAD</span><span>🔑 Akses Penuh</span><span>✅ Aktif</span></div>
+              <div class="profile-tags"><span><x-layout-icon name="school" style="width:14px;height:14px;" /> UPT SIAKAD</span><span><x-layout-icon name="key" style="width:14px;height:14px;" /> Akses Penuh</span><span><x-layout-icon name="check" style="width:14px;height:14px;" /> Aktif</span></div>
             </div>
           </div>
           <div class="page-card">
-            <div class="page-card-head"><h2>👤 Data Akun</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="user" /> <span>Data Akun</span></h2></div>
             <div class="page-card-body">
               <div class="profile-detail-grid">
                 <div>

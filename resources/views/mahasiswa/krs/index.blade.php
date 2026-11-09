@@ -1217,7 +1217,7 @@
                 "
             >
 
-                ℹ️
+                <x-layout-icon name="info" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;" />
 
                 Batas maksimal KRS Anda adalah
                 <strong>

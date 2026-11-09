@@ -3,18 +3,18 @@
         <div class="inner-page">
           <div class="chart-grid">
             <div class="chart-box">
-              <h3>📈 Tren Kehadiran per Bulan</h3>
+              <h3><x-layout-icon name="chart" /> <span>Tren Kehadiran per Bulan</span></h3>
               <div class="sub">Rata-rata persentase kehadiran, Februari–Juli 2026</div>
               <div class="chart-canvas-wrap"><canvas id="chartAbsensiTrend2"></canvas></div>
             </div>
             <div class="chart-box">
-              <h3>🏫 Kehadiran per Program Studi</h3>
+              <h3><x-layout-icon name="school" /> <span>Kehadiran per Program Studi</span></h3>
               <div class="sub">Rata-rata semester berjalan</div>
               <div class="chart-canvas-wrap"><canvas id="chartAbsensiProdi"></canvas></div>
             </div>
           </div>
           <div class="page-card">
-            <div class="page-card-head"><h2>✅ Rekap Kehadiran Mahasiswa</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="attendance" /> <span>Rekap Kehadiran Mahasiswa</span></h2></div>
             <div class="page-card-body">
               <div class="table-wrap">
                 <table>

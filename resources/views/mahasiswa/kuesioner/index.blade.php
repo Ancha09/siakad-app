@@ -5,7 +5,7 @@
 @section('content')
 <div class="page-card">
     <div class="page-card-head">
-        <h2>📝 Kuesioner Evaluasi Dosen</h2>
+        <h2><x-layout-icon name="file-check" /> <span>Kuesioner Evaluasi Dosen</span></h2>
     </div>
 
     <div class="page-card-body">

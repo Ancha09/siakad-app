@@ -13,24 +13,21 @@
 
 <div class="toolbar">
 
-```
 <div class="search-box">
-    <span class="search-icon">🔍</span>
+    <span class="search-icon" style="display:inline-flex;align-items:center;"><x-layout-icon name="search" style="width:16px;height:16px;" /></span>
     <input type="text" placeholder="Cari kode atau nama fakultas...">
 </div>
 
 <a href="{{ route('admin.fakultas.create', ['return_url' => request()->fullUrl()]) }}" class="btn-primary">
-    ➕ Tambah Fakultas
+    <x-layout-icon name="plus" /> <span>Tambah Fakultas</span>
 </a>
-```
 
 </div>
 
 <div class="page-card">
 
-```
 <div class="page-card-head">
-    <h2>🏛️ Data Fakultas</h2>
+    <h2><x-layout-icon name="building" /> <span>Data Fakultas</span></h2>
 </div>
 
 <div class="page-card-body">
@@ -67,7 +64,7 @@
                         <div class="action-buttons">
 
                             <a href="{{ route('admin.fakultas.edit', ['fakulta' => $item->id, 'return_url' => request()->fullUrl()]) }}" class="btn-edit">
-                                ✏ Edit
+                                <x-layout-icon name="edit" style="width:14px;height:14px;" /> <span>Edit</span>
                             </a>
 
                             <form action="{{ route('admin.fakultas.destroy', $item->id) }}" method="POST">
@@ -79,7 +76,7 @@
                                 <button type="submit"
                                         class="btn-delete"
                                         onclick="return confirm('Yakin ingin menghapus fakultas ini?')">
-                                    🗑 Hapus
+                                    <x-layout-icon name="trash" style="width:14px;height:14px;" /> <span>Hapus</span>
                                 </button>
 
                             </form>
@@ -115,7 +112,6 @@
     </div>
 
 </div>
-```
 
 </div>
 

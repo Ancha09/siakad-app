@@ -9,7 +9,7 @@
     <div class="page-card">
 
         <div class="page-card-head">
-            <h2>📅 Jadwal Mengajar Semester Gasal 2024/2025</h2>
+            <h2><x-layout-icon name="calendar" /> <span>Jadwal Mengajar Semester Gasal 2024/2025</h2>
             <span style="font-size:12px;color:rgba(255,255,255,0.7)">
                 T.A 2024/2025 Gasal
             </span>

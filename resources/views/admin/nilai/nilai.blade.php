@@ -3,18 +3,18 @@
         <div class="inner-page">
           <div class="chart-grid">
             <div class="chart-box">
-              <h3>🎓 Distribusi Nilai Huruf Seluruh Prodi</h3>
+              <h3><x-layout-icon name="graduation" /> <span>Distribusi Nilai Huruf Seluruh Prodi</span></h3>
               <div class="sub">Jumlah mahasiswa per kategori nilai akhir, semester berjalan</div>
               <div class="chart-canvas-wrap"><canvas id="chartNilaiDist2"></canvas></div>
             </div>
             <div class="chart-box">
-              <h3>📊 Rata-rata Nilai per Mata Kuliah</h3>
+              <h3><x-layout-icon name="chart" /> <span>Rata-rata Nilai per Mata Kuliah</span></h3>
               <div class="sub">Skala 0–4</div>
               <div class="chart-canvas-wrap"><canvas id="chartNilaiMk"></canvas></div>
             </div>
           </div>
           <div class="page-card">
-            <div class="page-card-head"><h2>📄 Rekap Nilai Mahasiswa</h2></div>
+            <div class="page-card-head"><h2><x-layout-icon name="file-chart" /> <span>Rekap Nilai Mahasiswa</span></h2></div>
             <div class="page-card-body">
               <div class="table-wrap">
                 <table>

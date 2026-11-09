@@ -26,7 +26,7 @@
         border-radius:8px;
         margin-bottom:20px;
     ">
-        ❌ {{ session('error') }}
+        <x-layout-icon name="x" /> <span>{{ session('error') }}</span>
     </div>
 
 @endif
@@ -38,7 +38,7 @@
 
     <div>
         <h2 style="margin:0;">
-            📅 Periode KRS
+            <x-layout-icon name="period" /> <span>Periode KRS</span>
         </h2>
 
         <p style="
@@ -55,7 +55,7 @@
         href="{{ route('admin.periode-krs.create', ['return_url' => request()->fullUrl()]) }}"
         class="btn-primary"
     >
-        ➕ Tambah Periode KRS
+        <x-layout-icon name="plus" /> <span>Tambah Periode KRS</span>
     </a>
 
 </div>
@@ -103,7 +103,7 @@
     <div class="page-card-head">
 
         <h2>
-            📋 Daftar Periode KRS
+            <x-layout-icon name="calendar" /> <span>Daftar Periode KRS</span>
         </h2>
 
     </div>
@@ -234,13 +234,13 @@
                             @if($item->status === 'Dibuka')
 
                                 <span class="badge badge-green">
-                                    🔓 Dibuka
+                                    <x-layout-icon name="lock-open" /> <span>Dibuka</span>
                                 </span>
 
                             @else
 
                                 <span class="badge badge-gray">
-                                    🔒 Ditutup
+                                    <x-layout-icon name="lock" /> <span>Ditutup</span>
                                 </span>
 
                             @endif
@@ -309,7 +309,7 @@
                                                 'Yakin ingin menutup periode KRS ini?'
                                             )"
                                         >
-                                            🔒 Tutup
+                                            <x-layout-icon name="lock" /> <span>Tutup</span>
                                         </button>
 
                                     @else
@@ -321,7 +321,7 @@
                                                 'Yakin ingin membuka periode KRS ini?'
                                             )"
                                         >
-                                            🔓 Buka
+                                            <x-layout-icon name="lock-open" /> <span>Buka</span>
                                         </button>
 
                                     @endif
@@ -335,7 +335,7 @@
                                     href="{{ route('admin.periode-krs.edit', ['periodeKrs' => $item->id, 'return_url' => request()->fullUrl()]) }}"
                                     class="btn-edit"
                                 >
-                                    ✏ Edit
+                                    <x-layout-icon name="edit" style="width:14px;height:14px;" /> <span>Edit</span>
                                 </a>
 
 
@@ -361,7 +361,7 @@
                                             'Yakin ingin menghapus periode KRS ini?'
                                         )"
                                     >
-                                        🗑 Hapus
+                                        <x-layout-icon name="trash" style="width:14px;height:14px;" /> <span>Hapus</span>
                                     </button>
 
                                 </form>
@@ -385,9 +385,7 @@
                             "
                         >
 
-                            <div style="font-size:40px;">
-                                📅
-                            </div>
+                            <div style="display:flex;justify-content:center;margin-bottom:12px;color:#94a3b8;"><x-layout-icon name="period" style="width:48px;height:48px;" /></div>
 
                             <strong>
                                 Belum ada periode KRS
