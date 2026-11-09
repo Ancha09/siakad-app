@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>✏️ Edit Data Mahasiswa</h2>
+        <h2><x-layout-icon name="edit" /> <span>Edit Data Mahasiswa</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -39,8 +39,12 @@
                 padding:15px;
                 border-radius:8px;
                 margin-bottom:20px;
+                display:flex;
+                align-items:center;
+                gap:8px;
             ">
-                ❌ {{ session('error') }}
+                <x-layout-icon name="x" />
+                <span>{{ session('error') }}</span>
             </div>
         @endif
 
@@ -221,11 +225,10 @@
 
                     <label>Password Baru</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password"
-                        class="form-control"
-                    >
+                        autocomplete="new-password"
+                    />
 
                     <small>
                         Kosongkan jika password tidak ingin diubah.
@@ -239,11 +242,10 @@
 
                     <label>Konfirmasi Password</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password_confirmation"
-                        class="form-control"
-                    >
+                        autocomplete="new-password"
+                    />
 
                 </div>
 
@@ -272,15 +274,13 @@
                         color:#166534;
                     "
                 >
-                    👨‍🏫
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                        <x-layout-icon name="user" style="width:18px;height:18px;" />
+                        <strong>Dosen Wali:</strong>
+                        <span>{{ $mahasiswa->dosenWali->nama }}</span>
+                    </div>
 
-                    <strong>Dosen Wali:</strong>
-
-                    {{ $mahasiswa->dosenWali->nama }}
-
-                    <br>
-
-                    <small>
+                    <small style="color:#15803d;display:block;">
                         Dosen wali dipilih langsung pada Data Mahasiswa.
                     </small>
 
@@ -295,8 +295,10 @@
             <button
                 type="submit"
                 class="btn-primary"
+                style="display:inline-flex;align-items:center;gap:6px;"
             >
-                💾 Update
+                <x-layout-icon name="save" />
+                <span>Update Mahasiswa</span>
             </button>
 
 

@@ -9,13 +9,15 @@
     {{-- ================= HEADER ================= --}}
     <div class="page-card-head">
 
-        <h2>🎓 Data Mahasiswa</h2>
+        <h2><x-layout-icon name="users" /> <span>Data Mahasiswa</span></h2>
 
         <a
             href="{{ route('admin.mahasiswa.create', ['return_url' => request()->fullUrl()]) }}"
             class="btn-primary"
+            style="display:inline-flex;align-items:center;gap:6px;"
         >
-            + Tambah Mahasiswa
+            <x-layout-icon name="plus" />
+            <span>Tambah Mahasiswa</span>
         </a>
 
     </div>
@@ -34,9 +36,13 @@
                     padding:14px 18px;
                     border-radius:10px;
                     margin-bottom:20px;
+                    display:flex;
+                    align-items:center;
+                    gap:8px;
                 "
             >
-                ✅ {{ session('success') }}
+                <x-layout-icon name="check" />
+                <span>{{ session('success') }}</span>
             </div>
 
         @endif
@@ -53,9 +59,13 @@
                     padding:14px 18px;
                     border-radius:10px;
                     margin-bottom:20px;
+                    display:flex;
+                    align-items:center;
+                    gap:8px;
                 "
             >
-                ❌ {{ session('error') }}
+                <x-layout-icon name="x" />
+                <span>{{ session('error') }}</span>
             </div>
 
         @endif
@@ -83,7 +93,8 @@
                     color:#1e293b;
                 "
             >
-                🔎 Filter Data Mahasiswa
+                <x-layout-icon name="search" />
+                <span>Filter Data Mahasiswa</span>
             </div>
 
 
@@ -264,16 +275,20 @@
                     <button
                         type="submit"
                         class="btn-primary"
+                        style="display:inline-flex;align-items:center;gap:6px;"
                     >
-                        🔍 Terapkan Filter
+                        <x-layout-icon name="search" />
+                        <span>Terapkan Filter</span>
                     </button>
 
 
                     <a
                         href="{{ route('admin.mahasiswa') }}"
                         class="btn-outline"
+                        style="display:inline-flex;align-items:center;gap:6px;"
                     >
-                        ↻ Reset
+                        <x-layout-icon name="refresh" />
+                        <span>Reset</span>
                     </a>
 
                 </div>
@@ -537,9 +552,13 @@
                                             padding:6px 10px;
                                             font-size:12px;
                                             text-decoration:none;
+                                            display:inline-flex;
+                                            align-items:center;
+                                            gap:4px;
                                         "
                                     >
-                                        ✏️ Edit
+                                        <x-layout-icon name="edit" style="width:14px;height:14px;" />
+                                        <span>Edit</span>
                                     </a>
 
 
@@ -589,11 +608,13 @@
 
                                 <div
                                     style="
-                                        font-size:42px;
-                                        margin-bottom:10px;
+                                        display:flex;
+                                        justify-content:center;
+                                        margin-bottom:12px;
+                                        color:#94a3b8;
                                     "
                                 >
-                                    🎓
+                                    <x-layout-icon name="users" style="width:48px;height:48px;" />
                                 </div>
 
                                 <strong>

@@ -106,25 +106,22 @@
                         </select>
 
                     </div>
-<div class="form-group">
-    <label>Password</label>
-    <input
-        type="password"
-        name="password"
-        class="form-control"
-        required
-    >
-</div>
 
-<div class="form-group">
-    <label>Konfirmasi Password</label>
-    <input
-        type="password"
-        name="password_confirmation"
-        class="form-control"
-        required
-    >
-</div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <x-password-input
+                            name="password"
+                            :required="true"
+                        />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Konfirmasi Password</label>
+                        <x-password-input
+                            name="password_confirmation"
+                            :required="true"
+                        />
+                    </div>
                 </div>
 
                 <br>

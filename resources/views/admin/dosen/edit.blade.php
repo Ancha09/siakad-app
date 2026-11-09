@@ -227,12 +227,10 @@
 
                     <label>Password Baru</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password"
-                        class="form-control"
                         autocomplete="new-password"
-                    >
+                    />
 
                     <small>
                         Kosongkan jika tidak ingin mengubah password.
@@ -246,12 +244,10 @@
 
                     <label>Konfirmasi Password</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password_confirmation"
-                        class="form-control"
                         autocomplete="new-password"
-                    >
+                    />
 
                 </div>
 

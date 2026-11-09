@@ -7,7 +7,7 @@
 <div class="page-card">
 
     <div class="page-card-head">
-        <h2>🎓 Tambah Data Mahasiswa</h2>
+        <h2><x-layout-icon name="plus" /> <span>Tambah Data Mahasiswa</span></h2>
     </div>
 
     <div class="page-card-body">
@@ -47,9 +47,13 @@
                 padding:15px;
                 border-radius:8px;
                 margin-bottom:20px;
+                display:flex;
+                align-items:center;
+                gap:8px;
             ">
 
-                ❌ {{ session('error') }}
+                <x-layout-icon name="x" />
+                <span>{{ session('error') }}</span>
 
             </div>
 
@@ -252,12 +256,10 @@
 
                     <label>Password Login</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password"
-                        class="form-control"
-                        required
-                    >
+                        :required="true"
+                    />
 
                 </div>
 
@@ -267,12 +269,10 @@
 
                     <label>Konfirmasi Password</label>
 
-                    <input
-                        type="password"
+                    <x-password-input
                         name="password_confirmation"
-                        class="form-control"
-                        required
-                    >
+                        :required="true"
+                    />
 
                 </div>
 
@@ -287,9 +287,11 @@
             <button
                 type="submit"
                 class="btn-primary"
+                style="display:inline-flex;align-items:center;gap:6px;"
             >
 
-                💾 Simpan Mahasiswa
+                <x-layout-icon name="save" />
+                <span>Simpan Mahasiswa</span>
 
             </button>
 
