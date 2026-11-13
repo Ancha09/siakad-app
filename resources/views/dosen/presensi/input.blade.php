@@ -1,4 +1,4 @@
-﻿@extends('layouts.dosen')
+@extends('layouts.dosen')
 
 @section('title', 'Presensi Mahasiswa')
 

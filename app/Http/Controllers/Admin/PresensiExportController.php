@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
+use App\Models\Jadwal;
 use App\Models\Kelas;
 use App\Models\MataKuliah;
 use App\Models\Presensi;
@@ -20,37 +21,65 @@ class PresensiExportController extends Controller
     public function excel(Request $request, ReportExporter $exporter)
     {
         $data = $this->data($request);
+        $progresMataKuliah = $this->progresData($request);
 
         return $exporter->excel(
             'rekap-presensi-'.now()->format('Ymd-His').'.xlsx',
             'Rekap Presensi Mahasiswa',
             $this->deskripsiFilter($request),
-            [[
-                'title' => 'Rekap Presensi',
-                'headings' => ['NIM', 'Nama Mahasiswa', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Dosen', 'Pertemuan', 'Tanggal', 'Status'],
-                'rows' => $data->map(fn (Presensi $item) => [
-                    $item->krs?->mahasiswa?->nim ?? '-',
-                    $item->krs?->mahasiswa?->nama ?? '-',
-                    $item->krs?->prodi_efektif?->nama_prodi ?? '-',
-                    $item->krs?->kelas_efektif?->nama_kelas ?? '-',
-                    $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-',
-                    $item->dosen_efektif?->nama ?? '-',
-                    $item->pertemuan ? 'Pertemuan '.$item->pertemuan : '-',
-                    $item->tanggal ? Carbon::parse($item->tanggal)->format('d-m-Y') : '-',
-                    $item->status,
-                ]),
-            ]]
+            [
+                [
+                    'title' => 'Progres Pertemuan',
+                    'headings' => ['No', 'Mata Kuliah', 'Dosen Pengampu', 'Kelas / Ruangan', 'Jadwal', 'Pertemuan Terlaksana', 'Target', 'Progres (%)'],
+                    'rows' => $progresMataKuliah->values()->map(function (Jadwal $item, int $index) {
+                        $terlaksana = $item->total_pertemuan ?? 0;
+                        $pct = min(100, round(($terlaksana / 16) * 100));
+                        $mk = ($item->mataKuliah?->kode_mk ? $item->mataKuliah->kode_mk.' - ' : '').($item->mataKuliah?->nama_mk ?? '-');
+                        $kelasNama = $item->kelas?->nama_kelas ?? $item->kelas ?? '-';
+                        $ruangNama = $item->ruangan?->nama_ruangan ?? '-';
+                        $kelasRuang = ($kelasNama !== '-' || $ruangNama !== '-') ? ($kelasNama.' / '.$ruangNama) : '-';
+                        $jadwal = $item->hari.', '.$item->jam_mulai.' - '.$item->jam_selesai;
+
+                        return [
+                            $index + 1,
+                            $mk,
+                            $item->semua_dosen_nama ?: ($item->dosen?->nama ?? '-'),
+                            $kelasRuang,
+                            $jadwal,
+                            $terlaksana,
+                            16,
+                            $pct.'%',
+                        ];
+                    }),
+                ],
+                [
+                    'title' => 'Detail Presensi',
+                    'headings' => ['NIM', 'Nama Mahasiswa', 'Program Studi', 'Kelas', 'Mata Kuliah', 'Dosen', 'Pertemuan', 'Tanggal', 'Status'],
+                    'rows' => $data->map(fn (Presensi $item) => [
+                        $item->krs?->mahasiswa?->nim ?? '-',
+                        $item->krs?->mahasiswa?->nama ?? '-',
+                        $item->krs?->prodi_efektif?->nama_prodi ?? '-',
+                        $item->krs?->kelas_efektif?->nama_kelas ?? '-',
+                        $item->krs?->mata_kuliah_efektif?->nama_mk ?? '-',
+                        $item->dosen_efektif?->nama ?? '-',
+                        $item->pertemuan ? 'Pertemuan '.$item->pertemuan : '-',
+                        $item->tanggal ? Carbon::parse($item->tanggal)->format('d-m-Y') : '-',
+                        $item->status,
+                    ]),
+                ],
+            ]
         );
     }
 
     public function pdf(Request $request)
     {
         $data = $this->data($request);
+        $progresMataKuliah = $this->progresData($request);
 
         return Pdf::loadView('admin.presensi.print', [
             'reportTitle' => 'Rekap Presensi Mahasiswa',
             'deskripsiFilter' => $this->deskripsiFilter($request),
-            'presensis' => $data,
+            'progresMataKuliah' => $progresMataKuliah,
             'summary' => [
                 'total' => $data->count(),
                 'hadir' => $data->where('status', 'Hadir')->count(),
@@ -60,6 +89,26 @@ class PresensiExportController extends Controller
             ],
         ])->setPaper('a4', 'landscape')
             ->download('rekap-presensi-'.now()->format('Ymd-His').'.pdf');
+    }
+
+    private function progresData(Request $request): Collection
+    {
+        return Jadwal::with([
+            'mataKuliah',
+            'dosen',
+            'dosens',
+            'kelas',
+            'ruangan',
+        ])
+        ->withCount('presensiPertemuans as total_pertemuan')
+        ->when($request->filled('tahun_akademik'), fn ($q) => $q->where('tahun_akademik', $request->tahun_akademik))
+        ->when($request->filled('semester_akademik'), fn ($q) => $q->where('semester_akademik', $request->semester_akademik))
+        ->when($request->filled('prodi_id'), fn ($q) => $q->whereHas('mataKuliah', fn ($m) => $m->where('prodi_id', $request->prodi_id)))
+        ->when($request->filled('kelas_id'), fn ($q) => $q->where('kelas_id', $request->kelas_id))
+        ->when($request->filled('mata_kuliah_id'), fn ($q) => $q->where('mata_kuliah_id', $request->mata_kuliah_id))
+        ->when($request->filled('dosen_id'), fn ($q) => $q->untukDosen((int) $request->dosen_id))
+        ->orderBy('hari')
+        ->get();
     }
 
     private function data(Request $request): Collection
