@@ -388,13 +388,10 @@ class JadwalController extends Controller
         $incomingCourse = MataKuliah::with('kurikulums')->findOrFail($data['mata_kuliah_id']);
         $incomingProgramIds = $this->courseProgramIds($incomingCourse);
 
-        $allDosenIds = array_values(array_unique(array_filter([
-            (int) $data['dosen_id'],
-            ...array_map('intval', $data['dosen_pendamping_ids'] ?? []),
-        ])));
+        $dosenUtamaId = (int) $data['dosen_id'];
 
         $conflicts = Jadwal::query()
-            ->with(['mataKuliah.kurikulums', 'dosen', 'dosens'])
+            ->with(['mataKuliah.kurikulums', 'dosen'])
             ->where('hari', $data['hari'])
             ->whereRaw(
                 "REPLACE(REPLACE(TRIM(tahun_akademik), ' ', ''), '-', '/') = ?",
@@ -403,9 +400,8 @@ class JadwalController extends Controller
             ->whereIn('semester_akademik', $this->semesterAliases($data['semester_akademik']))
             ->where('jam_mulai', '<', $data['jam_selesai'])
             ->where('jam_selesai', '>', $data['jam_mulai'])
-            ->where(function ($query) use ($data, $allDosenIds) {
-                $query->whereIn('dosen_id', $allDosenIds)
-                    ->orWhereHas('dosens', fn ($q) => $q->whereIn('dosens.id', $allDosenIds))
+            ->where(function ($query) use ($data, $dosenUtamaId) {
+                $query->where('dosen_id', $dosenUtamaId)
                     ->orWhere('ruangan_id', $data['ruangan_id']);
             })
             ->when($ignored, fn ($query) => $query->whereKeyNot($ignored->getKey()))
@@ -432,16 +428,11 @@ class JadwalController extends Controller
                 ]);
             }
 
-            // Cek bentrok dosen (baik dosen utama maupun dosen tim pengajar)
-            $conflictDosenIds = array_values(array_unique(array_filter([
-                (int) $conflict->dosen_id,
-                ...$conflict->dosens->pluck('id')->map(fn ($id) => (int) $id)->all(),
-            ])));
-
-            $bentrokDosenIds = array_intersect($allDosenIds, $conflictDosenIds);
-            if (! empty($bentrokDosenIds)) {
-                $bentrokDosen = Dosen::find(reset($bentrokDosenIds));
-                $namaDosen = $bentrokDosen ? $bentrokDosen->nama : 'dosen pengampu';
+            // Cek bentrok dosen utama
+            // Sesuai kebijakan akademik: Dosen Utama tidak boleh memiliki 2 jadwal mengajar bersamaan.
+            // Dosen Pendamping (team teaching) diperbolehkan memiliki jadwal bersamaan (bisa bentrok).
+            if ((int) $conflict->dosen_id === $dosenUtamaId) {
+                $namaDosen = $conflict->dosen ? $conflict->dosen->nama : 'dosen pengampu';
                 throw ValidationException::withMessages([
                     'jam_mulai' => "Jadwal bentrok: {$namaDosen} sudah memiliki jadwal mengajar lain pada hari, jam, dan periode tersebut.",
                 ]);
