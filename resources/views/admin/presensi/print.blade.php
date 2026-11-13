@@ -91,7 +91,7 @@
                             <tr>
                                 <td style="border:0; padding:0; width:55px; vertical-align:middle;">
                                     <div class="progress-track" style="width:55px;">
-                                        <div class="progress-fill" style="width:{{ max(4, $pct) }}%; background:{{ $barColor }};"></div>
+                                        <div class="progress-fill" @style(['width: ' . max(4, $pct) . '%', 'background: ' . $barColor])></div>
                                     </div>
                                 </td>
                                 <td style="border:0; padding:0 0 0 6px; vertical-align:middle;" class="progress-text">
