@@ -543,171 +543,205 @@
                     "
                 >
 
-                    Data sesi pertemuan telah dibuat.
-
-                    Nomor pertemuan, tanggal, foto, dan materi
-                    tidak dapat diubah.
-
-                    Status presensi mahasiswa tetap dapat diedit.
+                    Data sesi pertemuan telah tersimpan. Anda dapat memperbarui tanggal, pokok bahasan (materi kuliah), keterangan, foto absen, file materi, dan status kehadiran mahasiswa di bawah ini.
 
                 </div>
 
             </div>
 
 
-            {{-- =====================================================
-                 DOKUMENTASI
-            ====================================================== --}}
-
-            <div
-                style="
-                    background:#f8fafc;
-                    border:1px solid #e2e8f0;
-                    border-radius:10px;
-                    padding:18px;
-                    margin-bottom:25px;
-                "
+            <form
+                action="{{ route('dosen.presensi.store') }}"
+                method="POST"
+                enctype="multipart/form-data"
             >
 
-                <h3 style="margin-top:0;">
+                @csrf
 
-                    Dokumentasi Pertemuan
-                    {{ $pertemuanAktif->pertemuan }}
+                <input
+                    type="hidden"
+                    name="jadwal_id"
+                    value="{{ $jadwal->id }}"
+                >
 
-                </h3>
+                <input
+                    type="hidden"
+                    name="pertemuan"
+                    value="{{ $pertemuanAktif->pertemuan }}"
+                >
 
+                {{-- =====================================================
+                     FORM EDIT DOKUMENTASI & POKOK BAHASAN PERTEMUAN
+                ====================================================== --}}
 
-                <div style="margin-bottom:12px;">
-                    <strong>Materi Kuliah:</strong>
-                    <div style="margin-top:5px;white-space:pre-line;">{{ $pertemuanAktif->materi_kuliah ?: '-' }}</div>
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <strong>Keterangan:</strong>
-                    <div style="margin-top:5px;white-space:pre-line;">{{ $pertemuanAktif->keterangan ?: '-' }}</div>
-                </div>
-
-
-                <div style="margin-bottom:12px;">
-
-                    <strong>
-                        Foto:
-                    </strong>
-
-                    @if($pertemuanAktif->foto)
-
-                        <a
-                            href="{{ asset('storage/' . $pertemuanAktif->foto) }}"
-                            target="_blank"
-                            class="btn-outline"
-                            style="margin-left:10px;"
-                        >
-                            Lihat Foto
-                        </a>
-
-                    @else
-
-                        <span style="color:#64748b;">
-                            Tidak ada foto.
-                        </span>
-
-                    @endif
-
-                </div>
-
-
-                <div>
-
-                    <strong>
-                        File Materi:
-                    </strong>
-
-                    @if($pertemuanAktif->materi)
-
-                        <a
-                            href="{{ asset('storage/' . $pertemuanAktif->materi) }}"
-                            target="_blank"
-                            class="btn-outline"
-                            style="margin-left:10px;"
-                        >
-                            Lihat Materi
-                        </a>
-
-                    @else
-
-                        <span style="color:#64748b;">
-                            Tidak ada materi.
-                        </span>
-
-                    @endif
-
-                </div>
-
-            </div>
-
-
-            {{-- =====================================================
-                 EDIT STATUS MAHASISWA
-            ====================================================== --}}
-
-            <div
-                style="
-                    background:#fff;
-                    border:1px solid #e2e8f0;
-                    border-radius:10px;
-                    padding:18px;
-                    margin-bottom:25px;
-                "
-            >
-
-                <h3 style="margin-top:0;">
-                    <x-layout-icon name="edit" /> <span>Edit Status Presensi Mahasiswa</span>
-                </h3>
-
-
-                <p
+                <div
                     style="
-                        color:#64748b;
-                        margin-bottom:20px;
+                        background:#f8fafc;
+                        border:1px solid #e2e8f0;
+                        border-radius:10px;
+                        padding:18px;
+                        margin-bottom:25px;
                     "
                 >
 
-                    Mengubah status mahasiswa pada
+                    <h3 style="margin-top:0;display:flex;align-items:center;gap:8px;">
+                        <x-layout-icon name="edit" />
+                        <span>Edit Pokok Bahasan &amp; Dokumentasi Pertemuan {{ $pertemuanAktif->pertemuan }}</span>
+                    </h3>
 
-                    <strong>
-                        Pertemuan
-                        {{ $pertemuanAktif->pertemuan }}
-                    </strong>.
+                    <div
+                        class="krs-form-grid"
+                        style="margin-bottom:20px;"
+                    >
 
-                    Data sesi pertemuan tetap terkunci.
+                        <div class="form-group">
+                            <label>Pertemuan</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                value="Pertemuan {{ $pertemuanAktif->pertemuan }}"
+                                readonly
+                            >
+                        </div>
 
-                </p>
+                        <div class="form-group">
+                            <label for="edit_tanggal">
+                                Tanggal <span style="color:#dc2626;" aria-hidden="true">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                id="edit_tanggal"
+                                name="tanggal"
+                                class="form-control"
+                                value="{{ old('tanggal', $pertemuanAktif->tanggal) }}"
+                                required
+                            >
+                        </div>
+
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label for="edit_materi_kuliah">
+                            Materi Kuliah / Pokok Bahasan <span style="color:#dc2626;" aria-hidden="true">*</span>
+                        </label>
+                        <textarea
+                            id="edit_materi_kuliah"
+                            name="materi_kuliah"
+                            class="form-control"
+                            rows="3"
+                            maxlength="2000"
+                            required
+                            placeholder="Tuliskan materi yang dibahas pada pertemuan ini"
+                        >{{ old('materi_kuliah', $pertemuanAktif->materi_kuliah) }}</textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label for="edit_keterangan">
+                            Keterangan Perkuliahan <span style="color:#dc2626;" aria-hidden="true">*</span>
+                        </label>
+                        <textarea
+                            id="edit_keterangan"
+                            name="keterangan"
+                            class="form-control"
+                            rows="3"
+                            maxlength="2000"
+                            required
+                            placeholder="Tuliskan keterangan pelaksanaan perkuliahan"
+                        >{{ old('keterangan', $pertemuanAktif->keterangan) }}</textarea>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label>
+                            Foto Absen
+                            <span style="color:#64748b;">(Opsional jika tidak ingin mengubah foto)</span>
+                        </label>
+
+                        @if($pertemuanAktif->foto)
+                            <div style="margin-bottom:8px;font-size:13px;display:flex;align-items:center;gap:10px;">
+                                <span>Foto saat ini:</span>
+                                <a
+                                    href="{{ asset('storage/' . $pertemuanAktif->foto) }}"
+                                    target="_blank"
+                                    class="btn-outline"
+                                    style="padding:3px 10px;font-size:12px;"
+                                >
+                                    Lihat Foto Saat Ini
+                                </a>
+                            </div>
+                        @endif
+
+                        <input
+                            type="file"
+                            name="foto"
+                            class="form-control"
+                            accept="image/*,.jpg,.jpeg,.png,.heic,.heif,.webp"
+                        >
+                        <small style="display:block;margin-top:6px;color:#64748b;">
+                            Format: JPG, JPEG, PNG, HEIC, WEBP. Maksimal 10 MB. Unggah foto baru jika ingin mengganti foto yang sudah ada.
+                        </small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            File Materi
+                            <span style="color:#64748b;">(Opsional jika tidak ingin mengubah materi)</span>
+                        </label>
+
+                        @if($pertemuanAktif->materi)
+                            <div style="margin-bottom:8px;font-size:13px;display:flex;align-items:center;gap:10px;">
+                                <span>Materi saat ini:</span>
+                                <a
+                                    href="{{ asset('storage/' . $pertemuanAktif->materi) }}"
+                                    target="_blank"
+                                    class="btn-outline"
+                                    style="padding:3px 10px;font-size:12px;"
+                                >
+                                    Lihat File Materi Saat Ini
+                                </a>
+                            </div>
+                        @endif
+
+                        <input
+                            type="file"
+                            name="materi"
+                            class="form-control"
+                            accept=".pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx"
+                        >
+                        <small style="display:block;margin-top:6px;color:#64748b;">
+                            Format: PDF, PPT, PPTX, DOC, DOCX, XLS, XLSX. Maksimal 10 MB. Unggah file baru jika ingin mengganti materi yang sudah ada.
+                        </small>
+                    </div>
+
+                </div>
 
 
-                <form
-                    action="{{ route('dosen.presensi.store') }}"
-                    method="POST"
+                {{-- =====================================================
+                     EDIT STATUS PRESENSI MAHASISWA
+                ====================================================== --}}
+
+                <div
+                    style="
+                        background:#fff;
+                        border:1px solid #e2e8f0;
+                        border-radius:10px;
+                        padding:18px;
+                        margin-bottom:25px;
+                    "
                 >
 
-                    @csrf
+                    <h3 style="margin-top:0;display:flex;align-items:center;gap:8px;">
+                        <x-layout-icon name="clipboard" />
+                        <span>Presensi Mahasiswa Pertemuan {{ $pertemuanAktif->pertemuan }}</span>
+                    </h3>
 
-                    <input
-                        type="hidden"
-                        name="jadwal_id"
-                        value="{{ $jadwal->id }}"
+                    <p
+                        style="
+                            color:#64748b;
+                            margin-bottom:20px;
+                        "
                     >
-
-                    <input
-                        type="hidden"
-                        name="pertemuan"
-                        value="{{ $pertemuanAktif->pertemuan }}"
-                    >
-
-                    <input
-                        type="hidden"
-                        name="tanggal"
-                        value="{{ $pertemuanAktif->tanggal }}"
-                    >
+                        Sesuaikan status presensi mahasiswa jika ada perubahan kehadiran.
+                    </p>
 
 
                     <div class="table-wrap">
@@ -832,7 +866,7 @@
                         type="submit"
                         class="btn-primary"
                     >
-                        Simpan Perubahan Status
+                        <x-layout-icon name="save" /> <span>Simpan Perubahan Pertemuan {{ $pertemuanAktif->pertemuan }}</span>
                     </button>
 
 

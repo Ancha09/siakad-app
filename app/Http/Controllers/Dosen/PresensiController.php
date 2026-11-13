@@ -12,6 +12,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PresensiController extends Controller
@@ -368,37 +369,78 @@ class PresensiController extends Controller
 
         // =====================================================
         // JIKA PERTEMUAN SUDAH ADA
-        // HANYA STATUS MAHASISWA YANG BOLEH DIUBAH
+        // PERBARUI INFORMASI PERTEMUAN & STATUS MAHASISWA
         // =====================================================
 
         if ($pertemuan) {
-
-            foreach (
-                $request->krs_id
-                as $i => $krsId
+            DB::transaction(function () use (
+                $request,
+                $pertemuan
             ) {
+                $updateData = [];
 
-                Presensi::updateOrCreate(
+                if ($request->filled('tanggal')) {
+                    $updateData['tanggal'] = $request->tanggal;
+                }
 
-                    [
-                        'krs_id' =>
-                            $krsId,
+                if ($request->filled('materi_kuliah')) {
+                    $updateData['materi_kuliah'] = $request->materi_kuliah;
+                }
 
-                        'pertemuan' =>
-                            $pertemuan->pertemuan,
-                    ],
+                if ($request->filled('keterangan')) {
+                    $updateData['keterangan'] = $request->keterangan;
+                }
 
-                    [
-                        'tanggal' =>
-                            $pertemuan->tanggal,
+                if ($request->hasFile('foto')) {
+                    if ($pertemuan->foto && Storage::disk('public')->exists($pertemuan->foto)) {
+                        Storage::disk('public')->delete($pertemuan->foto);
+                    }
 
-                        'status' =>
-                            $request->status[$i],
-                    ]
+                    $updateData['foto'] = $request->file('foto')->store(
+                        'presensi/foto',
+                        'public'
+                    );
+                }
 
-                );
-            }
+                if ($request->hasFile('materi')) {
+                    if ($pertemuan->materi && Storage::disk('public')->exists($pertemuan->materi)) {
+                        Storage::disk('public')->delete($pertemuan->materi);
+                    }
 
+                    $updateData['materi'] = $request->file('materi')->store(
+                        'presensi/materi',
+                        'public'
+                    );
+                }
+
+                if (! empty($updateData)) {
+                    $pertemuan->update($updateData);
+                }
+
+                $tanggalPresensi = $updateData['tanggal'] ?? $pertemuan->tanggal;
+
+                foreach (
+                    $request->krs_id
+                    as $i => $krsId
+                ) {
+                    Presensi::updateOrCreate(
+                        [
+                            'krs_id' =>
+                                $krsId,
+
+                            'pertemuan' =>
+                                $pertemuan->pertemuan,
+                        ],
+                        [
+                            'tanggal' =>
+                                $tanggalPresensi,
+
+                            'status' =>
+                                $request->status[$i],
+                        ]
+                    );
+                }
+            });
 
             return redirect()
                 ->route(
@@ -413,7 +455,7 @@ class PresensiController extends Controller
                 )
                 ->with(
                     'success',
-                    'Status presensi mahasiswa berhasil diperbarui.'
+                    'Data pertemuan dan presensi mahasiswa berhasil diperbarui.'
                 );
         }
 
