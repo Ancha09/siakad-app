@@ -724,7 +724,7 @@
                                                 @endphp
                                                 @if($alloc > 0 && $komp)
                                                     <td style="text-align:center; padding:6px 4px; vertical-align:middle; background:#ffffff;">
-                                                        <div style="font-weight:800; font-size:13px; color:{{ $scoreVal !== null ? '#0f172a' : '#94a3b8' }};">
+                                                        <div @style(['font-weight:800', 'font-size:13px', 'color:' . ($scoreVal !== null ? '#0f172a' : '#94a3b8')])>
                                                             {{ $scoreVal !== null ? number_format($scoreVal, 1) : '-' }}
                                                         </div>
                                                         <span style="font-size:10px; color:#64748b; font-weight:600; display:block; margin-top:2px;">
@@ -810,11 +810,14 @@
                                 @php
                                     $score = $dt['weight'] > 0 ? round($dt['weighted'] / $dt['weight'], 2) : 0;
                                     $isLulus = $score >= $pg;
+                                    $cplBoxBg = $isLulus ? '#f0fdf4' : '#fef2f2';
+                                    $cplBoxBorder = $isLulus ? '#bbf7d0' : '#fecaca';
+                                    $cplTextColor = $isLulus ? '#15803d' : '#b91c1c';
                                 @endphp
-                                <div style="background:{{ $isLulus ? '#f0fdf4' : '#fef2f2' }}; border:1px solid {{ $isLulus ? '#bbf7d0' : '#fecaca' }}; border-radius:8px; padding:10px 12px; display:flex; justify-content:space-between; align-items:center;">
+                                <div @style(['background:' . $cplBoxBg, 'border:1px solid ' . $cplBoxBorder, 'border-radius:8px', 'padding:10px 12px', 'display:flex', 'justify-content:space-between', 'align-items:center'])>
                                     <div>
                                         <div style="display:flex; align-items:center; gap:6px;">
-                                            <span style="font-weight:700; color:{{ $isLulus ? '#15803d' : '#b91c1c' }}; font-size:12px;">{{ $cCode }}</span>
+                                            <span @style(['font-weight:700', 'color:' . $cplTextColor, 'font-size:12px'])>{{ $cCode }}</span>
                                             <span style="font-size:11px; color:#64748b;">(Bobot: {{ round($dt['weight'], 1) }}%)</span>
                                         </div>
                                         @if($dt['desc'])
@@ -822,7 +825,7 @@
                                         @endif
                                     </div>
                                     <div style="text-align:right;">
-                                        <div style="font-weight:800; font-size:13.5px; color:{{ $isLulus ? '#15803d' : '#b91c1c' }};">{{ $score }}</div>
+                                        <div @style(['font-weight:800', 'font-size:13.5px', 'color:' . $cplTextColor])>{{ $score }}</div>
                                         @if($isLulus)
                                             <span class="badge badge-success" style="font-size:10px; padding:2px 6px;">
                                                 <x-layout-icon name="check" /> Lulus
