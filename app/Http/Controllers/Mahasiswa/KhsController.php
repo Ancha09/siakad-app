@@ -50,6 +50,20 @@ class KhsController extends Controller
             ->orderByDesc('tahun_akademik')
             ->get();
 
+        foreach ($khs as $item) {
+            if ($item->krs?->kuesioner === null) {
+                continue;
+            }
+
+            $skema = $item->krs->jadwal?->skemaPenilaian;
+            $item->setAttribute(
+                'ringkasan_komponen_obe',
+                $skema
+                    ? $nilaiService->ringkasanKomponenObe($skema->komponens, $item->krs->nilaiKomponens)
+                    : []
+            );
+        }
+
         // Nilai hanya ikut ditampilkan dan dihitung setelah kuesioner diisi.
         $khsTerlihat = $khs->filter(function ($item) {
             return $item->krs?->kuesioner !== null;

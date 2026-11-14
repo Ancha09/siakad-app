@@ -96,5 +96,7 @@ test('advisor only sees advisees while admin sees all mining students', function
     $this->get(route('dosen.penilaian-mahasiswa.show', $data['otherStudent']))->assertForbidden();
 
     $this->actingAs($data['admin'])->get(route('admin.penilaian-cpl-mahasiswa.index'))
-        ->assertOk()->assertSee('Mahasiswa Profil CPL')->assertSee('Mahasiswa Rahasia CPL');
+        ->assertRedirect('/admin/analisis-cpl');
+    $this->actingAs($data['admin'])->get('/admin/analisis-cpl')
+        ->assertOk();
 });

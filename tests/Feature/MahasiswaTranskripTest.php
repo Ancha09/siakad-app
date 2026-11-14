@@ -5,8 +5,11 @@ use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Kuesioner;
 use App\Models\Mahasiswa;
+use App\Models\MahasiswaNilaiKomponen;
 use App\Models\MataKuliah;
 use App\Models\Prodi;
+use App\Models\RpsPenilaianKomponen;
+use App\Models\RpsPenilaianSkema;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\View;
@@ -69,6 +72,48 @@ function buatDataTranskrip(bool $kuesionerSelesai = false): array
 
     return compact('user', 'mahasiswa', 'krs');
 }
+
+test('student KHS shows weighted OBE totals by normal assessment category', function () {
+    ['user' => $user, 'krs' => $krs] = buatDataTranskrip(true);
+    $skema = RpsPenilaianSkema::create(['jadwal_id' => $krs->jadwal_id]);
+
+    foreach ([
+        ['UTS (CPMK 1)', 10, 70],
+        ['UTS (CPMK 2)', 30, 90],
+        ['UAS (CPMK 1)', 20, 80],
+        ['Tugas terstruktur (CPMK 1)', 20, 60],
+        ['Tugas studi kasus (CPMK 2)', 20, 100],
+    ] as [$nama, $bobot, $nilai]) {
+        $komponen = RpsPenilaianKomponen::create([
+            'skema_id' => $skema->id,
+            'nama_instrumen' => $nama,
+            'bobot' => $bobot,
+        ]);
+        MahasiswaNilaiKomponen::create([
+            'krs_id' => $krs->id,
+            'komponen_id' => $komponen->id,
+            'nilai_angka' => $nilai,
+        ]);
+    }
+
+    $response = $this->actingAs($user)
+        ->get(route('mahasiswa.khs'))
+        ->assertOk()
+        ->assertSee('Nilai Total per Komponen Perkuliahan')
+        ->assertSee('UTS Total')
+        ->assertSee('UAS Total')
+        ->assertSee('Tugas Total')
+        ->assertSee('85.00')
+        ->assertSee('80.00')
+        ->assertSee('Bobot nilai akhir: 40.0%')
+        ->assertSee('Lihat rincian skor per CPMK');
+
+    expect($response->viewData('khs')->first()->ringkasan_komponen_obe)->toBe([
+        ['nama' => 'UTS', 'nilai' => 85.0, 'bobot' => 40.0],
+        ['nama' => 'UAS', 'nilai' => 80.0, 'bobot' => 20.0],
+        ['nama' => 'Tugas', 'nilai' => 80.0, 'bobot' => 40.0],
+    ]);
+});
 
 test('transcript pdf route requires an authenticated student', function () {
     $this->get(route('mahasiswa.transkrip.pdf'))

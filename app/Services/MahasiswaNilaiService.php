@@ -9,6 +9,53 @@ class MahasiswaNilaiService
 {
     public const LOCKED_PLACEHOLDER = 'Isi kuesioner untuk melihat nilai';
 
+    public function ringkasanKomponenObe(Collection $komponens, Collection $nilaiKomponens): array
+    {
+        $nilaiMap = $nilaiKomponens->pluck('nilai_angka', 'komponen_id');
+        $kelompok = [];
+
+        foreach ($komponens as $komponen) {
+            $bobot = (float) $komponen->bobot;
+            if ($bobot <= 0) {
+                continue;
+            }
+
+            $namaInstrumen = trim((string) $komponen->nama_instrumen);
+            $namaDasar = trim((string) preg_replace('/\s*\([^()]*\)\s*$/u', '', $namaInstrumen));
+            $nama = match (true) {
+                preg_match('/^uts\b|ujian tengah semester/i', $namaDasar) === 1 => 'UTS',
+                preg_match('/^uas\b|ujian akhir semester/i', $namaDasar) === 1 => 'UAS',
+                preg_match('/^tugas\b|studi kasus|proyek|project/i', $namaDasar) === 1 => 'Tugas',
+                preg_match('/^kuis\b|quiz|keaktifan/i', $namaDasar) === 1 => 'Kuis',
+                preg_match('/^praktikum\b|lab\b/i', $namaDasar) === 1 => 'Praktikum',
+                $namaDasar === '' => 'Lainnya',
+                default => $namaDasar,
+            };
+            $key = strtolower($nama);
+            $nilai = (float) ($nilaiMap->get($komponen->id) ?? 0);
+
+            if (! isset($kelompok[$key])) {
+                $kelompok[$key] = [
+                    'nama' => $nama,
+                    'total_bobot' => 0.0,
+                    'nilai_terbobot' => 0.0,
+                ];
+            }
+
+            $kelompok[$key]['total_bobot'] += $bobot;
+            $kelompok[$key]['nilai_terbobot'] += $nilai * $bobot;
+        }
+
+        return array_values(array_map(
+            fn (array $kelompokNilai) => [
+                'nama' => $kelompokNilai['nama'],
+                'nilai' => round($kelompokNilai['nilai_terbobot'] / $kelompokNilai['total_bobot'], 2),
+                'bobot' => round($kelompokNilai['total_bobot'], 1),
+            ],
+            $kelompok
+        ));
+    }
+
     public function ringkasanMahasiswa(int $mahasiswaId): array
     {
         $khs = Khs::with(['krs.jadwal.mataKuliah', 'krs.mataKuliahManual', 'krs.kuesioner'])

@@ -26,7 +26,7 @@
                 <form
                     method="POST"
                     action="{{ route('dosen.krs.setujui-semua', $mahasiswa) }}"
-                    onsubmit="return confirm('Pastikan Anda sudah memeriksa seluruh mata kuliah, jumlah SKS, jadwal, dan ruangan pada detail mahasiswa ini.') && confirm('Setujui semua {{ $pendingKrs->count() }} mata kuliah yang masih menunggu untuk mahasiswa dan periode ini? Tindakan ini tidak dapat dibatalkan dari halaman ini.')"
+                    onsubmit="return confirm('Pastikan Anda sudah memeriksa seluruh mata kuliah, jumlah SKS, jadwal, dan ruangan pada detail mahasiswa ini.') && confirm('Setujui semua {{ $pendingKrs->count() }} mata kuliah yang masih menunggu untuk mahasiswa dan periode ini? Tindakan ini tidak dapat dibatalkan dari halaman ini. Lanjutkan?')"
                 >
                     @csrf
                     <input type="hidden" name="tahun_akademik" value="{{ $year }}">

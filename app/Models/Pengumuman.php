@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Pengumuman extends Model
 {
@@ -33,7 +34,7 @@ class Pengumuman extends Model
             ->where(fn ($q) => $q->whereNull('berakhir_pada')->orWhere('berakhir_pada', '>', now()))
             ->when($user->role !== 'admin', function ($q) use ($user) {
                 $student = $user->role === 'mahasiswa' ? $user->mahasiswa : null;
-                $periodIds = $student ? PeriodeKrs::query()
+                $periodIds = $student && Schema::hasTable('periode_krs') && Schema::hasTable('krs') ? PeriodeKrs::query()
                     ->where(function ($periods) use ($student) {
                         $periods->whereHas('aksesMahasiswa', fn ($access) => $access
                             ->where('mahasiswa_id', $student->id)

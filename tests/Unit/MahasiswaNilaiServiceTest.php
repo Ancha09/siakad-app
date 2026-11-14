@@ -6,13 +6,60 @@ use App\Models\Jadwal;
 use App\Models\Khs;
 use App\Models\Krs;
 use App\Models\Kuesioner;
+use App\Models\MahasiswaNilaiKomponen;
 use App\Models\MataKuliah;
+use App\Models\RpsPenilaianKomponen;
 use App\Services\MahasiswaNilaiService;
 use Illuminate\Support\Collection;
 use PHPUnit\Framework\TestCase;
 
 class MahasiswaNilaiServiceTest extends TestCase
 {
+    public function test_obe_component_scores_are_aggregated_by_normal_assessment_category(): void
+    {
+        $service = new MahasiswaNilaiService;
+        $komponens = collect([
+            $this->component(1, 'UTS (S1)', 10),
+            $this->component(2, 'UTS (S2)', 30),
+            $this->component(3, 'UAS (S1)', 20),
+            $this->component(4, 'Tugas terstruktur (S1)', 15),
+            $this->component(5, 'Tugas studi kasus (S2)', 15),
+            $this->component(6, 'Kuis (S1)', 10),
+        ]);
+        $nilaiKomponens = collect([
+            $this->componentScore(1, 70),
+            $this->componentScore(2, 90),
+            $this->componentScore(3, 80),
+            $this->componentScore(4, 60),
+            $this->componentScore(5, 100),
+            $this->componentScore(6, 50),
+        ]);
+
+        $summary = $service->ringkasanKomponenObe($komponens, $nilaiKomponens);
+
+        $this->assertSame([
+            ['nama' => 'UTS', 'nilai' => 85.0, 'bobot' => 40.0],
+            ['nama' => 'UAS', 'nilai' => 80.0, 'bobot' => 20.0],
+            ['nama' => 'Tugas', 'nilai' => 80.0, 'bobot' => 30.0],
+            ['nama' => 'Kuis', 'nilai' => 50.0, 'bobot' => 10.0],
+        ], $summary);
+    }
+
+    public function test_missing_obe_component_score_uses_zero_like_the_final_grade_calculation(): void
+    {
+        $komponens = collect([
+            $this->component(1, 'UTS (S1)', 25),
+            $this->component(2, 'UTS (S2)', 25),
+        ]);
+        $nilaiKomponens = collect([$this->componentScore(1, 80)]);
+
+        $summary = (new MahasiswaNilaiService)->ringkasanKomponenObe($komponens, $nilaiKomponens);
+
+        $this->assertSame([
+            ['nama' => 'UTS', 'nilai' => 40.0, 'bobot' => 50.0],
+        ], $summary);
+    }
+
     public function test_ipk_is_locked_while_any_questionnaire_is_pending(): void
     {
         $service = new MahasiswaNilaiService;
@@ -94,5 +141,24 @@ class MahasiswaNilaiServiceTest extends TestCase
         }
         $this->assertSame(70, $visible->nilai_angka);
         $this->assertSame('B', $visible->nilai_huruf);
+    }
+
+    private function component(int $id, string $name, float $weight): RpsPenilaianKomponen
+    {
+        $component = new RpsPenilaianKomponen([
+            'nama_instrumen' => $name,
+            'bobot' => $weight,
+        ]);
+        $component->setAttribute('id', $id);
+
+        return $component;
+    }
+
+    private function componentScore(int $componentId, float $score): MahasiswaNilaiKomponen
+    {
+        return new MahasiswaNilaiKomponen([
+            'komponen_id' => $componentId,
+            'nilai_angka' => $score,
+        ]);
     }
 }

@@ -398,6 +398,19 @@
                                             </div>
                                         @endif
 
+                                        @if(!empty($item->ringkasan_komponen_obe))
+                                            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
+                                                @foreach($item->ringkasan_komponen_obe as $komp)
+                                                    @php
+                                                        $labelKomp = str_ends_with(strtolower($komp['nama']), 'total') ? $komp['nama'] : ($komp['nama'] . ' Total');
+                                                    @endphp
+                                                    <span style="display:inline-block; font-size:10.5px; background:#f8fafc; color:#334155; border:1px solid #e2e8f0; border-radius:4px; padding:1px 6px;">
+                                                        {{ $labelKomp }}: <strong>{{ number_format($komp['nilai'], 1) }}</strong>
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+
                                     </td>
 
 
@@ -579,7 +592,7 @@
             <div class="modal-box-custom {{ $hasMatrix ? 'modal-box-large' : '' }}">
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:16px; border-bottom:1px solid #e2e8f0; padding-bottom:14px; gap:12px; flex-wrap:wrap;">
                     <div>
-                        <h3 style="margin:0; font-size:17px; font-weight:800; color:#0f172a;">Rincian Penilaian Matriks OBE</h3>
+                        <h3 style="margin:0; font-size:17px; font-weight:800; color:#0f172a;">Rincian Nilai OBE</h3>
                         <div style="font-size:13px; color:#64748b; margin-top:3px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                             <span style="font-weight:700; color:#1e293b;">{{ $item->krs->mata_kuliah_efektif?->kode_mk }} — {{ $item->krs->mata_kuliah_efektif?->nama_mk }}</span>
                             <span>&bull;</span>
@@ -613,6 +626,36 @@
                     </div>
                 </div>
 
+                @if(!empty($item->ringkasan_komponen_obe))
+                    <div style="margin-bottom:20px;">
+                        <div style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:8px;">
+                            Nilai Total per Komponen Perkuliahan
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(145px, 1fr)); gap:10px;">
+                            @foreach($item->ringkasan_komponen_obe as $komponenNilai)
+                                @php
+                                    $labelKomp = str_ends_with(strtolower($komponenNilai['nama']), 'total') ? $komponenNilai['nama'] : ($komponenNilai['nama'] . ' Total');
+                                @endphp
+                                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:9px; padding:12px; text-align:center;">
+                                    <div style="font-size:11px; text-transform:uppercase; color:#64748b; font-weight:700;">
+                                        {{ $labelKomp }}
+                                    </div>
+                                    <div style="font-size:22px; font-weight:800; color:#0f172a; margin-top:3px;">
+                                        {{ number_format($komponenNilai['nilai'], 2) }}
+                                    </div>
+                                    <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                                        Bobot nilai akhir: {{ number_format($komponenNilai['bobot'], 1) }}%
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                <details style="margin-bottom:18px; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
+                    <summary style="cursor:pointer; color:#475569; font-size:12px; font-weight:700;">
+                        Lihat rincian skor per CPMK
+                    </summary>
                 @if($hasMatrix)
                     {{-- 2D Matrix Table --}}
                     <div style="margin-bottom:20px;">
@@ -756,6 +799,7 @@
                         </div>
                     </div>
                 @endif
+                </details>
 
                 {{-- Ketercapaian CPL Mahasiswa --}}
                 @if(!empty($cplScores))
