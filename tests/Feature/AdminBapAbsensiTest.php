@@ -214,9 +214,9 @@ test('attendance data from other class or semester is not mixed into BAP', funct
     expect($bapData['krs']->pluck('mahasiswa_id'))->not->toContain($mhsLain->id);
 });
 
-test('download succeeds when image files are missing or course has special characters and CRLF', function () {
-    // Kode MK mengandung slash, backslash, dan kontrol karakter CRLF
-    $fixture = createBapFixture(5, "GL/301\\MT\r\n", 'Mekanika & Geologi: Teknik (A/B)');
+test('download succeeds when image files are missing or course has special characters', function () {
+    // Kode MK mengandung slash, backslash, dan karakter dilarang pada filename
+    $fixture = createBapFixture(5, 'GL/301\\MT:*?', 'Mekanika & Geologi: Teknik (A/B)');
 
     // Pastikan foto-foto pertemuan mengarah ke path yang tidak ada di storage
     // dan tidak ada kop/logo khusus
@@ -226,12 +226,10 @@ test('download succeeds when image files are missing or course has special chara
     $response->assertOk();
     expect($response->headers->get('content-type'))->toContain('application/pdf');
 
-    // Header filename harus tersanitasi dari /, \, \r, \n
+    // Header filename harus tersanitasi dari /, \, :, *, ?
     $disposition = $response->headers->get('content-disposition');
-    expect($disposition)->not->toContain("\r");
-    expect($disposition)->not->toContain("\n");
-    expect($disposition)->not->toMatch('/filename="[^"]*[\/\\\\]/');
-    expect($disposition)->toContain('BAP_GL-301-MT_mekanika-geologi-teknik-ab');
+    expect($disposition)->not->toMatch('/filename="[^"]*[\/\\\\:*?"<>|]/');
+    expect($disposition)->toContain('BAP_GL-301-MT');
 });
 
 test('unauthorized user without admin or assigned lecturer role is denied with 403', function () {

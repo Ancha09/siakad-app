@@ -127,7 +127,11 @@ class BapPresensiService
     public function downloadPdf(Jadwal $jadwal)
     {
         $pdf = $this->generatePdf($jadwal);
-        $filename = $this->sanitizeFilename($jadwal);
+
+        $kodeMk = preg_replace('/[\/\\\\:*?"<>|]+/', '-', $jadwal->mataKuliah?->kode_mk ?? 'MK');
+        $namaMk = Str::slug($jadwal->mataKuliah?->nama_mk ?? 'Matkul');
+        $namaKelas = Str::slug($jadwal->kelas?->nama_kelas ?? $jadwal->kelas ?? 'Kelas');
+        $filename = str_replace(['/', '\\'], '-', 'BAP_' . $kodeMk . '_' . $namaMk . '_' . $namaKelas . '_' . now()->format('Ymd') . '.pdf');
 
         return $pdf->download($filename);
     }
@@ -137,24 +141,11 @@ class BapPresensiService
      */
     public function sanitizeFilename(Jadwal $jadwal): string
     {
-        $rawKodeMk = (string) ($jadwal->mataKuliah?->kode_mk ?? 'MK');
-        $rawNamaMk = (string) ($jadwal->mataKuliah?->nama_mk ?? 'Matkul');
-        $rawNamaKelas = (string) ($jadwal->kelas?->nama_kelas ?? $jadwal->kelas ?? 'Kelas');
+        $kodeMk = preg_replace('/[\/\\\\:*?"<>|]+/', '-', $jadwal->mataKuliah?->kode_mk ?? 'MK');
+        $namaMk = Str::slug($jadwal->mataKuliah?->nama_mk ?? 'Matkul');
+        $namaKelas = Str::slug($jadwal->kelas?->nama_kelas ?? $jadwal->kelas ?? 'Kelas');
 
-        // Bersihkan kode mata kuliah dari control chars, slash, backslash, spasi
-        $cleanKode = preg_replace('/[\r\n\t\x00-\x1F\x7F]/', '', $rawKodeMk);
-        $cleanKode = str_replace(['/', '\\'], '-', $cleanKode);
-        $cleanKode = preg_replace('/[^A-Za-z0-9_-]/', '_', trim($cleanKode));
-        $cleanKode = preg_replace('/_+/', '_', $cleanKode);
-        $cleanKode = trim($cleanKode, '_-') ?: 'MK';
-
-        $cleanMk = Str::slug($rawNamaMk) ?: 'Matkul';
-        $cleanKelas = Str::slug($rawNamaKelas) ?: 'Kelas';
-
-        $filename = sprintf('BAP_%s_%s_%s_%s.pdf', $cleanKode, $cleanMk, $cleanKelas, now()->format('Ymd'));
-
-        // Sanitasi akhir: pastikan tidak ada karakter kontrol atau pemisah path yang tersisa
-        return preg_replace('/[\r\n\x00-\x1F\x7F\/\\\\]/', '', $filename);
+        return str_replace(['/', '\\'], '-', 'BAP_' . $kodeMk . '_' . $namaMk . '_' . $namaKelas . '_' . now()->format('Ymd') . '.pdf');
     }
 
     /**
