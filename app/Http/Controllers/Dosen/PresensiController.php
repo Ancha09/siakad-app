@@ -8,6 +8,7 @@ use App\Models\Jadwal;
 use App\Models\Krs;
 use App\Models\Presensi;
 use App\Models\PresensiPertemuan;
+use App\Services\BapPresensiService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -589,7 +590,7 @@ class PresensiController extends Controller
     // BERITA ACARA PERKULIAHAN (BAP) DETAIL DOSEN
     // =========================================================
 
-    public function bap(Jadwal $jadwal)
+    public function bap(Jadwal $jadwal, BapPresensiService $bapService)
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
@@ -597,75 +598,16 @@ class PresensiController extends Controller
             abort(403);
         }
 
-        $jadwal->load([
-            'mataKuliah.prodi.fakultas',
-            'dosen.prodi',
-            'dosens',
-            'kelas',
-            'ruangan',
-            'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),
-        ]);
+        $data = $bapService->prepareBapData($jadwal);
 
-        $krs = Krs::with([
-            'mahasiswa.prodi',
-            'mahasiswa.kelas',
-            'presensis',
-        ])
-        ->where('is_manual', false)
-        ->where('jadwal_id', $jadwal->id)
-        ->get();
-
-        foreach ($krs as $item) {
-            $item->hadir = $item->presensis->where('status', 'Hadir')->count();
-            $item->izin = $item->presensis->where('status', 'Izin')->count();
-            $item->sakit = $item->presensis->where('status', 'Sakit')->count();
-            $item->alpha = $item->presensis->where('status', 'Alpha')->count();
-            $total = $item->hadir + $item->izin + $item->sakit + $item->alpha;
-            $item->total_pertemuan_mhs = $total;
-            $item->persentase = $total > 0 ? round(($item->hadir / $total) * 100, 1) : 0;
-        }
-
-        $pertemuans = $jadwal->presensiPertemuans;
-        $krsIds = $krs->pluck('id')->toArray();
-        $totalPeserta = $krs->count();
-
-        foreach ($pertemuans as $p) {
-            $p->total_hadir = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Hadir')
-                ->count();
-            $p->total_izin = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Izin')
-                ->count();
-            $p->total_sakit = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Sakit')
-                ->count();
-            $p->total_alpha = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Alpha')
-                ->count();
-        }
-
-        $rataRataKehadiranKelas = $krs->count() > 0
-            ? round($krs->avg('persentase'), 1)
-            : 0;
-
-        return view('admin.presensi.detail', compact(
-            'jadwal',
-            'krs',
-            'pertemuans',
-            'totalPeserta',
-            'rataRataKehadiranKelas'
-        ));
+        return view('admin.presensi.detail', $data);
     }
 
     // =========================================================
     // DOWNLOAD BAP PDF DOSEN
     // =========================================================
 
-    public function downloadBapPdf(Jadwal $jadwal)
+    public function downloadBapPdf(Jadwal $jadwal, BapPresensiService $bapService)
     {
         $dosen = Dosen::where('user_id', Auth::id())->firstOrFail();
 
@@ -673,62 +615,6 @@ class PresensiController extends Controller
             abort(403);
         }
 
-        $jadwal->load([
-            'mataKuliah.prodi.fakultas',
-            'dosen.prodi',
-            'dosens',
-            'kelas',
-            'ruangan',
-            'presensiPertemuans' => fn ($q) => $q->orderBy('pertemuan'),
-        ]);
-
-        $krs = Krs::with([
-            'mahasiswa.prodi',
-            'mahasiswa.kelas',
-            'presensis',
-        ])
-        ->where('is_manual', false)
-        ->where('jadwal_id', $jadwal->id)
-        ->get();
-
-        $totalPeserta = $krs->count();
-        $pertemuans = $jadwal->presensiPertemuans;
-        $krsIds = $krs->pluck('id')->toArray();
-
-        foreach ($pertemuans as $p) {
-            $p->total_hadir = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Hadir')
-                ->count();
-            $p->total_izin = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Izin')
-                ->count();
-            $p->total_sakit = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Sakit')
-                ->count();
-            $p->total_alpha = Presensi::whereIn('krs_id', $krsIds)
-                ->where('pertemuan', $p->pertemuan)
-                ->where('status', 'Alpha')
-                ->count();
-        }
-
-        $prodi = $jadwal->mataKuliah?->prodi ?? $jadwal->dosen?->prodi;
-
-        $pdf = Pdf::loadView('admin.presensi.bap-pdf', [
-            'jadwal' => $jadwal,
-            'pertemuans' => $pertemuans,
-            'krs' => $krs,
-            'totalPeserta' => $totalPeserta,
-            'prodi' => $prodi,
-        ])->setPaper('a4', 'portrait');
-
-        $kodeMk = $jadwal->mataKuliah?->kode_mk ?? 'MK';
-        $namaMk = Str::slug($jadwal->mataKuliah?->nama_mk ?? 'Matkul');
-        $namaKelas = Str::slug($jadwal->kelas?->nama_kelas ?? $jadwal->kelas ?? 'Kelas');
-        $filename = 'BAP_' . $kodeMk . '_' . $namaMk . '_' . $namaKelas . '_' . now()->format('Ymd') . '.pdf';
-
-        return $pdf->download($filename);
+        return $bapService->downloadPdf($jadwal);
     }
 }

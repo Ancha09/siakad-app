@@ -167,7 +167,11 @@
 </head>
 <body>
     {{-- ===================== KOP RESMI STTMI ===================== --}}
-    @if(file_exists(public_path('images/kop-sttmi.jpeg.jpeg')))
+    @if(!empty($kopBase64))
+        <div style="text-align: center; margin-bottom: 12px; border-bottom: 2.5px solid #0a1f5c; padding-bottom: 6px;">
+            <img src="{{ $kopBase64 }}" style="width: 100%; max-height: 110px;" alt="Kop STTMI">
+        </div>
+    @elseif(file_exists(public_path('images/kop-sttmi.jpeg.jpeg')))
         <div style="text-align: center; margin-bottom: 12px; border-bottom: 2.5px solid #0a1f5c; padding-bottom: 6px;">
             <img src="{{ public_path('images/kop-sttmi.jpeg.jpeg') }}" style="width: 100%; max-height: 110px;" alt="Kop STTMI">
         </div>
@@ -175,7 +179,9 @@
         <table class="letterhead">
             <tr>
                 <td style="width: 65px; text-align: center;">
-                    @if(file_exists(public_path('images/logo_sttmi.jpeg')))
+                    @if(!empty($logoBase64))
+                        <img class="logo" src="{{ $logoBase64 }}" alt="Logo STTMI">
+                    @elseif(file_exists(public_path('images/logo_sttmi.jpeg')))
                         <img class="logo" src="{{ public_path('images/logo_sttmi.jpeg') }}" alt="Logo STTMI">
                     @endif
                 </td>
@@ -269,7 +275,9 @@
                         <span style="color: #64748b; font-size: 7.5px;">Hadir</span>
                     </td>
                     <td class="text-center">
-                        @if($p->foto && file_exists(public_path('storage/' . $p->foto)))
+                        @if(!empty($p->foto_base64))
+                            <img class="thumb-img" src="{{ $p->foto_base64 }}" alt="Foto Pertemuan {{ $p->pertemuan }}">
+                        @elseif($p->foto && file_exists(public_path('storage/' . $p->foto)))
                             <img class="thumb-img" src="{{ public_path('storage/' . $p->foto) }}" alt="Foto Pertemuan {{ $p->pertemuan }}">
                         @elseif($p->foto && file_exists(storage_path('app/public/' . $p->foto)))
                             <img class="thumb-img" src="{{ storage_path('app/public/' . $p->foto) }}" alt="Foto Pertemuan {{ $p->pertemuan }}">
